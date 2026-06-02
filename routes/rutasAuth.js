@@ -492,7 +492,7 @@ router.delete('/api/productos/:id', verificarSesion, async (req, res) => {
 
 
 router.post('/api/productos', verificarSesion, async (req, res) => {
-    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio } = req.body;
+    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, stock_minimo } = req.body;
     const id_usuario = req.session.usuario.id;
     if (!nombre_producto || !precio_costo || !precio_venta)
         return res.json({ ok: false, mensaje: 'Nombre y precios son requeridos' });
@@ -511,21 +511,21 @@ router.post('/api/productos', verificarSesion, async (req, res) => {
             await pool.query(
                 `UPDATE productos
                  SET descripcion=$1, precio_costo=$2, precio_venta=$3, id_categoria=$4,
-                     genero=$5, id_colegio=$6, estado=1,
-                     updated_at=NOW(), updated_by=$7,
+                     genero=$5, id_colegio=$6, estado=1, stock_minimo=$7,
+                     updated_at=NOW(), updated_by=$8,
                      deleted_at=NULL, deleted_by=NULL
-                 WHERE id_producto=$8`,
+                 WHERE id_producto=$9`,
                 [descripcion || null, precio_costo, precio_venta, id_categoria || null,
-                 genero || null, id_colegio || null, id_usuario, eliminado.rows[0].id_producto]
+                 genero || null, id_colegio || null, stock_minimo || 10, id_usuario, eliminado.rows[0].id_producto]
             );
             return res.json({ ok: true, mensaje: 'Producto reactivado correctamente' });
         }
         await pool.query(
             `INSERT INTO productos
-             (nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, estado, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8)`,
+             (nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, stock_minimo, estado, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9)`,
             [nombre_producto, descripcion || null, precio_costo, precio_venta,
-             id_categoria || null, genero || null, id_colegio || null, id_usuario]
+             id_categoria || null, genero || null, id_colegio || null, stock_minimo || 10, id_usuario]
         );
         res.json({ ok: true, mensaje: 'Producto creado correctamente' });
     } catch (error) {
@@ -537,7 +537,7 @@ router.post('/api/productos', verificarSesion, async (req, res) => {
 
 router.put('/api/productos/:id', verificarSesion, async (req, res) => {
     const { id } = req.params;
-    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, estado } = req.body;
+    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, estado, stock_minimo } = req.body;
     const id_usuario = req.session.usuario.id;
     if (!nombre_producto || !precio_costo || !precio_venta)
         return res.json({ ok: false, mensaje: 'Nombre y precio son requeridos' });
@@ -553,11 +553,11 @@ router.put('/api/productos/:id', verificarSesion, async (req, res) => {
     await pool.query(
         `UPDATE productos
         SET nombre_producto=$1, descripcion=$2, precio_costo=$3, precio_venta=$4, id_categoria=$5,
-            genero=$6, id_colegio=$7, estado=$8,
-            updated_at=NOW(), updated_by=$9
-        WHERE id_producto=$10`,
+            genero=$6, id_colegio=$7, estado=$8, stock_minimo=$9,
+            updated_at=NOW(), updated_by=$10
+        WHERE id_producto=$11`,
         [nombre_producto, descripcion || null, precio_costo, precio_venta, id_categoria || null,
-        genero || null, id_colegio || null, estado ?? 1, id_usuario, id]
+        genero || null, id_colegio || null, estado ?? 1, stock_minimo || 10, id_usuario, id]
     );
         res.json({ ok: true, mensaje: 'Producto actualizado correctamente' });
     } catch (error) {
@@ -566,6 +566,159 @@ router.put('/api/productos/:id', verificarSesion, async (req, res) => {
     }
     res.json({ ok: false, mensaje: error.message });
 }
+});
+
+// ==========================================
+// ENDPOINTS DE INVENTARIO
+// ==========================================
+
+router.get('/api/inventario', verificarSesion, async (req, res) => {
+    try {
+        const resultado = await pool.query(
+            `SELECT p.id_producto, p.nombre_producto, c.nombre as categoria_nombre, 
+                    COALESCE(SUM(v.stock), 0) as stock_general,
+                    COALESCE(p.stock_minimo, 10) as stock_minimo,
+                    p.estado,
+                    COALESCE(SUM(v.stock * p.precio_costo), 0) as valor
+             FROM productos p
+             LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
+             LEFT JOIN variantes_producto v ON v.id_producto = p.id_producto
+             WHERE p.estado != 2
+             GROUP BY p.id_producto, c.nombre
+             ORDER BY p.id_producto`
+        );
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.get('/api/inventario/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const prodResult = await pool.query(
+            `SELECT p.id_producto, p.nombre_producto, c.nombre as categoria_nombre,
+                    COALESCE(p.stock_minimo, 10) as stock_minimo
+             FROM productos p
+             LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
+             WHERE p.id_producto = $1 AND p.estado != 2`,
+            [id]
+        );
+
+        if (!prodResult.rows.length) {
+            return res.json({ ok: false, mensaje: 'Producto no encontrado' });
+        }
+
+        const varResult = await pool.query(
+            `SELECT v.id_variante, v.color, v.stock, v.precio_extra, t.nombre_talla, tu.nombre_tipo
+             FROM variantes_producto v
+             LEFT JOIN tallas t ON t.id_talla = v.id_talla
+             LEFT JOIN tipos_uniforme tu ON tu.id_tipo = v.id_tipo
+             WHERE v.id_producto = $1
+             ORDER BY t.id_talla, v.color`,
+            [id]
+        );
+
+        res.json({
+            ok: true,
+            producto: prodResult.rows[0],
+            variantes: varResult.rows
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.get('/api/inventario/variante/:id_variante/historial', verificarSesion, async (req, res) => {
+    const { id_variante } = req.params;
+    try {
+        const resultado = await pool.query(
+            `SELECT m.fecha_movimiento, m.tipo_movimiento, m.cantidad, m.motivo, 
+                    m.stock_antes, m.stock_despues, m.boleta, m.observacion,
+                    v.color, t.nombre_talla
+             FROM movimiento_stock m
+             JOIN variantes_producto v ON v.id_variante = m.id_variante
+             LEFT JOIN tallas t ON t.id_talla = v.id_talla
+             WHERE m.id_variante = $1
+             ORDER BY m.fecha_movimiento DESC
+             LIMIT 50`,
+            [id_variante]
+        );
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.post('/api/inventario/actualizar', verificarSesion, async (req, res) => {
+    const { id_variante, operacion, cantidad, boleta, observacion } = req.body;
+    const cantVal = parseInt(cantidad);
+
+    if (!id_variante || !operacion || isNaN(cantVal) || cantVal < 0) {
+        return res.json({ ok: false, mensaje: 'Parámetros inválidos' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Obtener stock actual
+        const varRes = await client.query(
+            `SELECT stock, id_producto FROM variantes_producto WHERE id_variante = $1 FOR UPDATE`,
+            [id_variante]
+        );
+
+        if (!varRes.rows.length) {
+            throw new Error('La presentación/variante no existe');
+        }
+
+        const stockAntes = varRes.rows[0].stock;
+        const idProducto = varRes.rows[0].id_producto;
+        let stockDespues = stockAntes;
+        let tipoMovimiento = 'entrada';
+        let diff = cantVal;
+
+        if (operacion === 'ingreso') {
+            stockDespues = stockAntes + cantVal;
+            tipoMovimiento = 'entrada';
+        } else if (operacion === 'egreso') {
+            stockDespues = stockAntes - cantVal;
+            tipoMovimiento = 'salida';
+            if (stockDespues < 0) {
+                throw new Error(`Stock insuficiente para realizar el egreso. Disponible: ${stockAntes}`);
+            }
+        } else if (operacion === 'ajuste') {
+            stockDespues = cantVal;
+            diff = Math.abs(stockDespues - stockAntes);
+            tipoMovimiento = stockDespues >= stockAntes ? 'entrada' : 'salida';
+        } else {
+            throw new Error('Operación no permitida');
+        }
+
+        // Actualizar el stock
+        await client.query(
+            `UPDATE variantes_producto SET stock = $1 WHERE id_variante = $2`,
+            [stockDespues, id_variante]
+        );
+
+        // Insertar movimiento
+        const motivo = operacion === 'ajuste' ? 'Ajuste de inventario' : (operacion === 'ingreso' ? 'Ingreso manual' : 'Egreso manual');
+        await client.query(
+            `INSERT INTO movimiento_stock (
+                id_producto, id_variante, tipo_movimiento, cantidad, motivo,
+                stock_antes, stock_despues, boleta, observacion
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [idProducto, id_variante, tipoMovimiento, diff, motivo, stockAntes, stockDespues, boleta || null, observacion || null]
+        );
+
+        await client.query('COMMIT');
+        res.json({ ok: true, mensaje: 'Stock actualizado correctamente', stock_despues: stockDespues });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        res.json({ ok: false, mensaje: error.message });
+    } finally {
+        client.release();
+    }
 });
 
 router.get('/catalogo', (req, res) => {
