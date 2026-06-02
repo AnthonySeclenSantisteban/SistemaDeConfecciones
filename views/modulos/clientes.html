@@ -1,0 +1,217 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Gestión de Clientes</h2>
+    <p class="modulo-subtitulo">Administra los clientes del sistema</p>
+  </div>
+  <button class="btn-primary" id="btn-nuevo-cliente">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nuevo cliente
+  </button>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Lista de clientes</span>
+    <span class="total-label" id="total-clientes"></span>
+  </div>
+
+  <div id="clientes-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="clientes-empty" class="empty-state" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+    </svg>
+    <p>No hay clientes registrados</p>
+    <small>Crea el primero con el botón de arriba</small>
+  </div>
+
+  <div id="clientes-tabla" style="display:none; overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>DNI</th>
+          <th>Teléfono</th>
+          <th>Correo</th>
+          <th>Estado</th>
+          <th>Registro</th>
+          <th style="text-align:right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="clientes-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cliente" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-cliente-titulo">Nuevo cliente</span>
+      <button class="modal-close" id="btn-cerrar-modal-cliente">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="alert alert-error" id="modal-cliente-alert" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="modal-cliente-alert-msg"></span>
+    </div>
+
+    <input type="hidden" id="cliente-id">
+
+    <div class="field">
+      <label for="cliente-nombres">Nombres</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <input type="text" id="cliente-nombres" placeholder="Nombres completos" maxlength="100">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cliente-apellidos">Apellidos</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <input type="text" id="cliente-apellidos" placeholder="Apellidos" maxlength="100">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cliente-dni">DNI</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+        </span>
+        <input type="text" id="cliente-dni" placeholder="12345678" maxlength="15">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cliente-telefono">Teléfono</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6 6l1.27-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 17z"/>
+          </svg>
+        </span>
+        <input type="text" id="cliente-telefono" placeholder="987654321" maxlength="15">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cliente-correo">Correo</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </span>
+        <input type="email" id="cliente-correo" placeholder="correo@ejemplo.com" maxlength="100">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cliente-estado">Estado</label>
+      <div class="input-wrap">
+        <select id="cliente-estado">
+          <option value="1">Activo</option>
+          <option value="0">Inactivo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-cliente">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-cliente">
+        <span id="btn-guardar-cliente-text">Guardar cliente</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-eliminar-cliente" style="display:none;">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">¿Eliminar cliente?</span>
+      <button class="modal-close" id="btn-cerrar-eliminar-cliente">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <p class="modal-desc">
+      El cliente <strong id="eliminar-cliente-nombre"></strong> será marcado como eliminado.
+    </p>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-eliminar-cliente">Cancelar</button>
+      <button class="btn-danger" id="btn-confirmar-eliminar-cliente">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-historial-cliente" style="display:none;">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <span class="modal-title" id="historial-cliente-nombre">Historial</span>
+      <button class="modal-close" id="btn-cerrar-historial-cliente">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div id="historial-loading" class="spinner-wrap" style="padding:20px;">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="historial-content" style="display:none;">
+      <div style="overflow-x:auto;">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>N° Venta</th>
+              <th>Fecha</th>
+              <th>Tipo Doc.</th>
+              <th>Método Pago</th>
+              <th>Estado Pago</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="historial-tbody"></tbody>
+        </table>
+      </div>
+      <div id="historial-empty" class="empty-state" style="display:none;padding:30px;">
+        <p>Sin compras registradas</p>
+      </div>
+      <div style="padding:14px 0 0;border-top:1px solid var(--border);margin-top:12px;display:flex;justify-content:flex-end;">
+        <span style="font-size:13px;font-weight:600;color:var(--text);">Total pagado: &nbsp;</span>
+        <span style="font-size:13px;font-weight:700;color:var(--accent);" id="historial-total">S/ 0.00</span>
+      </div>
+    </div>
+  </div>
+</div>

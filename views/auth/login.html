@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <title>Iniciar Sesion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel='stylesheet' href='/css/login.css'>
+</head>
+<body>
+     <div class="fondo"></div>
+ 
+  <div class="card">
+    <div class="logo-area">
+      <img class="logo-img" id="logo-img" src="" alt="Logo">
+ 
+
+      <div class="logo-text" id="logo-default">
+        <div class="logo-icon">🧵</div>
+        <div>
+          <div class="logo-name">Confecciones <span>Lix</span></div>
+        </div>
+      </div>
+      <div class="tagline">Sistema de gestión</div>
+    </div>
+ 
+    <div class="divider"></div>
+ 
+    <div class="titulo">
+      <h1>Iniciar sesión</h1>
+      <p>Ingresa tus credenciales para continuar</p>
+    </div>
+ 
+    <div class="error-msg" id="error-msg">
+      <span class="ico">⚠️</span>
+      <span id="error-text">Correo o contraseña incorrectos.</span>
+    </div>
+ 
+    <form action="/login" method="POST" id="loginForm">
+      <div class="field">
+        <label for="correo">Correo electrónico</label>
+        <div class="input-wrap">
+          <span class="input-icon">✉</span>
+          <input
+            type="email"
+            id="correo"
+            name="correo"
+            placeholder="admin@ejemplo.com"
+            autocomplete="email"
+            required
+          >
+        </div>
+      </div>
+ 
+      <div class="field">
+        <label for="contra">Contraseña</label>
+        <div class="input-wrap">
+          <input
+            type="password"
+            id="contra"
+            name="contra"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          >
+          <button type="button" class="toggle-pass" id="togglePass" title="Mostrar/ocultar">👁</button>
+        </div>
+      </div>
+ 
+      <button type="submit" class="btn" id="btnLogin">
+        <div class="spinner"></div>
+        <span class="btn-text">Entrar →</span>
+      </button>
+    </form>
+ 
+    <div class="final"> 2026 - Confecciones Lix </div>
+  </div>
+
+   <script>
+   
+    const params = new URLSearchParams(window.location.search);
+    const errorMsg = document.getElementById('error-msg');
+    const errorText = document.getElementById('error-text');
+ 
+    if (params.get('error') === '1') {
+    errorMsg.classList.add('show');
+    errorText.textContent = 'Correo o contraseña incorrectos.';
+    } else if (params.get('error') === '2') {
+        errorMsg.classList.add('show');
+        errorText.textContent = 'Error del servidor, intenta de nuevo.';
+    } else if (params.get('error') === '3') {
+        errorMsg.classList.add('show');
+        errorText.textContent = 'Tu cuenta está inhabilitada :C. Contacta al administrador.';
+    } else if (params.get('error') === '4') {
+        errorMsg.classList.add('show');
+        errorText.textContent = 'Tu perfil está inhabilitado :C . No puedes acceder al sistema.';
+    }
+ 
+    document.getElementById('togglePass').addEventListener('click', function () {
+      const input = document.getElementById('contra');
+      const isPass = input.type === 'password';
+      input.type = isPass ? 'text' : 'password';
+      this.textContent = isPass ? ' ' : '👁';
+    });
+ 
+    document.getElementById('loginForm').addEventListener('submit', function () {
+      const btn = document.getElementById('btnLogin');
+      btn.classList.add('loading');
+      btn.disabled = true;
+    });
+  </script>
+
+</body>
+</html>

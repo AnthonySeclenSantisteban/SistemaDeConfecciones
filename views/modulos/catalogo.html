@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo — Confecciones Lix</title>
+    <link rel="stylesheet" href="/css/modulos/catalogo.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
+</head>
+<body>
+
+<header class="header">
+    <div class="header-inner">
+        <a class="brand" href="/catalogo">
+            <span class="brand-logo">🧵</span>
+            <div>
+                <h1>Confecciones Lix</h1>
+                <p>Uniformes escolares · Chiclayo</p>
+            </div>
+        </a>
+        <div class="header-actions">
+            <button class="btn-outline" onclick="abrirModalSeguimiento()">
+                <i class="ti ti-package"></i> Mis pedidos
+            </button>
+            <a class="btn-outline" href="https://wa.me/51945952450" target="_blank">
+                <i class="ti ti-brand-whatsapp"></i> Contacto
+            </a>
+            <button class="btn-carrito" onclick="abrirCarrito()">
+                <i class="ti ti-shopping-cart"></i> Carrito
+                <span class="badge-carrito" id="badgeCarrito">0</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- NAV SECUNDARIA -->
+    <nav class="nav-bar">
+        <div class="nav-inner">
+            <a class="nav-link active" href="/catalogo">
+                <i class="ti ti-home"></i> Inicio
+            </a>
+
+            <div class="nav-dropdown">
+                <a class="nav-link">
+                    <i class="ti ti-building-community"></i> Colegios <span class="nav-chev">▾</span>
+                </a>
+                <div class="nav-dropdown-menu" id="menuColegios">
+                    <!-- se llena desde JS -->
+                </div>
+            </div>
+
+            <a class="nav-link" href="#promociones">
+                <i class="ti ti-tag"></i> Promociones
+            </a>
+            <a class="nav-link" href="#nosotros" onclick="abrirNosotros()">
+                <i class="ti ti-info-circle"></i> Nosotros
+            </a>
+            <a class="nav-link" href="https://wa.me/51945952450" target="_blank">
+                <i class="ti ti-headset"></i> Contacto
+            </a>
+        </div>
+    </nav>
+</header>
+
+<section class="slider-section" id="sliderSection" style="display:none;">
+    <div class="slider-track" id="sliderTrack"></div>
+    <button class="slider-prev" onclick="moverSlider(-1)">&#8249;</button>
+    <button class="slider-next" onclick="moverSlider(1)">&#8250;</button>
+    <div class="slider-dots" id="sliderDots"></div>
+</section>
+ 
+<section class="hero">
+    <div class="hero-inner">
+        <h2>Uniformes escolares de calidad</h2>
+        <p>Encuentra los uniformes de los principales colegios de Chiclayo.</p>
+        <div class="hero-stats">
+            <div class="stat"><strong id="totalProductos">—</strong><span>Productos</span></div>
+            <div class="stat"><strong id="totalColegios">—</strong><span>Colegios</span></div>
+            <div class="stat"><strong>📱</strong><span>Yape / Plin</span></div>
+            <div class="stat"><strong>🚚</strong><span>Delivery</span></div>
+        </div>
+    </div>
+    
+</section>
+ 
+<section class="filtros-section">
+    <div class="filtros-inner">
+        <div class="filtro-grupo">
+            <label>🏫 Colegio</label>
+            <select id="filtroColegio">
+                <option value="">Todos los colegios</option>
+            </select>
+        </div>
+        <div class="filtro-grupo">
+            <label>📂 Categoría</label>
+            <select id="filtroCategoria">
+                <option value="">Todas las categorías</option>
+            </select>
+        </div>
+        <div class="filtro-grupo">
+            <label>👤 Género</label>
+            <select id="filtroGenero">
+                <option value="">Todos</option>
+                <option value="masculino">Masculino</option>
+                <option value="femenino">Femenino</option>
+                <option value="unisex">Unisex</option>
+            </select>
+        </div>
+        <div class="filtro-grupo">
+            <label>🔍 Buscar</label>
+            <input type="text" id="filtroBusqueda" placeholder="Nombre del producto...">
+        </div>
+        <button class="btn-limpiar" onclick="limpiarFiltros()">✕ Limpiar</button>
+    </div>
+</section>
+ 
+<main class="catalogo-main">
+    <div class="catalogo-header">
+        <span id="resultadoCount" class="resultado-count">Cargando...</span>
+    </div>
+    <div class="productos-grid" id="productosGrid">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-icon">🔍</div>
+        <p>No se encontraron productos con ese filtro.</p>
+        <button onclick="limpiarFiltros()">Ver todos los productos</button>
+    </div>
+</main>
+ 
+<div class="modal-overlay" id="modalProducto" onclick="cerrarModalProducto(event)">
+    <div class="modal-producto">
+        <button class="modal-close" onclick="cerrarModalProductoBtn()">✕</button>
+        <div class="modal-producto-body" id="modalProductoBody"></div>
+    </div>
+</div>
+ 
+<div class="carrito-overlay" id="carritoOverlay" onclick="cerrarCarrito()"></div>
+<aside class="carrito-drawer" id="carritoDrawer">
+    <div class="carrito-header">
+        <h3>🛒 Tu carrito</h3>
+        <button onclick="cerrarCarrito()">✕</button>
+    </div>
+    <div class="carrito-items" id="carritoItems">
+        <div class="carrito-empty" id="carritoEmpty">
+            <p>Tu carrito está vacío</p>
+            <small>Agrega productos del catálogo</small>
+        </div>
+    </div>
+    <div class="carrito-footer" id="carritoFooter" style="display:none;">
+        <div class="carrito-total">
+            <span>Total:</span>
+            <strong id="carritoTotal">S/ 0.00</strong>
+        </div>
+        <button class="btn-checkout" onclick="irCheckout()">Proceder al pago →</button>
+    </div>
+</aside>
+ 
+<div class="modal-overlay" id="modalCheckout" onclick="cerrarCheckout(event)">
+    <div class="modal-checkout">
+        <button class="modal-close" onclick="document.getElementById('modalCheckout').classList.remove('active')">✕</button>
+        <h2>💳 Finalizar pedido</h2>
+ 
+        <div class="checkout-pasos">
+            <div class="paso active" id="paso1Tab">1 · Datos</div>
+            <div class="paso" id="paso2Tab">2 · Entrega</div>
+            <div class="paso" id="paso3Tab">3 · Pago</div>
+        </div>
+ 
+        <div class="paso-content" id="paso1">
+            <div class="form-grid">
+                <div class="fg"><label>Nombres *</label><input id="chkNombres" placeholder="Tus nombres"></div>
+                <div class="fg"><label>Apellidos</label><input id="chkApellidos" placeholder="Tus apellidos"></div>
+                <div class="fg"><label>Teléfono *</label><input id="chkTelefono" placeholder="9XXXXXXXX" maxlength="9"></div>
+                <div class="fg"><label>Correo (para confirmación)</label><input id="chkCorreo" type="email" placeholder="correo@email.com"></div>
+            </div>
+            <div class="paso-actions">
+                <button class="btn-primary" onclick="irPaso(2)">Siguiente →</button>
+            </div>
+        </div>
+ 
+        <div class="paso-content" id="paso2" style="display:none;">
+            <div class="opcion-grupo">
+                <label class="opcion-label">🚚 Tipo de entrega</label>
+                <div class="opciones-radio">
+                    <label class="radio-card">
+                        <input type="radio" name="tipoEntrega" value="delivery" checked>
+                        <span><strong>Delivery</strong><br><small>Chiclayo y distritos</small></span>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="tipoEntrega" value="recojo_tienda">
+                        <span><strong>Recojo en tienda</strong><br><small>Coordinar por WhatsApp</small></span>
+                    </label>
+                </div>
+            </div>
+            <div id="camposDelivery">
+                <div class="form-grid">
+                    <div class="fg full"><label>Dirección *</label><input id="chkDireccion" placeholder="Av. / Jr. / Calle..."></div>
+                    <div class="fg"><label>Distrito</label><input id="chkDistrito" placeholder="Ej: Chiclayo"></div>
+                    <div class="fg"><label>Referencia</label><input id="chkReferencia" placeholder="Ej: Frente al parque"></div>
+                </div>
+            </div>
+            <div class="opcion-grupo" style="margin-top:1rem;">
+                <label class="opcion-label">📄 Documento</label>
+                <div class="opciones-radio">
+                    <label class="radio-card">
+                        <input type="radio" name="tipoDoc" value="nota_venta" checked>
+                        <span><strong>Nota de Venta</strong><br><small>NV-2026-XXXXXX</small></span>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="tipoDoc" value="boleta">
+                        <span><strong>Boleta</strong><br><small>B001-XXXXXX</small></span>
+                    </label>
+                </div>
+            </div>
+            <div class="paso-actions">
+                <button class="btn-secondary" onclick="irPaso(1)">← Volver</button>
+                <button class="btn-primary" onclick="irPaso(3)">Siguiente →</button>
+            </div>
+        </div>
+ 
+        <div class="paso-content" id="paso3" style="display:none;">
+            <div class="resumen-total">
+                <span>Total a pagar:</span>
+                <strong id="checkoutTotal">S/ 0.00</strong>
+            </div>
+ 
+            <label class="opcion-label">💳 Método de pago</label>
+            <div class="metodos-pago-grid" id="metodosPagoGrid">
+            </div>
+ 
+            <div class="panel-pago" id="panelYapePlin" style="display:none;">
+                <div class="qr-box">
+                    <div class="qr-placeholder">📱</div>
+                    <div class="qr-info">
+                        <p><strong>Confecciones Lix</strong></p>
+                        <p class="qr-numero" id="numeroYapePlin">945 952 450</p>
+                        <p class="qr-monto">Monto: <strong id="montoYapePlin">S/ 0.00</strong></p>
+                    </div>
+                </div>
+                <div class="fg">
+                    <label>N° de operación (opcional)</label>
+                    <input id="nroOperacionYP" placeholder="Ej: 123456789">
+                </div>
+                <p class="aviso-pago">📸 Envía el screenshot del pago por WhatsApp al <strong>945 952 450</strong> después de confirmar.</p>
+            </div>
+ 
+            <div class="panel-pago" id="panelTransferencia" style="display:none;">
+                <div class="banco-info">
+                    <div class="banco-logo">🏦</div>
+                    <div>
+                        <p><strong>BCP</strong></p>
+                        <p>Titular: Confecciones Lix</p>
+                        <p class="cuenta-numero" id="numeroCuenta">30598113774008</p>
+                        <p class="qr-monto">Monto: <strong id="montoTransferencia">S/ 0.00</strong></p>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="fg"><label>N° de operación *</label><input id="nroOperacionBCP" placeholder="Ej: 987654321012"></div>
+                    <div class="fg"><label>Fecha de operación</label><input type="date" id="fechaOperacion"></div>
+                </div>
+                <p class="aviso-pago">📸 Envía el voucher de transferencia por WhatsApp al <strong>945 952 450</strong>.</p>
+            </div>
+ 
+            <div class="panel-pago" id="panelVisa" style="display:none;">
+                <div class="visa-form">
+                    <div class="fg full"><label>Número de tarjeta</label>
+                        <input id="visaNumero" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatearTarjeta(this)">
+                    </div>
+                    <div class="fg"><label>Fecha de vencimiento</label><input id="visaFecha" placeholder="MM/AA" maxlength="5" oninput="formatearFechaVisa(this)"></div>
+                    <div class="fg"><label>CVV</label><input id="visaCvv" placeholder="123" maxlength="3" type="password"></div>
+                    <div class="fg full"><label>Nombre en tarjeta</label><input id="visaNombre" placeholder="NOMBRE APELLIDO"></div>
+                </div>
+                <div class="visa-simulado-aviso">
+                    <span>⚠️</span> Pago simulado — No se realiza ningún cargo real
+                </div>
+            </div>
+ 
+            <div class="paso-actions">
+                <button class="btn-secondary" onclick="irPaso(2)">← Volver</button>
+                <button class="btn-confirmar" id="btnConfirmar" onclick="confirmarPedido()">
+                    ✅ Confirmar pedido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+<div class="modal-overlay" id="modalConfirmacion">
+    <div class="modal-confirmacion">
+        <div class="confirmacion-icon">🎉</div>
+        <h2>¡Pedido registrado!</h2>
+        <div class="confirmacion-datos" id="confirmacionDatos"></div>
+        <p class="confirmacion-aviso">Guarda tu número de pedido para rastrear el estado. Te contactaremos al teléfono registrado.</p>
+        <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
+            <a id="btnWhatsapp" class="btn-whatsapp" href="#" target="_blank">💬 WhatsApp</a>
+            <button class="btn-primary" onclick="cerrarConfirmacion()">Seguir comprando</button>
+        </div>
+    </div>
+</div>
+ 
+<div class="modal-overlay" id="modalSeguimiento" onclick="cerrarModalSeg(event)">
+    <div class="modal-seguimiento">
+        <button class="modal-close" onclick="document.getElementById('modalSeguimiento').classList.remove('active')">✕</button>
+        <h2>📦 Rastrear pedido</h2>
+        <div class="fg">
+            <label>Código de seguimiento</label>
+            <input id="inputSeguimiento" placeholder="LIX-1234567890" style="width:100%;padding:0.75rem;border:2px solid #ddd;border-radius:8px;">
+        </div>
+        <button class="btn-primary" style="width:100%;margin-top:0.8rem;" onclick="rastrearPedido()">Rastrear</button>
+        <div id="resultadoSeguimiento" style="margin-top:1rem;"></div>
+    </div>
+</div>
+ 
+<a class="btn-whatsapp-flotante" href="https://wa.me/51945952450?text=Hola,%20quiero%20información%20sobre%20uniformes" target="_blank">
+    💬
+</a>
+ 
+<script src="/js/modulos/catalogo.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confecciones Lix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel='stylesheet' href='/css/dashboard.css'>
+    <link rel="stylesheet" href="/css/modulos/perfiles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+</head>
+<body>
+
+    
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">🧵</div>
+            <div class="logo-text">
+                <strong>Confecciones <span>Lix</span></strong>
+                <small>Sistema de gestión</small>
+            </div>
+        </div>
+
+        <nav>
+            <div class="nav-section">Principal</div>
+            <a href="#" class="nav-item active" data-modulo="dashboard">
+               <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+
+            <div class="nav-section">Administración</div>
+            <a href="#" class="nav-item" data-modulo="usuarios">
+                <i data-lucide="user"></i> Usuarios
+            </a>
+            <a href="#" class="nav-item" data-modulo="perfiles">
+                <i data-lucide="shield"></i> Perfiles
+            </a>
+
+            <div class="nav-section">Catálogo</div>
+            <a href="#" class="nav-item" data-modulo="categorias">
+                <i data-lucide="tag"></i> Categorías
+            </a>
+            <a href="#" class="nav-item" data-modulo="productos">
+                <i data-lucide="shirt"></i> Productos
+            </a>
+            <a href="#" class="nav-item" data-modulo="variantes">
+                <i data-lucide="palette"></i> Variantes
+            </a>
+
+            <div class="nav-section">Ventas</div>
+            <a href="#" class="nav-item" data-modulo="clientes">
+                <i data-lucide="users"></i> Clientes
+            </a>
+            <a href="#" class="nav-item" data-modulo="pedidos">
+                <i data-lucide="shopping-bag"></i> Pedidos
+            </a>
+            <a href="#" class="nav-item" data-modulo="envios">
+                <i data-lucide="truck"></i> Envíos
+            </a>
+            <a href="#" class="nav-item" data-modulo="verificacion-pagos">
+                <i data-lucide="check-circle"></i> Verificación Pagos
+            </a>
+
+            <div class="nav-section">Almacén</div>
+            <a href="#" class="nav-item" data-modulo="inventario">
+                <i data-lucide="package"></i> Inventario
+            </a>
+            <a href="#" class="nav-item" data-modulo="compras">
+                <i data-lucide="file-text"></i> Compras
+            </a>
+
+            <a href="#" class="nav-item" data-modulo="gestion-tienda">
+                <i data-lucide="layout"></i> Gestión Tienda
+            </a>
+            <a href="#" class="nav-item" data-modulo="configuracion">
+                <i data-lucide="settings"></i> Configuración
+            </a>
+
+            <div class="nav-section">Tienda</div>
+            <a href="/catalogo" target="_blank" class="nav-item" data-modulo="catalogo">
+                <i data-lucide="shopping-cart"></i> Sitio Web
+            </a>
+        </nav>
+
+     
+
+        <div class="sidebar-footer">
+            <div class="user-chip">
+                <div class="avatar" id="avatar">A</div>
+                <div class="user-info">
+                    <div class="user-nombre" id="user-nombre">Admin</div>
+                    <div class="user-perfil" id="user-perfil">Administrador</div>
+                </div>
+            </div>
+            <a href="/logout" class="btn-logout">Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div>
+                <h1 id="titulo-modulo">Dashboard</h1>
+                <span id="fecha-hoy"></span>
+            </div>
+        </div>
+
+        <div id="contenido"></div>
+    </main>
+
+    <script src="/js/dashboard.js"></script>
+    <script>lucide.createIcons();</script>
+    <script src="/js/modulos/clientes.js"></script>
+    
+</body>
+</html>

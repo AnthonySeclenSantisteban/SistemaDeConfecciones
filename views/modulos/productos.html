@@ -1,0 +1,219 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Gestión de Productos</h2>
+    <p class="modulo-subtitulo">Administra el catálogo de productos</p>
+  </div>
+  <button class="btn-primary" id="btn-nuevo-producto">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nuevo producto
+  </button>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Lista de productos</span>
+    <span class="total-label" id="total-productos"></span>
+  </div>
+
+  <div style="display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+    <div class="input-wrap" style="flex:1;min-width:180px;">
+      <span class="input-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </span>
+      <input type="text" id="filtro-nombre-producto" placeholder="Buscar por nombre…">
+    </div>
+    <div class="input-wrap" style="min-width:180px;">
+      <select id="filtro-categoria-producto">
+        <option value="">Todas las categorías</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="productos-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="productos-empty" class="empty-state" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+    <p>No hay productos registrados :C</p>
+    <small>Crea el primero con el botón de arriba :D</small>
+  </div>
+
+  <div id="productos-tabla" style="display:none;overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Colegio</th>
+          <th>Género</th>
+          <th>Precio Costo</th>
+          <th>Precio Venta</th>
+          <th>Estado</th>
+          <th>Creado</th>
+          <th style="text-align:right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="productos-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-producto" style="display:none;">
+  <div class="modal" style="max-width:540px;">
+
+    <div class="modal-header">
+      <span class="modal-title" id="modal-producto-titulo">Nuevo producto</span>
+      <button class="modal-close" id="btn-cerrar-modal-producto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="alert alert-error" id="modal-producto-alert" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="modal-producto-alert-msg"></span>
+    </div>
+
+    <input type="hidden" id="producto-id">
+
+    <div class="form-grid">
+      <div class="field" style="grid-column:1/-1;">
+        <label for="producto-nombre">Nombre del producto</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+            </svg>
+          </span>
+          <input type="text" id="producto-nombre" placeholder="Ej. Polo deportivo San José" maxlength="100">
+        </div>
+      </div>
+
+      <div class="field" style="grid-column:1/-1;">
+        <label for="producto-descripcion">Descripción</label>
+        <div class="input-wrap">
+          <textarea id="producto-descripcion" placeholder="Descripción opcional del producto" maxlength="200" style="padding:10px 14px;"></textarea>
+        </div>
+      </div>
+      <div class="field">
+  <label for="producto-precio-costo">Precio costo (S/)</label>
+  <div class="input-wrap">
+    <span class="input-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+      </svg>
+    </span>
+    <input type="number" id="producto-precio-costo" placeholder="0.00" min="0" step="0.01">
+  </div>
+</div>
+
+<div class="field">
+  <label for="producto-precio-venta">Precio venta (S/)</label>
+  <div class="input-wrap">
+    <span class="input-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+      </svg>
+    </span>
+    <input type="number" id="producto-precio-venta" placeholder="0.00" min="0" step="0.01">
+  </div>
+</div>
+
+      <div class="field">
+        <label for="producto-estado">Estado</label>
+        <div class="input-wrap">
+          <select id="producto-estado">
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="producto-categoria">Categoría</label>
+        <div class="input-wrap">
+          <select id="producto-categoria">
+            <option value="">Sin categoría</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="producto-colegio">Colegio</label>
+        <div class="input-wrap">
+          <select id="producto-colegio">
+            <option value="">Sin colegio</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column:1/-1;">
+        <label for="producto-genero">Género</label>
+        <div class="input-wrap">
+          <select id="producto-genero">
+            <option value="">Sin especificar</option>
+            <option value="masculino">Masculino</option>
+            <option value="femenino">Femenino</option>
+            <option value="unisex">Unisex</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-producto">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-producto">
+        <span id="btn-guardar-producto-text">Crear producto</span>
+        <div class="spinner" id="btn-guardar-producto-spinner"
+             style="display:none;width:14px;height:14px;border-width:2px;border-color:#ffffff55;border-top-color:#fff;"></div>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-eliminar-producto" style="display:none;">
+  <div class="modal modal-sm">
+
+    <div class="modal-header">
+      <span class="modal-title">¿Eliminar producto?</span>
+      <button class="modal-close" id="btn-cerrar-eliminar-producto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="modal-desc">
+      El producto <strong id="eliminar-producto-nombre"></strong> será marcado como eliminado
+      y no aparecerá en el sistema.
+    </p>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-eliminar-producto">Cancelar</button>
+      <button class="btn-danger" id="btn-confirmar-eliminar-producto">
+        <span id="btn-eliminar-producto-text">Sí, eliminar</span>
+        <div class="spinner spinner-danger" id="btn-eliminar-producto-spinner" style="display:none;"></div>
+      </button>
+    </div>
+
+  </div>
+</div>

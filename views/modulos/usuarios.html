@@ -1,0 +1,175 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Gestión de Usuarios</h2>
+    <p class="modulo-subtitulo">Administra los usuarios del sistema</p>
+  </div>
+  <button class="btn-primary" id="btn-nuevo-usuario">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nuevo usuario
+  </button>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Lista de usuarios</span>
+    <span class="total-label" id="total-usuarios"></span>
+  </div>
+
+  <div id="usuarios-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="usuarios-empty" class="empty-state" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    <p>No hay usuarios registrados</p>
+    <small>Crea el primero con el botón de arriba</small>
+  </div>
+
+  <div id="usuarios-tabla" style="display:none; overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Perfil</th>
+          <th>Estado</th>
+          <th>Fecha registro</th>
+          <th style="text-align:right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="usuarios-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-usuario" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-usuario-titulo">Nuevo usuario</span>
+      <button class="modal-close" id="btn-cerrar-modal-usuario">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="alert alert-error" id="modal-usuario-alert" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="modal-usuario-alert-msg"></span>
+    </div>
+
+    <input type="hidden" id="usuario-id">
+
+    <div class="field">
+      <label for="usuario-nombre">Nombre</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <input type="text" id="usuario-nombre" placeholder="Nombre completo" maxlength="100">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="usuario-correo">Correo</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </span>
+        <input type="email" id="usuario-correo" placeholder="correo@ejemplo.com" maxlength="100">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="usuario-contrasena">Contraseña <span id="contrasena-hint" style="font-size:11px;color:var(--muted);">(dejar vacío para no cambiar)</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </span>
+        <input type="password" id="usuario-contrasena" placeholder="••••••••">
+      </div>
+    </div>
+
+    <div class="field" id="field-confirmar" >
+  <label for="usuario-confirmar">Confirmar contraseña</label>
+  <div class="input-wrap">
+    <span class="input-icon">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </span>
+    <input type="password" id="usuario-confirmar" placeholder="••••••••">
+  </div>
+</div>
+
+    <div class="field">
+      <label for="usuario-perfil">Perfil</label>
+      <div class="input-wrap">
+        <select id="usuario-perfil">
+          <option value="">Selecciona un perfil</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="usuario-estado">Estado</label>
+      <div class="input-wrap">
+        <select id="usuario-estado">
+          <option value="1">Activo</option>
+          <option value="0">Inactivo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-usuario">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-usuario">
+        <span id="btn-guardar-usuario-text">Crear usuario</span>
+        <div class="spinner" id="btn-guardar-usuario-spinner"
+         style="display:none; width:14px; height:14px; border-width:2px; border-color:#ffffff55; border-top-color:#fff;"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-eliminar-usuario" style="display:none;">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">¿Eliminar usuario?</span>
+      <button class="modal-close" id="btn-cerrar-eliminar-usuario">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <p class="modal-desc">
+      El usuario <strong id="eliminar-usuario-nombre"></strong> será marcado como eliminado y no podrá iniciar sesión.
+    </p>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-eliminar-usuario">Cancelar</button>
+      <button class="btn-danger" id="btn-confirmar-eliminar-usuario">Sí, eliminar</button>
+    </div>
+  </div>
+</div>

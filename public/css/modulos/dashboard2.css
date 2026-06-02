@@ -1,0 +1,67 @@
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 22px 24px;
+    border: 1.5px solid #f0ede8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    border-radius: 16px 16px 0 0;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.card:nth-child(1)::before { background: #f4a96a; }
+.card:nth-child(1) .value  { color: #d97c3a; }
+
+.card:nth-child(2)::before { background: #7ec8a4; }
+.card:nth-child(2) .value  { color: #3a9e72; }
+
+.card:nth-child(3)::before { background: #89b8e8; }
+.card:nth-child(3) .value  { color: #3a7fc1; }
+
+.card:nth-child(4)::before { background: #f49898; }
+.card:nth-child(4) .value  { color: #c94f4f; }
+
+.card .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #a09890;
+    margin-bottom: 10px;
+}
+
+.card .value {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.card .delta {
+    font-size: 12px;
+    color: #b0a89e;
+}
+
+.card .delta.neg {
+    color: #c94f4f;
+}

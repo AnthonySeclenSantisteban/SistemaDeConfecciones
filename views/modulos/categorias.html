@@ -1,0 +1,150 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Gestión de Categorías</h2>
+    <p class="modulo-subtitulo">Administra las categorías del sistema</p>
+  </div>
+  <button class="btn-primary" id="btn-nueva-categoria">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nueva categoría
+  </button>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Lista de categorías</span>
+    <span class="total-label" id="total-categorias"></span>
+  </div>
+
+  <div id="categorias-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="categorias-empty" class="empty-state" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+      <line x1="7" y1="7" x2="7.01" y2="7"/>
+    </svg>
+    <p>No hay categorías registradas</p>
+    <small>Crea la primera con el botón de arriba</small>
+  </div>
+
+  <div id="categorias-tabla" style="display:none; overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Descripción</th>
+          <th>Estado</th>
+          <th>Creado</th>
+          <th style="text-align:right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="categorias-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR -->
+<div class="modal-overlay" id="modal-categoria" style="display:none;">
+  <div class="modal">
+
+    <div class="modal-header">
+      <span class="modal-title" id="modal-categoria-titulo">Nueva categoría</span>
+      <button class="modal-close" id="btn-cerrar-modal-categoria">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="alert alert-error" id="modal-categoria-alert" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="modal-categoria-alert-msg"></span>
+    </div>
+
+    <input type="hidden" id="categoria-id">
+
+    <div class="field">
+      <label for="categoria-nombre">Nombre</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+            <line x1="7" y1="7" x2="7.01" y2="7"/>
+          </svg>
+        </span>
+        <input type="text" id="categoria-nombre" placeholder="Ej. Medicinas" maxlength="100">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="categoria-descripcion">Descripción</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </span>
+        <input type="text" id="categoria-descripcion" placeholder="Breve descripción" maxlength="200">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="categoria-estado">Estado</label>
+      <div class="input-wrap">
+        <select id="categoria-estado">
+          <option value="1">Activo</option>
+          <option value="0">Inactivo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-categoria">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-categoria">
+        <span id="btn-guardar-categoria-text">Crear categoría</span>
+        <div class="spinner" id="btn-guardar-categoria-spinner"
+             style="display:none; width:14px; height:14px; border-width:2px; border-color:#ffffff55; border-top-color:#fff;"></div>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-eliminar-categoria" style="display:none;">
+  <div class="modal modal-sm">
+
+    <div class="modal-header">
+      <span class="modal-title">¿Eliminar categoría?</span>
+      <button class="modal-close" id="btn-cerrar-eliminar-categoria">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <p class="modal-desc">
+      La categoría <strong id="eliminar-categoria-nombre"></strong> será marcada como eliminada
+      y no aparecerá en el sistema.
+    </p>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-eliminar-categoria">Cancelar</button>
+      <button class="btn-danger" id="btn-confirmar-eliminar-categoria">
+        <span id="btn-eliminar-categoria-text">Sí, eliminar</span>
+        <div class="spinner spinner-danger" id="btn-eliminar-categoria-spinner" style="display:none;"></div>
+      </button>
+    </div>
+
+  </div>
+</div>

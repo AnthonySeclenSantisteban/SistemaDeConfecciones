@@ -1,0 +1,162 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Perfiles de acceso</h2>
+    <p class="modulo-subtitulo">Gestiona los roles y permisos del sistema</p>
+  </div>
+  <button class="btn-primary" id="btn-nuevo-perfil">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nuevo perfil
+  </button>
+</div>
+ 
+<!-- TABLA -->
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Todos los perfiles</span>
+    <span class="total-label" id="total-perfiles"></span>
+  </div>
+ 
+  <div id="perfiles-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+ 
+  <div id="perfiles-empty" class="empty-state" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/>
+    </svg>
+    <p>No hay perfiles registrados</p>
+    <small>Crea el primero con el botón de arriba</small>
+  </div>
+ 
+  <div id="perfiles-tabla" style="display:none; overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Descripción</th>
+          <th>Módulos asignados</th>
+          <th>Estado</th>
+          <th>Creado</th>
+          <th style="text-align:right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="perfiles-tbody"></tbody>
+    </table>
+  </div>
+</div>
+ 
+ <div class="modal-overlay" id="modal-perfil" style="display:none;">
+  <div class="modal">
+ 
+    <div class="modal-header">
+      <span class="modal-title" id="modal-titulo">Nuevo perfil</span>
+      <button class="modal-close" id="btn-cerrar-modal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+ 
+    <div class="alert alert-error" id="modal-alert" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="modal-alert-msg"></span>
+    </div>
+ 
+    <input type="hidden" id="perfil-id">
+ 
+    <div class="field">
+      <label for="perfil-nombre">Nombre del perfil</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/>
+          </svg>
+        </span>
+        <input type="text" id="perfil-nombre" placeholder="Ej. Vendedor" maxlength="50">
+      </div>
+      <div class="field-error" id="err-nombre" style="display:none;">Este campo es requerido</div>
+    </div>
+ 
+    <div class="field">
+      <label for="perfil-descripcion">Descripción</label>
+      <div class="input-wrap">
+        <span class="input-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+        </span>
+        <input type="text" id="perfil-descripcion" placeholder="Breve descripción del perfil" maxlength="120">
+      </div>
+      <div class="field-error" id="err-desc" style="display:none;">Este campo es requerido</div>
+    </div>
+
+  <div class="field">
+    <label for="perfil-estado">Estado</label>
+    <div class="input-wrap">
+      <select id="perfil-estado">
+        <option value="1">Activo</option>
+        <option value="0">Inactivo</option>
+      </select>
+    </div>
+  </div>
+ 
+    <div class="field">
+      <label>Opciones del sistema</label>
+      <p class="campo-ayuda">Selecciona los módulos a los que tendrá acceso este perfil</p>
+      <div id="opciones-loading" class="spinner-wrap" style="padding:20px;">
+        <div class="spinner"></div>
+      </div>
+      <div id="opciones-lista" class="opciones-grid" style="display:none;"></div>
+    </div>
+ 
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar">
+        <span id="btn-guardar-text">Guardar perfil</span>
+        <div class="spinner" id="btn-spinner" style="display:none;"></div>
+      </button>
+    </div>
+ 
+  </div>
+</div>
+ 
+ 
+<!-- ── MODAL CONFIRMAR ELIMINAR ──────────────────────────── -->
+<div class="modal-overlay" id="modal-eliminar" style="display:none;">
+  <div class="modal modal-sm">
+ 
+    <div class="modal-header">
+      <span class="modal-title">¿Eliminar perfil?</span>
+      <button class="modal-close" id="btn-cerrar-eliminar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+ 
+    <p class="modal-desc">
+      El perfil <strong id="eliminar-nombre"></strong> será marcado como eliminado.
+      Los usuarios con este perfil no podrán iniciar sesión.
+    </p>
+ 
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-eliminar">Cancelar</button>
+      <button class="btn-danger" id="btn-confirmar-eliminar">
+        <span id="btn-eliminar-text">Sí, eliminar</span>
+        <div class="spinner spinner-danger" id="btn-eliminar-spinner" style="display:none;"></div>
+      </button>
+    </div>
+ 
+  </div>
+</div>
+ 
