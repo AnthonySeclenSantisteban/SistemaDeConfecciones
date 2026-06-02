@@ -1,0 +1,86 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Gestión de Compras</h2>
+    <p class="modulo-subtitulo">Registra entradas de stock usando compras_insumos</p>
+  </div>
+  <button class="btn-primary" id="btn-nueva-compra">
+    Nueva compra
+  </button>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Lista de compras</span>
+    <span class="total-label" id="total-compras"></span>
+  </div>
+
+  <div id="compras-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="compras-empty" class="empty-state" style="display:none;">
+    <p>No hay compras registradas</p>
+    <small>Registra la primera compra</small>
+  </div>
+
+  <div id="compras-tabla" style="display:none; overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Insumo</th>
+          <th>Cantidad</th>
+          <th>Unidad</th>
+          <th>Costo</th>
+          <th>Lugar</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody id="compras-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-compra" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Nueva compra</span>
+      <button class="modal-close" id="btn-cerrar-modal-compra">×</button>
+    </div>
+
+    <div class="field">
+      <label for="compra-producto">Producto</label>
+      <select id="compra-producto"></select>
+    </div>
+
+    <div class="field">
+      <label for="compra-variante">Variante</label>
+      <select id="compra-variante"></select>
+    </div>
+
+    <div class="field">
+      <label for="compra-cantidad">Cantidad</label>
+      <input type="number" id="compra-cantidad" min="1" value="1">
+    </div>
+
+    <div class="field">
+      <label for="compra-costo">Costo</label>
+      <input type="number" id="compra-costo" min="0.01" step="0.01">
+    </div>
+
+    <div class="field">
+      <label for="compra-unidad">Unidad medida</label>
+      <input type="text" id="compra-unidad" value="unidad">
+    </div>
+
+    <div class="field">
+      <label for="compra-lugar">Lugar compra</label>
+      <input type="text" id="compra-lugar" placeholder="Mercado, proveedor, tienda...">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-compra">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-compra">Guardar compra</button>
+    </div>
+  </div>
+</div>
