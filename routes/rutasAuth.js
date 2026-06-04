@@ -725,4 +725,132 @@ router.delete('/api/clientes/:id', verificarSesion, async (req, res) => {
     }
 });
 
+
+router.get('/api/pedidos', verificarSesion, async (req, res) => {
+    const { estado, fecha_desde, fecha_hasta, codigo, page = 1, limit = 15 } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const params = [];
+    const conds = ['p.id_pedido IS NOT NULL'];
+
+    if (estado) { params.push(estado); conds.push(`p.estado = $${params.length}`); }
+    if (codigo) { params.push(`%${codigo}%`); conds.push(`p.codigo_seguimiento ILIKE $${params.length}`); }
+    if (fecha_desde) { params.push(fecha_desde); conds.push(`p.fecha_pedido::date >= $${params.length}::date`); }
+    if (fecha_hasta) { params.push(fecha_hasta); conds.push(`p.fecha_pedido::date <= $${params.length}::date`); }
+
+    const where = conds.join(' AND ');
+    try {
+        const countRes = await pool.query(
+            `SELECT COUNT(*) AS total FROM pedidos p WHERE ${where}`, params
+        );
+        const total = parseInt(countRes.rows[0].total);
+        params.push(parseInt(limit));
+        params.push(offset);
+
+        const resultado = await pool.query(
+            `SELECT p.id_pedido, p.codigo_seguimiento, p.fecha_pedido, p.total, p.estado,
+                    c.nombres, c.apellidos, c.telefono, c.dni,
+                    e.tipo_entrega, e.estado_entrega,
+                    d.direccion, d.distrito
+             FROM pedidos p
+             LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+             LEFT JOIN envios e ON e.id_pedido = p.id_pedido
+             LEFT JOIN direcciones_cliente d ON d.id_direccion = p.id_direccion
+             WHERE ${where}
+             ORDER BY p.fecha_pedido DESC
+             LIMIT $${params.length - 1} OFFSET $${params.length}`,
+            params
+        );
+        res.json({ ok: true, data: resultado.rows, total, pages: Math.ceil(total / parseInt(limit)), page: parseInt(page) });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.get('/api/pedidos/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const pedidoRes = await pool.query(
+            `SELECT p.id_pedido, p.codigo_seguimiento, p.fecha_pedido, p.total, p.estado,
+                    c.id_cliente, c.nombres, c.apellidos, c.telefono, c.dni, c.correo,
+                    e.tipo_entrega, e.estado_entrega, e.fecha_estimada, e.observaciones,
+                    d.direccion, d.distrito, d.referencia,
+                    pa.metodo_pago, pa.estado AS estado_pago, pa.monto
+             FROM pedidos p
+             LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
+             LEFT JOIN envios e ON e.id_pedido = p.id_pedido
+             LEFT JOIN direcciones_cliente d ON d.id_direccion = p.id_direccion
+             LEFT JOIN pagos pa ON pa.id_pedido = p.id_pedido
+             WHERE p.id_pedido = $1`,
+            [id]
+        );
+        if (!pedidoRes.rows.length) return res.json({ ok: false, mensaje: 'Pedido no encontrado' });
+
+        const itemsRes = await pool.query(
+            `SELECT dp.cantidad, dp.precio_unitario, dp.subtotal,
+                    pr.nombre_producto,
+                    vp.color, t.nombre_talla
+             FROM detalle_pedido dp
+             LEFT JOIN productos pr ON pr.id_producto = dp.id_producto
+             LEFT JOIN variantes_producto vp ON vp.id_variante = dp.id_variante
+             LEFT JOIN tallas t ON t.id_talla = vp.id_talla
+             WHERE dp.id_pedido = $1`,
+            [id]
+        );
+        res.json({ ok: true, data: { pedido: pedidoRes.rows[0], items: itemsRes.rows } });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.patch('/api/pedidos/:id/estado', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { estado } = req.body;
+    const estadosValidos = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
+
+    if (!estadosValidos.includes(estado))
+        return res.json({ ok: false, mensaje: 'Estado no válido' });
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const pedidoRes = await client.query(
+            'SELECT estado FROM pedidos WHERE id_pedido = $1', [id]
+        );
+        if (!pedidoRes.rows.length) throw new Error('Pedido no encontrado');
+
+        const estadoActual = pedidoRes.rows[0].estado;
+        if (estadoActual === 'cancelado')
+            throw new Error('No se puede cambiar el estado de un pedido cancelado');
+        if (estadoActual === 'entregado' && estado !== 'cancelado')
+            throw new Error('Un pedido entregado no puede cambiar de estado');
+
+        await client.query('UPDATE pedidos SET estado = $1 WHERE id_pedido = $2', [estado, id]);
+
+        if (estado === 'entregado') {
+            await client.query(
+                `UPDATE ventas SET estado = 'pagada' WHERE id_pedido = $1`, [id]
+            );
+            await client.query(
+                `UPDATE pagos SET estado = 'pagado' WHERE id_pedido = $1`, [id]
+            );
+        }
+
+        if (estado !== 'cancelado') {
+            await client.query(
+                `UPDATE envios SET estado_entrega = $1 WHERE id_pedido = $2`,
+                [estado === 'enviado' ? 'en_camino' : estado === 'entregado' ? 'entregado' : 'pendiente', id]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({ ok: true, mensaje: `Pedido actualizado a ${estado}` });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        res.json({ ok: false, mensaje: error.message });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;

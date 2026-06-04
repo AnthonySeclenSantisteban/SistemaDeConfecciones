@@ -1,3 +1,4 @@
+
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
@@ -28,6 +29,9 @@ app.use('/', rutasAuth);
 
 const rutasCliente = require('./routes/rutasClientes');
 app.use('/', rutasCliente);
+
+const rutasVentas = require('./routes/rutasVentas');
+app.use('/', rutasVentas);
 
 app.listen(PORT, () => {   
     console.log(`Servidor en http://localhost:${PORT}`);
