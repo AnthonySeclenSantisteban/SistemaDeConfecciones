@@ -3,6 +3,7 @@ const router = express.Router();
 const controladorAuth = require('../controllers/controladorAuth');
 const path = require('path'); 
 const pool = require('../config/bd');
+const { uploadLogo, uploadSlider } = require('../utils/uploadTienda');
 
 const verificarSesion = (req, res, next) => {
     if (!req.session.usuario) {
@@ -618,14 +619,16 @@ router.get('/api/catalogo/categorias', async (req, res) => {
 
 router.get('/api/catalogo/slider', async (req, res) => {
     try {
-        const resultado = await pool.query(
-            `SELECT url_imagen, titulo FROM imagenes_producto 
-             WHERE id_producto IS NULL 
-             ORDER BY id_imagen LIMIT 10`
-        );
+        const resultado = await pool.query(`
+            SELECT imagen_url AS url_imagen, titulo
+            FROM sliders
+            WHERE activo = true
+            ORDER BY orden ASC, id_slider DESC
+            LIMIT 10
+        `);
         res.json({ ok: true, data: resultado.rows });
     } catch (error) {
-        res.json({ ok: true, data: [] }); // siempre retorna array vacío si falla
+        res.json({ ok: true, data: [] });
     }
 });
 
@@ -725,4 +728,395 @@ router.delete('/api/clientes/:id', verificarSesion, async (req, res) => {
     }
 });
 
+
+
+// =====================================================
+// GESTIÓN TIENDA - LOGOS
+// =====================================================
+
+router.get('/api/gestion-tienda/logos', verificarSesion, async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT id_recurso, tipo, nombre_archivo, url, activo, creado_en
+            FROM recursos_tienda
+            WHERE tipo = 'logo'
+            ORDER BY id_recurso DESC
+        `);
+
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.post('/api/gestion-tienda/logo', verificarSesion, async (req, res) => {
+    const { tipo, nombre_archivo, url, activo } = req.body;
+
+    try {
+        if (!url) {
+            return res.json({ ok: false, mensaje: 'La URL es requerida' });
+        }
+
+        const resultado = await pool.query(`
+            INSERT INTO recursos_tienda (tipo, nombre_archivo, url, activo)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id_recurso, tipo, nombre_archivo, url, activo, creado_en
+        `, [
+            tipo || 'logo',
+            nombre_archivo || null,
+            url,
+            activo ?? true
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Logo guardado correctamente',
+            data: resultado.rows[0]
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.patch('/api/gestion-tienda/logo/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { activo } = req.body;
+
+    try {
+        await pool.query(`
+            UPDATE recursos_tienda
+            SET activo = $1
+            WHERE id_recurso = $2 AND tipo = 'logo'
+        `, [activo, id]);
+
+        res.json({ ok: true, mensaje: 'Estado del logo actualizado' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.delete('/api/gestion-tienda/logo/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query(`
+            DELETE FROM recursos_tienda
+            WHERE id_recurso = $1 AND tipo = 'logo'
+        `, [id]);
+
+        res.json({ ok: true, mensaje: 'Logo eliminado correctamente' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+
+// =====================================================
+// GESTIÓN TIENDA - SLIDERS
+// =====================================================
+
+router.get('/api/gestion-tienda/sliders', verificarSesion, async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT id_slider, imagen_url, nombre_archivo, titulo, orden, activo, creado_en
+            FROM sliders
+            ORDER BY orden ASC, id_slider DESC
+        `);
+
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.post('/api/gestion-tienda/sliders', verificarSesion, async (req, res) => {
+    const { imagen_url, nombre_archivo, titulo, orden, activo } = req.body;
+
+    try {
+        if (!imagen_url) {
+            return res.json({ ok: false, mensaje: 'La imagen es requerida' });
+        }
+
+        const resultado = await pool.query(`
+            INSERT INTO sliders (imagen_url, nombre_archivo, titulo, orden, activo)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id_slider, imagen_url, nombre_archivo, titulo, orden, activo, creado_en
+        `, [
+            imagen_url,
+            nombre_archivo || null,
+            titulo || null,
+            orden ?? 0,
+            activo ?? true
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Slider guardado correctamente',
+            data: resultado.rows[0]
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.put('/api/gestion-tienda/sliders/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { imagen_url, nombre_archivo, titulo, orden, activo } = req.body;
+
+    try {
+        const resultado = await pool.query(`
+            UPDATE sliders
+            SET imagen_url = $1,
+                nombre_archivo = $2,
+                titulo = $3,
+                orden = $4,
+                activo = $5
+            WHERE id_slider = $6
+            RETURNING id_slider, imagen_url, nombre_archivo, titulo, orden, activo, creado_en
+        `, [
+            imagen_url,
+            nombre_archivo || null,
+            titulo || null,
+            orden ?? 0,
+            activo ?? true,
+            id
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Slider actualizado correctamente',
+            data: resultado.rows[0] || null
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.patch('/api/gestion-tienda/sliders/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { activo } = req.body;
+
+    try {
+        await pool.query(`
+            UPDATE sliders
+            SET activo = $1
+            WHERE id_slider = $2
+        `, [activo, id]);
+
+        res.json({ ok: true, mensaje: 'Estado del slider actualizado' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.delete('/api/gestion-tienda/sliders/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query(`
+            DELETE FROM sliders
+            WHERE id_slider = $1
+        `, [id]);
+
+        res.json({ ok: true, mensaje: 'Slider eliminado correctamente' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+
+// =====================================================
+// GESTIÓN TIENDA - REDES
+// =====================================================
+
+router.get('/api/gestion-tienda/redes', verificarSesion, async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT id_recurso, tipo, nombre_archivo, url, activo, creado_en
+            FROM recursos_tienda
+            WHERE tipo IN ('facebook', 'instagram', 'tiktok', 'whatsapp', 'youtube', 'telegram', 'otro')
+            ORDER BY id_recurso DESC
+        `);
+
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.post('/api/gestion-tienda/redes', verificarSesion, async (req, res) => {
+    const { tipo, nombre_archivo, url, activo } = req.body;
+
+    try {
+        if (!tipo || !url) {
+            return res.json({ ok: false, mensaje: 'Tipo y URL son requeridos' });
+        }
+
+        const resultado = await pool.query(`
+            INSERT INTO recursos_tienda (tipo, nombre_archivo, url, activo)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id_recurso, tipo, nombre_archivo, url, activo, creado_en
+        `, [
+            tipo,
+            nombre_archivo || null,
+            url,
+            activo ?? true
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Red social guardada correctamente',
+            data: resultado.rows[0]
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.put('/api/gestion-tienda/redes/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { tipo, nombre_archivo, url, activo } = req.body;
+
+    try {
+        const resultado = await pool.query(`
+            UPDATE recursos_tienda
+            SET tipo = $1,
+                nombre_archivo = $2,
+                url = $3,
+                activo = $4
+            WHERE id_recurso = $5
+            RETURNING id_recurso, tipo, nombre_archivo, url, activo, creado_en
+        `, [
+            tipo,
+            nombre_archivo || null,
+            url,
+            activo ?? true,
+            id
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Red social actualizada correctamente',
+            data: resultado.rows[0] || null
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.patch('/api/gestion-tienda/redes/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { activo } = req.body;
+
+    try {
+        await pool.query(`
+            UPDATE recursos_tienda
+            SET activo = $1
+            WHERE id_recurso = $2
+        `, [activo, id]);
+
+        res.json({ ok: true, mensaje: 'Estado de la red actualizado' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.delete('/api/gestion-tienda/redes/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query(`
+            DELETE FROM recursos_tienda
+            WHERE id_recurso = $1
+        `, [id]);
+
+        res.json({ ok: true, mensaje: 'Red social eliminada correctamente' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+
+router.post('/api/upload/logo', verificarSesion, (req, res) => {
+    uploadLogo.single('imagen')(req, res, function (error) {
+        if (error) {
+            return res.json({ ok: false, mensaje: error.message });
+        }
+
+        if (!req.file) {
+            return res.json({ ok: false, mensaje: 'No se recibió ninguna imagen' });
+        }
+
+        return res.json({
+            ok: true,
+            mensaje: 'Logo subido correctamente',
+            data: {
+                nombre_archivo: req.file.filename,
+                url: `/uploads/logos/${req.file.filename}`
+            }
+        });
+    });
+});
+
+router.post('/api/upload/slider', verificarSesion, (req, res) => {
+    uploadSlider.single('imagen')(req, res, function (error) {
+        if (error) {
+            return res.json({ ok: false, mensaje: error.message });
+        }
+
+        if (!req.file) {
+            return res.json({ ok: false, mensaje: 'No se recibió ninguna imagen' });
+        }
+
+        return res.json({
+            ok: true,
+            mensaje: 'Slider subido correctamente',
+            data: {
+                nombre_archivo: req.file.filename,
+                url: `/uploads/sliders/${req.file.filename}`
+            }
+        });
+    });
+
+});
+
+
+router.put('/api/gestion-tienda/logos/:id/estado', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const id = Number(req.params.id);
+        const { activo } = req.body;
+
+        await client.query('BEGIN');
+
+        if (activo === true) {
+            await client.query(`
+                UPDATE recursos_tienda
+                SET activo = false
+                WHERE tipo = 'logo'
+            `);
+
+            await client.query(`
+                UPDATE recursos_tienda
+                SET activo = true
+                WHERE id_recurso = $1 AND tipo = 'logo'
+            `, [id]);
+        } else {
+            await client.query(`
+                UPDATE recursos_tienda
+                SET activo = false
+                WHERE id_recurso = $1 AND tipo = 'logo'
+            `, [id]);
+        }
+
+        await client.query('COMMIT');
+        res.json({ ok: true, msg: 'Estado actualizado' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(error);
+        res.status(500).json({ ok: false, msg: 'Error al actualizar estado' });
+    } finally {
+        client.release();
+    }
+});
 module.exports = router;
