@@ -1,0 +1,155 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Gestión de Pedidos</h2>
+    <p class="modulo-subtitulo">Administra y da seguimiento a los pedidos</p>
+  </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="shopping-bag"></i></div>
+    <div class="stat-label">Total pedidos</div>
+    <div class="stat-value" id="statTotalPedidos">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="clock"></i></div>
+    <div class="stat-label">Pendientes</div>
+    <div class="stat-value" id="statPendientes">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="truck"></i></div>
+    <div class="stat-label">En proceso</div>
+    <div class="stat-value" id="statEnProceso">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="check-circle"></i></div>
+    <div class="stat-label">Entregados</div>
+    <div class="stat-value" id="statEntregados">—</div>
+  </div>
+</div>
+
+<div class="content-card" style="margin-bottom:16px;">
+  <div class="content-card-body" style="padding:14px 20px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="filtroCodigo" placeholder="Código de pedido..."
+             style="width:180px;" oninput="aplicarFiltrosPedidos()">
+      <select id="filtroEstadoPedido" onchange="aplicarFiltrosPedidos()">
+        <option value="">Todos los estados</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="procesando">Procesando</option>
+        <option value="enviado">Enviado</option>
+        <option value="entregado">Entregado</option>
+        <option value="cancelado">Cancelado</option>
+      </select>
+      <input type="date" id="filtroFechaDesde" onchange="aplicarFiltrosPedidos()" title="Desde">
+      <input type="date" id="filtroFechaHasta" onchange="aplicarFiltrosPedidos()" title="Hasta">
+      <button class="btn-secondary" onclick="limpiarFiltrosPedidos()" style="padding:8px 14px;">
+        <i data-lucide="x" style="width:13px;height:13px;"></i> Limpiar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Lista de pedidos</span>
+    <span class="badge badge-blue" id="pedidosTotalRegistros">0 registros</span>
+  </div>
+
+  <div class="spinner-wrap" id="spinnerPedidos">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="tablaPedidosWrap" style="display:none; overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Cliente</th>
+          <th>Fecha</th>
+          <th>Total</th>
+          <th>Entrega</th>
+          <th>Estado</th>
+          <th style="text-align:center;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaPedidosBody"></tbody>
+    </table>
+    <div class="pagination" id="pedidosPaginacion"></div>
+  </div>
+
+  <div class="empty-state" id="emptyPedidos" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+         stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;opacity:.3;margin-bottom:14px;">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+    <p>No se encontraron pedidos</p>
+    <small>Prueba cambiando los filtros</small>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDetallePedido" style="display:none;">
+  <div class="modal" style="max-width:660px;">
+    <div class="modal-header">
+      <div>
+        <span class="modal-title" id="modalPedidoTitulo">Detalle del pedido</span>
+        <div style="font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:3px;"
+             id="modalPedidoSubtitulo"></div>
+      </div>
+      <button class="modal-close" id="btnCerrarDetallePedido">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div id="modalPedidoBody">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-footer" id="modalPedidoBotones"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCambiarEstado" style="display:none;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="modal-title">Cambiar estado del pedido</span>
+      <button class="modal-close" id="btnCerrarCambiarEstado">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div style="padding:4px 0 16px;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Pedido: <strong id="cambiarEstadoCodigo"></strong>
+      </p>
+      <div class="field">
+        <label>Nuevo estado</label>
+        <select id="selectNuevoEstado">
+          <option value="pendiente">Pendiente</option>
+          <option value="procesando">Procesando</option>
+          <option value="enviado">Enviado</option>
+          <option value="entregado">Entregado</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </div>
+      <div class="alert alert-warning" id="alertaCambioEstado" style="display:none;margin-top:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;flex-shrink:0;">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span id="alertaCambioEstadoMsg"></span>
+      </div>
+    </div>
+    <input type="hidden" id="cambiarEstadoIdPedido">
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btnCancelarCambiarEstado">Cancelar</button>
+      <button class="btn-primary" id="btnConfirmarCambiarEstado">Confirmar cambio</button>
+    </div>
+  </div>
+</div>
