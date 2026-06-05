@@ -721,6 +721,171 @@ router.post('/api/inventario/actualizar', verificarSesion, async (req, res) => {
     }
 });
 
+// ==========================================
+// ENDPOINTS DE ENVÍOS
+// ==========================================
+
+router.get('/api/envios', verificarSesion, async (req, res) => {
+    try {
+        const resultado = await pool.query(
+            `SELECT e.id_envio, v.numero_venta AS codigo_venta,
+                    c.nombres || ' ' || COALESCE(c.apellidos, '') AS cliente,
+                    c.telefono AS telefono, e.tipo_entrega, d.direccion AS direccion,
+                    e.fecha_estimada, e.fecha_entrega, e.estado_entrega, e.observaciones,
+                    e.id_pedido AS pedido_id
+             FROM envios e
+             JOIN pedidos p ON p.id_pedido = e.id_pedido
+             JOIN clientes c ON c.id_cliente = p.id_cliente
+             LEFT JOIN direcciones_cliente d ON d.id_direccion = e.id_direccion
+             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
+             ORDER BY e.id_envio DESC`
+        );
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.get('/api/envios/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    try {
+        // 1. Obtener datos generales del envío
+        const envioRes = await pool.query(
+            `SELECT e.id_envio, e.id_pedido AS pedido_id, e.tipo_entrega, e.fecha_estimada, e.fecha_entrega, e.estado_entrega, e.observaciones,
+                    p.codigo_seguimiento, p.total AS total_pedido, p.fecha_pedido,
+                    c.nombres || ' ' || COALESCE(c.apellidos, '') AS cliente, c.telefono AS telefono, c.correo AS correo,
+                    d.direccion, d.distrito, d.provincia, d.referencia,
+                    v.numero_venta AS codigo_venta,
+                    pa.metodo_pago
+             FROM envios e
+             JOIN pedidos p ON p.id_pedido = e.id_pedido
+             JOIN clientes c ON c.id_cliente = p.id_cliente
+             LEFT JOIN direcciones_cliente d ON d.id_direccion = e.id_direccion
+             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
+             LEFT JOIN pagos pa ON pa.id_pedido = p.id_pedido
+             WHERE e.id_envio = $1`,
+            [id]
+        );
+
+        if (envioRes.rows.length === 0) {
+            return res.json({ ok: false, mensaje: 'Envío no encontrado' });
+        }
+
+        const envio = envioRes.rows[0];
+
+        // 2. Obtener los productos (items) del pedido asociado
+        const itemsRes = await pool.query(
+            `SELECT dp.cantidad, dp.precio_unitario, dp.subtotal,
+                    p.nombre_producto,
+                    v.color, t.nombre_talla
+             FROM detalle_pedido dp
+             JOIN productos p ON p.id_producto = dp.id_producto
+             LEFT JOIN variantes_producto v ON v.id_variante = dp.id_variante
+             LEFT JOIN tallas t ON t.id_talla = v.id_talla
+             WHERE dp.id_pedido = $1`,
+            [envio.pedido_id]
+        );
+
+        res.json({
+            ok: true,
+            envio,
+            items: itemsRes.rows
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.put('/api/envios/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { estado_entrega, fecha_estimada, fecha_entrega, observaciones } = req.body;
+
+    if (!estado_entrega) {
+        return res.json({ ok: false, mensaje: 'El estado de entrega es requerido' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Obtener datos actuales del envío
+        const envioRes = await client.query(
+            `SELECT id_pedido, estado_entrega FROM envios WHERE id_envio = $1 FOR UPDATE`,
+            [id]
+        );
+
+        if (envioRes.rows.length === 0) {
+            throw new Error('Envío no encontrado');
+        }
+
+        const estadoActual = envioRes.rows[0].estado_entrega;
+        const idPedido = envioRes.rows[0].id_pedido;
+
+        // Impedir retrocesos peligrosos
+        if (estadoActual === 'entregado' && estado_entrega !== 'entregado') {
+            throw new Error('No se permite cambiar el estado de un envío que ya ha sido entregado.');
+        }
+
+        // Validaciones específicas
+        if (estado_entrega === 'entregado' && !fecha_entrega) {
+            throw new Error('Es obligatorio ingresar la fecha real de entrega para marcarlo como entregado.');
+        }
+        if (estado_entrega === 'fallido' && (!observaciones || observaciones.trim() === '')) {
+            throw new Error('Es obligatorio detallar las observaciones/motivos de entrega fallida.');
+        }
+        if (estado_entrega === 'demora') {
+            if (!observaciones || observaciones.trim() === '') {
+                throw new Error('Es obligatorio detallar las observaciones/motivos de la demora.');
+            }
+            if (!fecha_estimada) {
+                throw new Error('Es obligatorio ingresar una nueva fecha estimada de entrega.');
+            }
+        }
+
+        // Formatear fechas
+        const fEstimada = fecha_estimada ? new Date(fecha_estimada) : null;
+        const fEntrega = fecha_entrega ? new Date(fecha_entrega) : null;
+
+        // Actualizar envío
+        await client.query(
+            `UPDATE envios
+             SET estado_entrega = $1,
+                 fecha_estimada = $2,
+                 fecha_entrega = $3,
+                 observaciones = $4
+             WHERE id_envio = $5`,
+            [estado_entrega, fEstimada, fEntrega, observaciones || null, id]
+        );
+
+        // Sincronizar estado del pedido correspondiente
+        let nuevoEstadoPedido = null;
+        if (estado_entrega === 'pendiente') {
+            nuevoEstadoPedido = 'pendiente';
+        } else if (estado_entrega === 'en_camino') {
+            nuevoEstadoPedido = 'enviado';
+        } else if (estado_entrega === 'entregado') {
+            nuevoEstadoPedido = 'entregado';
+        } else if (estado_entrega === 'fallido') {
+            nuevoEstadoPedido = 'cancelado';
+        }
+
+        if (nuevoEstadoPedido) {
+            await client.query(
+                `UPDATE pedidos SET estado = $1 WHERE id_pedido = $2`,
+                [nuevoEstadoPedido, idPedido]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({ ok: true, mensaje: 'Envío actualizado correctamente' });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        res.json({ ok: false, mensaje: error.message });
+    } finally {
+        client.release();
+    }
+});
+
 router.get('/catalogo', (req, res) => {
     res.sendFile(path.join(__dirname, '../views/modulos/catalogo.html')); 
 });

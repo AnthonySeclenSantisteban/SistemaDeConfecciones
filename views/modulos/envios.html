@@ -1,0 +1,401 @@
+<div class="modulo-header">
+    <div>
+        <h2 class="modulo-titulo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"
+                style="display:inline;vertical-align:middle;margin-right:6px;">
+                <rect x="1" y="3" width="15" height="13" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+            Control de Envíos
+        </h2>
+        <p class="modulo-subtitulo">Seguimiento de entregas y despachos a clientes</p>
+    </div>
+</div>
+
+<!-- ── TARJETAS RESUMEN ── -->
+<div class="stats-grid" id="env-stats" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px;">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13" />
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+            </svg>
+        </div>
+        <div class="stat-label">Total Envíos</div>
+        <div class="stat-value" id="env-stat-total">—</div>
+        <div class="stat-sub">registrados en el sistema</div>
+    </div>
+
+    <div class="stat-card" style="border-color:#b5d2ff;">
+        <div class="stat-icon" style="background:linear-gradient(135deg,#eef5ff,#e0eeff);color:#1c69d4;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+            </svg>
+        </div>
+        <div class="stat-label">Pendientes</div>
+        <div class="stat-value" id="env-stat-pendiente" style="color:#1c69d4;">—</div>
+        <div class="stat-sub">esperando despacho</div>
+    </div>
+
+    <div class="stat-card" style="border-color:#ffebc2;">
+        <div class="stat-icon" style="background:linear-gradient(135deg,#fff8eb,#ffeed1);color:#d97706;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+        </div>
+        <div class="stat-label">En Camino</div>
+        <div class="stat-value" id="env-stat-camino" style="color:#d97706;">—</div>
+        <div class="stat-sub">en ruta de entrega</div>
+    </div>
+
+    <div class="stat-card" style="border-color:#b6ddbf;">
+        <div class="stat-icon" style="background:linear-gradient(135deg,#eaf4ec,#d9f0de);color:#276936;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+            </svg>
+        </div>
+        <div class="stat-label">Entregados</div>
+        <div class="stat-value" id="env-stat-entregado" style="color:#276936;">—</div>
+        <div class="stat-sub">completados con éxito</div>
+    </div>
+
+    <div class="stat-card" style="border-color:#feb2b2;">
+        <div class="stat-icon" style="background:linear-gradient(135deg,#fff5f5,#fed7d7);color:#e53e3e;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+        </div>
+        <div class="stat-label">Incidencias</div>
+        <div class="stat-value" id="env-stat-incidencias" style="color:#e53e3e;">—</div>
+        <div class="stat-sub">fallidos y demorados</div>
+    </div>
+</div>
+
+<!-- ── TABLA ENVÍOS ── -->
+<div class="content-card">
+    <div class="content-card-header">
+        <span class="content-card-title">Listado de Envíos</span>
+        <span class="total-label" id="env-total-label"></span>
+    </div>
+
+    <!-- Filtros -->
+    <div style="display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;">
+        <div class="input-wrap" style="flex:1;min-width:200px;">
+            <span class="input-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+            </span>
+            <input type="text" id="env-filtro-busqueda" placeholder="Buscar por cliente, boleta o teléfono…">
+        </div>
+
+        <div class="input-wrap" style="min-width:160px;">
+            <select id="env-filtro-estado">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="en_camino">En Camino</option>
+                <option value="entregado">Entregado</option>
+                <option value="demora">Demorado</option>
+                <option value="fallido">Fallido</option>
+            </select>
+        </div>
+
+        <div class="input-wrap" style="min-width:160px;">
+            <select id="env-filtro-tipo">
+                <option value="">Todos los tipos</option>
+                <option value="delivery">Delivery</option>
+                <option value="recojo_tienda">Recojo en tienda</option>
+            </select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+            <label style="font-size:12.5px;color:var(--muted);">Mostrar</label>
+            <div class="input-wrap" style="width:70px;">
+                <select id="env-por-pagina">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <label style="font-size:12.5px;color:var(--muted);">registros</label>
+        </div>
+    </div>
+
+    <!-- Estado cargando -->
+    <div id="env-loading" class="spinner-wrap">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Estado vacío -->
+    <div id="env-empty" class="empty-state" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <rect x="1" y="3" width="15" height="13" />
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+            <circle cx="5.5" cy="18.5" r="2.5" />
+            <circle cx="18.5" cy="18.5" r="2.5" />
+        </svg>
+        <p>No se encontraron envíos</p>
+        <small>Los pedidos con envíos registrados aparecerán aquí</small>
+    </div>
+
+    <!-- Tabla -->
+    <div id="env-tabla-wrap" style="display:none;overflow-x:auto;">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th data-col="id_envio" style="cursor:pointer;">ID ↕</th>
+                    <th>Venta</th>
+                    <th>Cliente</th>
+                    <th>Teléfono</th>
+                    <th>Tipo</th>
+                    <th data-col="fecha" style="cursor:pointer;">Fecha Estimada ↕</th>
+                    <th>Estado</th>
+                    <th style="text-align:right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="env-tbody"></tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    <div id="env-paginacion"
+        style="display:none;padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span id="env-pag-info" style="font-size:12.5px;color:var(--muted);font-family:var(--mono);"></span>
+        <div style="display:flex;gap:4px;" id="env-pag-botones"></div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL: VER DETALLE DEL ENVÍO
+     ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-envio-ver" style="display:none;">
+    <div class="modal" style="max-width:680px;">
+        <div class="modal-header">
+            <span class="modal-title">Detalle del Envío</span>
+            <button class="modal-close" id="btn-cerrar-envio-ver">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <div style="max-height: 480px; overflow-y: auto;">
+            <!-- Info cliente y envío -->
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--input-bg);display:grid;grid-template-columns:1.5fr 1fr;gap:16px;">
+                <div>
+                    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:6px;">Información del Cliente</div>
+                    <div style="font-size:13.5px;"><strong>Cliente:</strong> <span id="ver-envio-cliente"></span></div>
+                    <div style="font-size:13.5px;margin-top:2px;"><strong>Teléfono:</strong> <span id="ver-envio-telefono"></span></div>
+                    <div style="font-size:13.5px;margin-top:2px;"><strong>Correo:</strong> <span id="ver-envio-correo"></span></div>
+                </div>
+                <div>
+                    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);text-align:right;margin-bottom:6px;">Estado Entrega</div>
+                    <div id="ver-envio-badge" style="text-align:right;"></div>
+                </div>
+            </div>
+
+            <!-- Datos Dirección -->
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:6px;">Dirección de Entrega</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+                    <div><strong>Tipo Entrega:</strong> <span id="ver-envio-tipo"></span></div>
+                    <div><strong>Departamento:</strong> <span id="ver-envio-departamento">Lambayeque</span></div>
+                    <div><strong>Provincia:</strong> <span id="ver-envio-provincia">Chiclayo</span></div>
+                    <div><strong>Distrito:</strong> <span id="ver-envio-distrito">—</span></div>
+                    <div style="grid-column: 1/-1;"><strong>Dirección:</strong> <span id="ver-envio-direccion">—</span></div>
+                    <div style="grid-column: 1/-1;"><strong>Referencia:</strong> <span id="ver-envio-referencia">—</span></div>
+                </div>
+            </div>
+
+            <!-- Datos Pedido -->
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:#fafcff;display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px;">
+                <div>
+                    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:6px;">Información del Pedido</div>
+                    <div><strong>Código Venta:</strong> <span id="ver-envio-codigo-venta">—</span></div>
+                    <div><strong>Fecha Pedido:</strong> <span id="ver-envio-fecha-pedido">—</span></div>
+                    <div><strong>Método Pago:</strong> <span id="ver-envio-metodo-pago">—</span></div>
+                    <div style="margin-top:2px;"><strong>Total Venta:</strong> <span id="ver-envio-total-venta" style="font-weight:700;color:var(--accent);font-family:var(--mono);">—</span></div>
+                </div>
+                <div>
+                    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:6px;">Fechas de Envío</div>
+                    <div><strong>Fecha Estimada:</strong> <span id="ver-envio-fecha-estimada">—</span></div>
+                    <div><strong>Fecha Entrega:</strong> <span id="ver-envio-fecha-entrega">—</span></div>
+                </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div style="padding:12px 20px;border-bottom:1px solid var(--border);background:#fffdfa;">
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);">Observaciones de Entrega</div>
+                <div id="ver-envio-observaciones" style="font-size:13px;margin-top:4px;font-style:italic;color:#666;"></div>
+            </div>
+
+            <!-- Artículos del pedido -->
+            <div style="padding:16px 20px;">
+                <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:10px;">Artículos del Pedido</div>
+                <table class="tabla" style="font-size:12.5px;">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Presentación</th>
+                            <th>Cantidad</th>
+                            <th style="text-align:right;">P. Unitario</th>
+                            <th style="text-align:right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ver-envio-items-tbody"></tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" style="text-align:right;font-weight:700;">Total Artículos:</td>
+                            <td id="ver-envio-total-pedido" style="text-align:right;font-weight:700;color:var(--accent);font-family:var(--mono);"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" id="btn-cerrar-envio-ver2">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL: EDITAR ESTADO DE ENVÍO
+     ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-envio-editar" style="display:none;">
+    <div class="modal" style="max-width:500px;">
+        <div class="modal-header">
+            <span class="modal-title">Actualizar Estado de Envío</span>
+            <button class="modal-close" id="btn-cerrar-envio-editar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="alert alert-error" id="modal-envio-alert" style="display:none;margin:12px 20px 0 20px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span id="modal-envio-alert-msg"></span>
+        </div>
+
+        <input type="hidden" id="edit-envio-id">
+
+        <div class="form-grid" style="padding:16px 20px;">
+            <div class="field" style="grid-column:1/-1;">
+                <label>Cliente</label>
+                <div style="font-weight:600;font-size:14.5px;" id="edit-envio-cliente-nombre"></div>
+            </div>
+
+            <div class="field" style="grid-column:1/-1;">
+                <label for="edit-envio-estado">Estado de Entrega</label>
+                <div class="input-wrap">
+                    <select id="edit-envio-estado">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_camino">En Camino</option>
+                        <option value="entregado">Entregado</option>
+                        <option value="demora">Demorado</option>
+                        <option value="fallido">Fallido</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="edit-envio-fecha-estimada">Fecha Est. Entrega <span class="req-estimada" style="color:var(--error);display:none;">*</span></label>
+                <div class="input-wrap">
+                    <input type="date" id="edit-envio-fecha-estimada">
+                </div>
+            </div>
+
+            <div class="field" id="field-fecha-entrega" style="display:none;">
+                <label for="edit-envio-fecha-entrega">Fecha Real de Entrega <span style="color:var(--error);">*</span></label>
+                <div class="input-wrap">
+                    <input type="date" id="edit-envio-fecha-entrega">
+                </div>
+            </div>
+
+            <div class="field" style="grid-column:1/-1;">
+                <label for="edit-envio-observaciones">Observaciones / Bitácora <span class="req-obs" style="color:var(--error);display:none;">*</span></label>
+                <div class="input-wrap">
+                    <textarea id="edit-envio-observaciones" placeholder="Detalles de la entrega, persona que recibe, motivo de retraso o fallido…" style="height:80px;padding:8px 12px;"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" id="btn-cancelar-envio-editar">Cancelar</button>
+            <button class="btn-primary" id="btn-guardar-envio-editar">
+                <span id="btn-guardar-envio-text">Guardar Cambios</span>
+                <div class="spinner" id="btn-guardar-envio-spinner"
+                    style="display:none;width:14px;height:14px;border-width:2px;border-color:#ffffff55;border-top-color:#fff;">
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     ESTILOS ESPECÍFICOS DEL MÓDULO DE ENVÍOS
+     ════════════════════════════════════════════════════════ -->
+<style>
+    /* Badges de estados */
+    .badge-env-pendiente {
+        background: #eef5ff;
+        color: #1c69d4;
+        border: 1px solid #b5d2ff;
+    }
+
+    .badge-env-camino {
+        background: #fff8eb;
+        color: #d97706;
+        border: 1px solid #ffebc2;
+    }
+
+    .badge-env-entregado {
+        background: #eaf4ec;
+        color: #276936;
+        border: 1px solid #b6ddbf;
+    }
+
+    .badge-env-demora {
+        background: #fff5f5;
+        color: #e53e3e;
+        border: 1px solid #feb2b2;
+    }
+
+    .badge-env-fallido {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 1px solid #cbd5e0;
+    }
+
+    /* Tabla pequeña en detalles */
+    #ver-envio-items-tbody td {
+        padding: 8px 10px;
+    }
+</style>
