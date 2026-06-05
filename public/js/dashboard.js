@@ -1,3 +1,42 @@
+function mostrarToast(mensaje, tipo = 'info') {
+    const colores = {
+        success: '#16a34a',
+        error: '#dc2626',
+        warning: '#d97706',
+        info: '#2563eb'
+    };
+    const iconos = {
+        success: 'check-circle',
+        error: 'x-circle',
+        warning: 'alert-triangle',
+        info: 'info'
+    };
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position:fixed;bottom:24px;right:24px;z-index:9999;
+        background:#1a1a1a;color:#fff;padding:12px 18px;border-radius:10px;
+        display:flex;align-items:center;gap:10px;font-size:13.5px;
+        border-left:4px solid ${colores[tipo] || colores.info};
+        box-shadow:0 4px 20px rgba(0,0,0,.25);
+        animation:slideInToast .25s ease;min-width:240px;max-width:380px;
+    `;
+    toast.innerHTML = `<i data-lucide="${iconos[tipo] || 'info'}" style="width:16px;height:16px;color:${colores[tipo]};flex-shrink:0;"></i><span>${mensaje}</span>`;
+    if (!document.getElementById('toast-style')) {
+        const s = document.createElement('style');
+        s.id = 'toast-style';
+        s.textContent = `@keyframes slideInToast{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}`;
+        document.head.appendChild(s);
+    }
+    document.body.appendChild(toast);
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+        toast.style.transition = 'opacity .3s,transform .3s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(110%)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
 async function cargarModulo(modulo) {
     const contenido = document.getElementById('contenido');
     const titulo = document.getElementById('titulo-modulo');
@@ -29,7 +68,7 @@ async function cargarModulo(modulo) {
 
         if (window.lucide) lucide.createIcons();
 
-        const moduloJs = modulo.replace('-', '_');
+        const moduloJs = modulo.replace(/-/g, '_');
         const fnNombre = `cargar_${moduloJs}`;
 
         if (window[fnNombre]) {
@@ -71,7 +110,7 @@ document.getElementById('fecha-hoy').textContent =
         month: 'long', day: 'numeric'
     });
 
-    async function cargarMisOpciones() {
+async function cargarMisOpciones() {
     const res = await fetch('/api/mis-opciones');
     const json = await res.json();
     const opciones = json.opciones;
@@ -79,12 +118,12 @@ document.getElementById('fecha-hoy').textContent =
     if (opciones.length === 0) return;
 
     document.querySelectorAll('.nav-item').forEach(item => {
-    const modulo = item.getAttribute('data-modulo');
-    if (modulo === 'dashboard' || modulo === 'catalogo') return; 
-    const rutaModulo = modulo + '.html';
-    if (!opciones.includes(rutaModulo)) {
-        item.style.display = 'none';
-    }
+        const modulo = item.getAttribute('data-modulo');
+        if (modulo === 'dashboard' || modulo === 'catalogo') return;
+        const rutaModulo = modulo + '.html';
+        if (!opciones.includes(rutaModulo)) {
+            item.style.display = 'none';
+        }
     });
 }
 

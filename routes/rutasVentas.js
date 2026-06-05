@@ -10,9 +10,6 @@ function requireAuth(req, res, next) {
     next();
 }
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/ventas  — listado paginado con filtros
-// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas', requireAuth, async (req, res) => {
     const {
         dni, numero_venta, estado, tipo_documento,
@@ -96,9 +93,6 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/ventas/stats  — tarjetas del dashboard
-// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas/stats', requireAuth, async (req, res) => {
     try {
         const ahora      = new Date();
@@ -133,11 +127,6 @@ router.get('/api/ventas/stats', requireAuth, async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/ventas/productos/buscar  — buscador para nueva venta
-// IMPORTANTE: debe ir ANTES de /api/ventas/:id para que Express
-// no confunda "productos" con un id numérico
-// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas/productos/buscar', requireAuth, async (req, res) => {
     const { q = '' } = req.query;
     if (q.trim().length < 2)
@@ -179,9 +168,6 @@ router.get('/api/ventas/productos/buscar', requireAuth, async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/ventas/:id  — detalle de una venta
-// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     try {
@@ -230,9 +216,6 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/ventas/:id/pagos  — historial de pagos de una venta
-// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas/:id/pagos', requireAuth, async (req, res) => {
     const { id } = req.params;
     try {

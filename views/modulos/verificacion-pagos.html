@@ -1,0 +1,201 @@
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="clock"></i></div>
+    <div class="stat-label">Pendientes</div>
+    <div class="stat-value" id="vpStatPendientes">—</div>
+    <div class="stat-sub">por revisar</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="check-circle"></i></div>
+    <div class="stat-label">Verificados</div>
+    <div class="stat-value" id="vpStatVerificados">—</div>
+    <div class="stat-sub">aprobados</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="x-circle"></i></div>
+    <div class="stat-label">Rechazados</div>
+    <div class="stat-value" id="vpStatRechazados">—</div>
+    <div class="stat-sub">no confirmados</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="dollar-sign"></i></div>
+    <div class="stat-label">Total pendiente</div>
+    <div class="stat-value" id="vpStatMonto">—</div>
+    <div class="stat-sub">por verificar</div>
+  </div>
+</div>
+
+<div class="content-card" style="margin-bottom:16px;">
+  <div class="content-card-body" style="padding:14px 20px;">
+    <div class="filtros-row">
+      <div class="input-wrap" style="flex:1;min-width:220px;">
+        <span class="input-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
+        <input type="text" id="vpFiltroTexto" placeholder="Cliente, orden, código operación..."
+               oninput="vpAplicarFiltros()" style="width:100%;">
+      </div>
+      <select id="vpFiltroEstado" onchange="vpAplicarFiltros()">
+        <option value="">Todos los estados</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="verificado">Verificado</option>
+        <option value="rechazado">Rechazado</option>
+      </select>
+      <select id="vpFiltroMetodo" onchange="vpAplicarFiltros()">
+        <option value="">Todos los métodos</option>
+        <option value="yape">Yape</option>
+        <option value="plin">Plin</option>
+        <option value="transferencia">Transferencia BCP</option>
+        <option value="efectivo">Efectivo</option>
+        <option value="visa">Tarjeta Visa</option>
+      </select>
+      <input type="date" id="vpFiltroFecha" onchange="vpAplicarFiltros()" title="Filtrar por fecha">
+      <button class="btn-secondary" onclick="vpLimpiarFiltros()" style="padding:8px 14px;">
+        <i data-lucide="x" style="width:13px;height:13px;"></i> Limpiar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Verificación de Pagos</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="badge badge-blue" id="vpTotalRegistros">0 registros</span>
+      <button class="btn-icon" onclick="vpExportarCSV()" title="Exportar CSV">
+        <i data-lucide="download" style="width:15px;height:15px;"></i>
+      </button>
+    </div>
+  </div>
+  <div class="spinner-wrap" id="vpSpinner"><div class="spinner"></div></div>
+  <div id="vpTablaWrap" style="display:none;">
+    <div style="overflow-x:auto;">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Cliente</th>
+            <th>Monto</th>
+            <th>Código Operación</th>
+            <th>Método</th>
+            <th>Estado</th>
+            <th>Comprobante</th>
+            <th>Fecha</th>
+            <th>Nota de Venta</th>
+            <th style="text-align:center;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="vpTablaBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="vpPaginacion"></div>
+  </div>
+  <div class="empty-state" id="vpEmpty" style="display:none;">
+    <i data-lucide="shield-check" style="width:44px;height:44px;opacity:.3;margin-bottom:14px;"></i>
+    <p>No se encontraron pagos</p>
+    <small>Prueba cambiando los filtros</small>
+  </div>
+</div>
+
+<div class="modal-overlay" id="vpModalDetalle" style="display:none;">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="vpModalTitulo">Detalle del pago</div>
+        <div style="font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:3px;" id="vpModalSubtitulo"></div>
+      </div>
+      <button class="modal-close" onclick="vpCerrarModal('vpModalDetalle')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div id="vpModalBody"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+    <div class="modal-footer" id="vpModalBotones"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="vpModalImagen" style="display:none;">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">Comprobante de pago</div>
+      <button class="modal-close" onclick="vpCerrarModal('vpModalImagen')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div style="padding:20px;text-align:center;">
+      <img id="vpImagenComprobante" src="" alt="Comprobante"
+           style="max-width:100%;max-height:500px;border-radius:8px;border:1px solid var(--border);">
+    </div>
+    <div class="modal-footer">
+      <a id="vpDescargarImagen" href="" download target="_blank" class="btn-secondary">
+        <i data-lucide="download"></i> Descargar
+      </a>
+      <button class="btn-secondary" onclick="vpCerrarModal('vpModalImagen')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="vpModalRechazar" style="display:none;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">Rechazar pago</div>
+      <button class="modal-close" onclick="vpCerrarModal('vpModalRechazar')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div class="alert alert-warning" style="margin-bottom:16px;">
+      <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+      <span>El pedido volverá a estado <strong>pendiente de pago</strong>.</span>
+    </div>
+    <div class="field">
+      <label>Motivo del rechazo *</label>
+      <textarea id="vpMotivoRechazo" placeholder="Ej: Código de operación incorrecto, monto no coincide..." rows="3"></textarea>
+    </div>
+    <input type="hidden" id="vpRechazarIdPago">
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="vpCerrarModal('vpModalRechazar')">Cancelar</button>
+      <button class="btn-danger" onclick="vpConfirmarRechazo()">
+        <i data-lucide="x-circle"></i> Confirmar rechazo
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="vpModalGenerarVenta" style="display:none;">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">Realizar Nota de Venta</div>
+      <button class="modal-close" onclick="vpCerrarModal('vpModalGenerarVenta')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div style="padding:20px 24px;">
+      <div style="display:grid;gap:10px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--muted);">Orden:</span>
+          <strong id="vpGVOrden" style="font-family:var(--mono);color:var(--accent);">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--muted);">Cliente:</span>
+          <strong id="vpGVCliente">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;">
+          <span style="color:var(--muted);">Total:</span>
+          <strong id="vpGVTotal" style="color:var(--accent);font-size:15px;">—</strong>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tipo de Comprobante</label>
+        <select id="vpGVTipoDoc">
+          <option value="nota_venta">Nota de Venta</option>
+          <option value="boleta">Boleta</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="vpGVIdPedido">
+    <input type="hidden" id="vpGVIdPago">
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="vpCerrarModal('vpModalGenerarVenta')">Cancelar</button>
+      <button class="btn-primary" onclick="vpConfirmarGenerarVenta()" id="vpBtnCrearVenta">
+        <i data-lucide="file-text"></i> Crear Venta
+      </button>
+    </div>
+  </div>
+</div>

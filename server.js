@@ -22,6 +22,8 @@ app.use(session({
     }
     
 }));
+const rutasPagos = require('./routes/rutasPagos');
+app.use('/', rutasPagos);
 
 const rutasAuth = require('./routes/rutasAuth');
 app.use('/', rutasAuth);
