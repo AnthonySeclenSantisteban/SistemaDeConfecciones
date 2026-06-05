@@ -130,8 +130,6 @@ function _filaVenta(v) {
     </tr>`;
 }
 
-/* ── FILTROS ── */
-
 function aplicarFiltrosVentas() {
     clearTimeout(_vBusqTimer);
     _vBusqTimer = setTimeout(() => cargarTablaVentas(1), 350);
@@ -292,8 +290,6 @@ async function abrirDetalleVenta(id) {
             </p>
         </div>
         ` : ''}`;
-
-        // Sin botones en el footer
         document.getElementById('modalDetalleBotones').innerHTML = '';
 
         if (window.lucide) {
@@ -603,8 +599,6 @@ async function guardarNuevaVenta() {
     }
 }
 
-/* ── CAMBIAR ESTADO ── */
-
 async function cambiarEstadoVenta(id, estado) {
     try {
         const res  = await fetch(`/api/ventas/${id}/estado`, {
@@ -620,8 +614,6 @@ async function cambiarEstadoVenta(id, estado) {
         } else { _mostrarToast(json.mensaje, 'error'); }
     } catch (e) { _mostrarToast('Error de conexión', 'error'); }
 }
-
-/* ── ANULAR VENTA ── */
 
 function abrirAnularVenta(id) {
     document.getElementById('anularIdVenta').value = id;
@@ -656,7 +648,6 @@ async function confirmarAnulacion() {
     }
 }
 
-/* ── IMPRIMIR / DOCUMENTO ── */
 
 async function abrirImprimirVenta(id) {
     _show('modalImprimirVenta');
@@ -743,8 +734,6 @@ function imprimirDocumentoVenta() {
     setTimeout(() => { ventana.print(); ventana.close(); }, 500);
 }
 
-/* ── EXPORTAR CSV ── */
-
 async function exportarVentasCSV() {
     try {
         const params = _construirParams(1);
@@ -781,7 +770,6 @@ async function exportarVentasCSV() {
     } catch (e) { _mostrarToast('Error al exportar', 'error'); }
 }
 
-/* ── CERRAR MODALES ── */
 
 function cerrarModalVentas(id) {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
@@ -795,7 +783,6 @@ document.addEventListener('click', function(e) {
     });
 });
 
-/* ── ALERTAS Y TOASTS ── */
 
 function mostrarAlertaNV(tipo, msg) {
     const el = document.getElementById('alertaNuevaVenta'); if (!el) return;
@@ -815,7 +802,6 @@ function _mostrarToast(msg, tipo = 'success') {
     setTimeout(() => { t.classList.add('saliendo'); setTimeout(() => t.remove(), 300); }, 3500);
 }
 
-/* ── PAGINACIÓN ── */
 
 function _renderPaginacion(containerId, paginaActual, totalPaginas, callback) {
     const el = document.getElementById(containerId); if (!el) return;
@@ -836,8 +822,6 @@ function _renderPaginacion(containerId, paginaActual, totalPaginas, callback) {
     if (window.lucide) lucide.createIcons();
 }
 
-/* ── BADGES ── */
-
 function _badgeEstadoVenta(estado) {
     const map    = { pendiente:'badge-amber', pagada:'badge-green', anulada:'badge-red' };
     const labels = { pendiente:'Pendiente',   pagada:'Pagada',      anulada:'Anulada'   };
@@ -855,7 +839,7 @@ function _badgeMetodoPago(metodo) {
     return `<span class="badge ${map[metodo]||'badge-blue'}">${_capitalizarMetodo(metodo)}</span>`;
 }
 
-/* ── UTILIDADES ── */
+
 
 function _val(id)         { const el = document.getElementById(id); return el ? el.value : ''; }
 function _setText(id, t)  { const el = document.getElementById(id); if (el) el.textContent = t; }
