@@ -1,5 +1,5 @@
-let _productosCompras = [];
-let _variantesCompras = [];
+let _comprasData = [];
+let _compraEliminarId = null;
 
 async function cargarCompras() {
     const loading = document.getElementById('compras-loading');
@@ -24,136 +24,116 @@ async function cargarCompras() {
             return;
         }
 
+        _comprasData = json.data;
         tabla.style.display = 'block';
         total.textContent = `${json.data.length} registros`;
 
         tbody.innerHTML = json.data.map((c, i) => `
             <tr>
                 <td style="font-family:var(--mono);font-size:12px;">${i + 1}</td>
-                <td><strong>${_esc(c.nombre_insumo)}</strong></td>
-                <td>${c.cantidad}</td>
-                <td>${_esc(c.unidad_medida)}</td>
-                <td style="font-family:var(--mono);">S/ ${parseFloat(c.costo).toFixed(2)}</td>
+                <td>
+                    <strong>${_esc(c.nombre_insumo)}</strong>
+                    ${c.observacion ? `<div style="font-size:11px;color:var(--muted);">${_esc(c.observacion)}</div>` : ''}
+                </td>
+                <td>
+                    ${c.categoria_insumo
+                        ? `<span class="badge badge-blue" style="font-size:11px;">${_esc(c.categoria_insumo)}</span>`
+                        : '<span style="color:var(--muted)">—</span>'}
+                </td>
+                <td style="font-family:var(--mono);">${parseInt(c.cantidad) || 0}</td>
+                <td>${_esc(c.unidad_medida || '—')}</td>
+                <td style="font-family:var(--mono);">S/ ${parseFloat(c.costo || 0).toFixed(2)}</td>
                 <td>${_esc(c.lugar_compra || '—')}</td>
                 <td style="font-size:12px;color:var(--muted);font-family:var(--mono);">${_fmtFecha(c.fecha_compra)}</td>
+                <td style="text-align:right;">
+                    <div style="display:flex;gap:6px;justify-content:flex-end;">
+                        <button class="btn-icon" title="Editar" data-accion="editar" data-id="${c.id_compra}">✏️</button>
+                        <button class="btn-icon btn-icon-danger" title="Eliminar" data-accion="eliminar" data-id="${c.id_compra}" data-nombre="${_esc(c.nombre_insumo)}">🗑️</button>
+                    </div>
+                </td>
             </tr>
         `).join('');
-    } catch (error) {
-        console.error('Error cargando compras:', error);
+    } catch (e) {
+        console.error('Error cargando compras:', e);
         loading.style.display = 'none';
         empty.style.display = 'flex';
     }
 }
 
-async function cargarProductosCompras() {
-    const select = document.getElementById('compra-producto');
-    select.innerHTML = '<option value="">Seleccione producto</option>';
-
-    try {
-        const res = await fetch('/api/productos');
-        const json = await res.json();
-
-        console.log('PRODUCTOS COMPRAS =>', json);
-
-        if (!json.ok || !json.data || !json.data.length) {
-            select.innerHTML = '<option value="">No hay productos</option>';
-            return;
-        }
-
-        _productosCompras = json.data.filter(p => Number(p.estado) === 1);
-
-        if (!_productosCompras.length) {
-            select.innerHTML = '<option value="">No hay productos activos</option>';
-            return;
-        }
-
-        _productosCompras.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id_producto;
-            opt.textContent = p.nombre_producto;
-            select.appendChild(opt);
-        });
-    } catch (error) {
-        console.error('Error cargando productos:', error);
-        select.innerHTML = '<option value="">Error al cargar productos</option>';
-    }
-}
-
-async function cargarVariantesCompra(idProducto) {
-    const select = document.getElementById('compra-variante');
-    select.innerHTML = '<option value="">Seleccione variante</option>';
-
-    if (!idProducto) return;
-
-    try {
-        const res = await fetch(`/api/productos/${idProducto}/variantes`);
-        const json = await res.json();
-
-        console.log('VARIANTES COMPRA =>', json);
-
-        if (!json.ok || !json.data) {
-            select.innerHTML = '<option value="">No hay variantes</option>';
-            return;
-        }
-
-        _variantesCompras = json.data;
-
-        if (!_variantesCompras.length) {
-            select.innerHTML = '<option value="">Sin variantes</option>';
-            return;
-        }
-
-        json.data.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v.id_variante;
-            opt.textContent = `${v.nombre_talla || '—'} / ${v.color || '—'} / Stock: ${v.stock}`;
-            select.appendChild(opt);
-        });
-    } catch (error) {
-        console.error('Error cargando variantes:', error);
-        select.innerHTML = '<option value="">Error al cargar variantes</option>';
-    }
-}
-
 function abrirNuevaCompra() {
-    document.getElementById('compra-producto').innerHTML = '<option value="">Seleccione producto</option>';
-    document.getElementById('compra-variante').innerHTML = '<option value="">Seleccione variante</option>';
+    document.getElementById('compra-id').value = '';
+    document.getElementById('modal-compra-titulo').textContent = 'Nueva compra de insumo';
+    document.getElementById('compra-categoria-insumo').value = '';
+    document.getElementById('compra-nombre').value = '';
     document.getElementById('compra-cantidad').value = 1;
     document.getElementById('compra-costo').value = '';
-    document.getElementById('compra-unidad').value = 'unidad';
+    document.getElementById('compra-unidad').value = 'metros';
     document.getElementById('compra-lugar').value = '';
+    document.getElementById('compra-observacion').value = '';
     document.getElementById('modal-compra').style.display = 'flex';
-    cargarProductosCompras();
+}
+
+function abrirEditarCompra(id) {
+    const c = _comprasData.find(x => String(x.id_compra) === String(id));
+    if (!c) return;
+
+    document.getElementById('compra-id').value = c.id_compra;
+    document.getElementById('modal-compra-titulo').textContent = 'Editar compra de insumo';
+    document.getElementById('compra-categoria-insumo').value = c.categoria_insumo || '';
+    document.getElementById('compra-nombre').value = c.nombre_insumo || '';
+    document.getElementById('compra-cantidad').value = c.cantidad || 1;
+    document.getElementById('compra-costo').value = c.costo || '';
+    document.getElementById('compra-unidad').value = c.unidad_medida || 'metros';
+    document.getElementById('compra-lugar').value = c.lugar_compra || '';
+    document.getElementById('compra-observacion').value = c.observacion || '';
+    document.getElementById('modal-compra').style.display = 'flex';
 }
 
 function cerrarModalCompra() {
     document.getElementById('modal-compra').style.display = 'none';
 }
 
-async function guardarCompra() {
-    const id_producto = document.getElementById('compra-producto').value;
-    const id_variante = document.getElementById('compra-variante').value;
-    const cantidad = document.getElementById('compra-cantidad').value;
-    const costo = document.getElementById('compra-costo').value;
-    const unidad_medida = document.getElementById('compra-unidad').value.trim();
-    const lugar_compra = document.getElementById('compra-lugar').value.trim();
+function abrirEliminarCompra(id, nombre) {
+    _compraEliminarId = id;
+    document.getElementById('eliminar-compra-nombre').textContent = nombre || 'esta compra';
+    document.getElementById('modal-eliminar-compra').style.display = 'flex';
+}
 
-    if (!id_producto || !id_variante || !cantidad || !costo) {
-        alert('Completa todos los campos requeridos');
-        return;
-    }
+function cerrarModalEliminarCompra() {
+    _compraEliminarId = null;
+    document.getElementById('modal-eliminar-compra').style.display = 'none';
+}
+
+async function guardarCompra() {
+    const id = document.getElementById('compra-id').value;
+    const categoria = document.getElementById('compra-categoria-insumo').value.trim();
+    const nombre = document.getElementById('compra-nombre').value.trim();
+    const cantidad = parseInt(document.getElementById('compra-cantidad').value);
+    const costo = parseFloat(document.getElementById('compra-costo').value);
+    const unidad = document.getElementById('compra-unidad').value.trim();
+    const lugar = document.getElementById('compra-lugar').value.trim();
+    const observacion = document.getElementById('compra-observacion').value.trim();
+
+    if (!nombre) return mostrarMensaje('Ingresa el nombre del insumo', 'warn');
+    if (!cantidad || cantidad < 1) return mostrarMensaje('La cantidad debe ser mayor a 0', 'warn');
+    if (!costo || costo <= 0) return mostrarMensaje('Ingresa un costo válido', 'warn');
+
+    const btn = document.getElementById('btn-guardar-compra');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
 
     try {
-        const res = await fetch('/api/compras', {
-            method: 'POST',
+        const res = await fetch(id ? `/api/compras/${id}` : '/api/compras', {
+            method: id ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                id_producto: parseInt(id_producto),
-                id_variante: parseInt(id_variante),
-                cantidad: parseInt(cantidad),
-                costo: parseFloat(costo),
-                unidad_medida,
-                lugar_compra
+                nombre_insumo: nombre,
+                categoria_insumo: categoria || null,
+                observacion: observacion || null,
+                cantidad,
+                costo,
+                unidad_medida: unidad,
+                lugar_compra: lugar || 'Sin especificar'
             })
         });
 
@@ -162,14 +142,65 @@ async function guardarCompra() {
         if (json.ok) {
             cerrarModalCompra();
             cargarCompras();
-            alert(json.mensaje || 'Compra registrada correctamente');
+            mostrarMensaje(json.mensaje || 'Compra guardada correctamente', 'ok');
         } else {
-            alert(json.mensaje || 'No se pudo registrar la compra');
+            mostrarMensaje(json.mensaje || 'No se pudo guardar', 'error');
         }
-    } catch (error) {
-        console.error('Error guardando compra:', error);
-        alert('Error de conexión');
+    } catch (e) {
+        console.error('Error guardando compra:', e);
+        mostrarMensaje('Error de conexión', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar compra';
     }
+}
+
+async function confirmarEliminarCompra() {
+    if (!_compraEliminarId) return;
+
+    const btn = document.getElementById('btn-confirmar-eliminar-compra');
+    const txt = document.getElementById('btn-eliminar-compra-text');
+
+    btn.disabled = true;
+    txt.textContent = 'Eliminando...';
+
+    try {
+        const res = await fetch(`/api/compras/${_compraEliminarId}`, {
+            method: 'DELETE'
+        });
+        const json = await res.json();
+
+        if (json.ok) {
+            cerrarModalEliminarCompra();
+            cargarCompras();
+            mostrarMensaje(json.mensaje || 'Compra eliminada correctamente', 'ok');
+        } else {
+            mostrarMensaje(json.mensaje || 'No se pudo eliminar', 'error');
+        }
+    } catch (e) {
+        console.error('Error eliminando compra:', e);
+        mostrarMensaje('Error de conexión', 'error');
+    } finally {
+        btn.disabled = false;
+        txt.textContent = 'Sí, eliminar';
+    }
+}
+
+function mostrarMensaje(msg, tipo = 'ok') {
+    const wrap = document.getElementById('toast-wrap');
+    if (!wrap) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast-msg ${tipo}`;
+    toast.textContent = msg;
+
+    wrap.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 250);
+    }, 3000);
 }
 
 function _fmtFecha(ts) {
@@ -191,17 +222,23 @@ function _esc(str) {
 }
 
 document.addEventListener('click', function (e) {
-    const id = e.target.closest('button')?.id || e.target.id;
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    const accion = btn.dataset.accion;
+    const id = btn.id;
+
+    if (accion === 'editar') abrirEditarCompra(btn.dataset.id);
+    if (accion === 'eliminar') abrirEliminarCompra(btn.dataset.id, btn.dataset.nombre);
 
     if (id === 'btn-nueva-compra') abrirNuevaCompra();
     if (id === 'btn-cerrar-modal-compra' || id === 'btn-cancelar-compra') cerrarModalCompra();
     if (id === 'btn-guardar-compra') guardarCompra();
-});
+    if (id === 'btn-cerrar-eliminar-compra' || id === 'btn-cancelar-eliminar-compra') cerrarModalEliminarCompra();
+    if (id === 'btn-confirmar-eliminar-compra') confirmarEliminarCompra();
 
-document.addEventListener('change', function (e) {
-    if (e.target.id === 'compra-producto') {
-        cargarVariantesCompra(e.target.value);
-    }
+    if (e.target.id === 'modal-compra') cerrarModalCompra();
+    if (e.target.id === 'modal-eliminar-compra') cerrarModalEliminarCompra();
 });
 
 function cargar_compras() {
