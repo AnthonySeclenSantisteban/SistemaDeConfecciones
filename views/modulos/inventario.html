@@ -1,0 +1,487 @@
+<div class="modulo-header">
+    <div>
+        <h2 class="modulo-titulo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"
+                style="display:inline;vertical-align:middle;margin-right:6px;">
+                <path
+                    d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+            </svg>
+            Gestión de Inventario
+        </h2>
+        <p class="modulo-subtitulo">Control de stock y movimiento de productos</p>
+    </div>
+</div>
+
+<!-- ── TARJETAS RESUMEN ── -->
+<div class="stats-grid" id="inv-stats">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path
+                    d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+            </svg>
+        </div>
+        <div class="stat-label">Total Productos</div>
+        <div class="stat-value" id="inv-stat-total">—</div>
+        <div class="stat-sub">con presentaciones activas</div>
+    </div>
+
+    <div class="stat-card" style="border-color:#f5c6c2;">
+        <div class="stat-icon" style="background:linear-gradient(135deg,#fdf0ef,#fbeaea);color:var(--error);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+        </div>
+        <div class="stat-label">Stock Crítico</div>
+        <div class="stat-value" id="inv-stat-critico" style="color:var(--error);">—</div>
+        <div class="stat-sub">por debajo del mínimo</div>
+    </div>
+
+    <div class="stat-card" style="border-color:#b6ddbf;">
+        <div class="stat-icon" style="background:linear-gradient(135deg,#eaf4ec,#d9f0de);color:#276936;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+            </svg>
+        </div>
+        <div class="stat-label">Stock Óptimo</div>
+        <div class="stat-value" id="inv-stat-optimo" style="color:#276936;">—</div>
+        <div class="stat-sub">con stock suficiente</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+            </svg>
+        </div>
+        <div class="stat-label">Valor Total</div>
+        <div class="stat-value" id="inv-stat-valor" style="font-size:22px;">—</div>
+        <div class="stat-sub">en stock valorizado</div>
+    </div>
+</div>
+
+<!-- ── TABLA INVENTARIO ── -->
+<div class="content-card">
+    <div class="content-card-header">
+        <span class="content-card-title">Listado de Inventario</span>
+        <span class="total-label" id="inv-total-label"></span>
+    </div>
+
+    <!-- Filtros -->
+    <div
+        style="display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;">
+        <div class="input-wrap" style="flex:1;min-width:200px;">
+            <span class="input-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+            </span>
+            <input type="text" id="inv-filtro-nombre" placeholder="Buscar por producto…">
+        </div>
+
+        <div class="input-wrap" style="min-width:160px;">
+            <select id="inv-filtro-estado">
+                <option value="">Todos los estados</option>
+                <option value="critico">Crítico</option>
+                <option value="optimo">Óptimo</option>
+                <option value="agotado">Agotado</option>
+            </select>
+        </div>
+
+        <div class="input-wrap" style="min-width:160px;">
+            <select id="inv-filtro-categoria">
+                <option value="">Todas las categorías</option>
+            </select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+            <label style="font-size:12.5px;color:var(--muted);">Mostrar</label>
+            <div class="input-wrap" style="width:70px;">
+                <select id="inv-por-pagina">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <label style="font-size:12.5px;color:var(--muted);">registros</label>
+        </div>
+    </div>
+
+    <!-- Estado cargando -->
+    <div id="inv-loading" class="spinner-wrap">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Estado vacío -->
+    <div id="inv-empty" class="empty-state" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path
+                d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+        </svg>
+        <p>No hay productos en el inventario</p>
+        <small>Los productos con presentaciones activas aparecerán aquí</small>
+    </div>
+
+    <!-- Tabla -->
+    <div id="inv-tabla-wrap" style="display:none;overflow-x:auto;">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th data-col="id" style="cursor:pointer;">ID ↕</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th data-col="stock" style="cursor:pointer;">Stock General ↕</th>
+                    <th>Stock Mínimo</th>
+                    <th>Estado</th>
+                    <th data-col="valor" style="cursor:pointer;">Valor ↕</th>
+                    <th style="text-align:right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="inv-tbody"></tbody>
+        </table>
+    </div>
+
+    <!-- Paginación -->
+    <div id="inv-paginacion"
+        style="display:none;padding:12px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span id="inv-pag-info" style="font-size:12.5px;color:var(--muted);font-family:var(--mono);"></span>
+        <div style="display:flex;gap:4px;" id="inv-pag-botones"></div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL: VER DETALLE DEL INVENTARIO
+     ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-inv-ver" style="display:none;">
+    <div class="modal" style="max-width:520px;">
+        <div class="modal-header">
+            <span class="modal-title">Detalle de Inventario</span>
+            <button class="modal-close" id="btn-cerrar-inv-ver">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Info producto -->
+        <div
+            style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--input-bg);display:flex;gap:16px;flex-wrap:wrap;">
+            <div style="flex:1;">
+                <div
+                    style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);">
+                    Producto</div>
+                <div id="ver-producto-nombre" style="font-weight:600;font-size:15px;margin-top:2px;"></div>
+                <div id="ver-producto-categoria" style="font-size:12.5px;color:var(--muted);margin-top:2px;"></div>
+            </div>
+            <div style="text-align:right;">
+                <div
+                    style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);">
+                    Stock General</div>
+                <div id="ver-stock-general" style="font-size:26px;font-weight:700;color:var(--accent);"></div>
+                <div id="ver-estado-badge" style="margin-top:4px;text-align:right;"></div>
+            </div>
+        </div>
+
+        <!-- Presentaciones -->
+        <div style="padding:16px 20px;">
+            <div
+                style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono);margin-bottom:12px;">
+                Presentaciones</div>
+            <div id="ver-presentaciones-lista"></div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" id="btn-cerrar-inv-ver2">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL: ACTUALIZAR STOCK
+     ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-inv-actualizar" style="display:none;">
+    <div class="modal" style="max-width:600px;">
+        <div class="modal-header">
+            <span class="modal-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round"
+                    style="display:inline;vertical-align:middle;margin-right:6px;">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Actualizar Stock
+            </span>
+            <button class="modal-close" id="btn-cerrar-inv-actualizar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Info del producto en el modal -->
+        <div
+            style="padding:14px 20px;border-bottom:1px solid var(--border);background:var(--input-bg);display:flex;gap:20px;flex-wrap:wrap;">
+            <div style="flex:1;">
+                <div
+                    style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);">
+                    Producto</div>
+                <div id="act-producto-nombre"
+                    style="font-weight:700;font-size:15px;margin-top:3px;letter-spacing:.01em;"></div>
+            </div>
+            <div>
+                <div
+                    style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);">
+                    Stock Actual</div>
+                <div id="act-stock-actual"
+                    style="font-size:18px;font-weight:700;color:var(--accent);margin-top:3px;font-family:var(--mono);">
+                </div>
+            </div>
+            <div>
+                <div
+                    style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);">
+                    Mínimo</div>
+                <div id="act-stock-minimo"
+                    style="font-size:18px;font-weight:700;color:var(--error);margin-top:3px;font-family:var(--mono);">
+                </div>
+            </div>
+        </div>
+
+        <!-- Presentaciones con botón Actualizar individual -->
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);">
+            <div
+                style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono);margin-bottom:12px;">
+                Presentaciones</div>
+            <div id="act-presentaciones-lista"></div>
+        </div>
+
+        <!-- Formulario de movimiento (aparece al click de "Actualizar" en una presentación) -->
+        <div id="act-form-movimiento"
+            style="display:none;padding:16px 20px;border-bottom:1px solid var(--border);background:#fdfcfa;">
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);font-family:var(--mono);">Presentación</div>
+                <span id="act-form-presentacion-nombre"
+                    style="font-size:12.5px;font-weight:600;color:var(--text);background:var(--border);padding:2px 10px;border-radius:20px;"></span>
+                <div style="margin-left:auto;font-size:12px;color:var(--muted);">Stock: <span id="act-form-stock-antes"
+                        style="font-weight:700;font-family:var(--mono);color:var(--text);"></span> → <span
+                        id="act-form-stock-despues"
+                        style="font-weight:700;font-family:var(--mono);color:var(--accent);"></span></div>
+            </div>
+
+            <div class="form-grid">
+                <div class="field">
+                    <label for="act-operacion">Operación</label>
+                    <div class="input-wrap">
+                        <select id="act-operacion">
+                            <option value="ingreso">Ingreso</option>
+                            <option value="egreso">Egreso</option>
+                            <option value="ajuste">Ajuste directo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="act-cantidad">Cantidad</label>
+                    <div class="input-wrap">
+                        <input type="number" id="act-cantidad" placeholder="0" min="0" step="1">
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="act-boleta">Boleta / Ref.</label>
+                    <div class="input-wrap">
+                        <input type="text" id="act-boleta" placeholder="Ej. BOL-001-2026" maxlength="60">
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="act-observacion">Observación</label>
+                    <div class="input-wrap">
+                        <input type="text" id="act-observacion" placeholder="Detalles del movimiento…" maxlength="200">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historial de movimientos -->
+        <div style="padding:16px 20px;">
+            <div
+                style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono);margin-bottom:10px;">
+                Historial</div>
+            <div style="overflow-x:auto;">
+                <table class="tabla" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Presentación</th>
+                            <th>Antes</th>
+                            <th>Después</th>
+                            <th>Boleta</th>
+                            <th>Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="act-historial-tbody">
+                        <tr>
+                            <td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">
+                                Selecciona una presentación para ver su historial
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" id="btn-cancelar-inv-actualizar">Cancelar</button>
+            <button class="btn-primary" id="btn-guardar-inv-actualizar" style="display:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span id="btn-guardar-inv-text">Guardar Cambios</span>
+                <div class="spinner" id="btn-guardar-inv-spinner"
+                    style="display:none;width:14px;height:14px;border-width:2px;border-color:#ffffff55;border-top-color:#fff;">
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     ESTILOS ESPECÍFICOS DEL MÓDULO INVENTARIO
+     ════════════════════════════════════════════════════════ -->
+<style>
+    /* ─── Fila crítica resaltada ─── */
+    .inv-fila-critica {
+        background: #fdf5f5 !important;
+    }
+
+    .inv-fila-critica:hover {
+        background: #faeaea !important;
+    }
+
+    /* ─── Badges estado inventario ─── */
+    .badge-inv-critico {
+        background: #fdf0ef;
+        color: var(--error);
+        border: 1px solid #f5c6c2;
+    }
+
+    .badge-inv-optimo {
+        background: #eaf4ec;
+        color: #276936;
+        border: 1px solid #b6ddbf;
+    }
+
+    .badge-inv-agotado {
+        background: #f0f0f2;
+        color: #666;
+        border: 1px solid #ddd;
+    }
+
+    /* ─── Tarjeta de presentación en modales ─── */
+    .pres-card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: border-color .15s, box-shadow .15s;
+    }
+
+    .pres-card:last-child {
+        margin-bottom: 0;
+    }
+
+    .pres-card.pres-activa {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px #c8622a18;
+    }
+
+    .pres-card.pres-agotada {
+        border-color: #f5c6c2;
+        background: #fdf5f5;
+    }
+
+    .pres-card-nombre {
+        font-weight: 600;
+        font-size: 13.5px;
+    }
+
+    .pres-card-precio {
+        font-size: 12.5px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .pres-card-stock {
+        margin-left: auto;
+        text-align: right;
+        font-size: 22px;
+        font-weight: 700;
+        font-family: var(--mono);
+    }
+
+    .pres-card-stock.optimo {
+        color: #276936;
+    }
+
+    .pres-card-stock.critico {
+        color: var(--error);
+    }
+
+    .pres-card-stock.agotado {
+        color: #aaa;
+    }
+
+    .pres-disponible {
+        font-size: 11.5px;
+        color: #276936;
+        margin-top: 2px;
+    }
+
+    .pres-agotado-txt {
+        font-size: 11.5px;
+        color: #aaa;
+        margin-top: 2px;
+    }
+
+    /* ─── Número de stock en tabla ─── */
+    .stock-critico-txt {
+        color: var(--error);
+        font-weight: 700;
+        font-family: var(--mono);
+    }
+
+    .stock-optimo-txt {
+        color: #276936;
+        font-weight: 700;
+        font-family: var(--mono);
+    }
+
+    .stock-agotado-txt {
+        color: #aaa;
+        font-weight: 700;
+        font-family: var(--mono);
+    }
+</style>
