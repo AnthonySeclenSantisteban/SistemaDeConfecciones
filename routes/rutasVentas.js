@@ -3,8 +3,6 @@ const router = express.Router();
 const pool = require('../config/bd');
 const { generarNumeroVenta } = require('../utils/GenerarNum');
 
-
-
 function requireAuth(req, res, next) {
     if (!req.session || !req.session.usuario) {
         return res.status(401).json({ ok: false, mensaje: 'No autorizado' });
@@ -12,6 +10,9 @@ function requireAuth(req, res, next) {
     next();
 }
 
+// ─────────────────────────────────────────────────────────────
+// GET /api/ventas  — listado paginado con filtros
+// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas', requireAuth, async (req, res) => {
     const {
         dni, numero_venta, estado, tipo_documento,
@@ -21,7 +22,7 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const params = [];
-    const conds = ['v.id_venta IS NOT NULL'];
+    const conds  = ['v.id_venta IS NOT NULL'];
 
     if (dni) {
         params.push(`%${dni}%`);
@@ -59,6 +60,7 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
             params
         );
         const total = parseInt(countRes.rows[0].total);
+
         params.push(parseInt(limit));
         params.push(offset);
 
@@ -68,10 +70,13 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
                 v.subtotal, v.descuento, v.total,
                 v.estado, v.fecha_venta, v.observaciones,
                 c.id_cliente, c.nombres, c.apellidos, c.dni, c.telefono,
-                u.nombre AS atendio
+                u.nombre AS atendio,
+                pa.metodo_pago, pa.estado AS estado_pago
              FROM ventas v
-             LEFT JOIN clientes c ON c.id_cliente = v.id_cliente
-             LEFT JOIN usuarios u ON u.id_usuario = v.id_usuario
+             LEFT JOIN clientes c  ON c.id_cliente = v.id_cliente
+             LEFT JOIN usuarios u  ON u.id_usuario = v.id_usuario
+             LEFT JOIN pedidos  p  ON p.id_pedido  = v.id_pedido
+             LEFT JOIN pagos    pa ON pa.id_pedido = p.id_pedido
              WHERE ${where}
              ORDER BY v.fecha_venta DESC
              LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -80,10 +85,10 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
 
         res.json({
             ok: true,
-            data: dataRes.rows,
+            data:  dataRes.rows,
             total,
             pages: Math.ceil(total / parseInt(limit)),
-            page: parseInt(page)
+            page:  parseInt(page)
         });
     } catch (error) {
         console.error('GET /api/ventas:', error);
@@ -91,18 +96,21 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────
+// GET /api/ventas/stats  — tarjetas del dashboard
+// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas/stats', requireAuth, async (req, res) => {
     try {
-        const ahora = new Date();
-        const mesActual = ahora.getMonth() + 1;
+        const ahora      = new Date();
+        const mesActual  = ahora.getMonth() + 1;
         const anioActual = ahora.getFullYear();
 
         const result = await pool.query(
             `SELECT
-                COUNT(*) FILTER (WHERE TRUE)                                    AS total_ventas,
-                COUNT(*) FILTER (WHERE estado = 'pagada')                       AS ventas_pagadas,
-                COUNT(*) FILTER (WHERE estado = 'pendiente')                    AS ventas_pendientes,
-                COALESCE(SUM(total) FILTER (WHERE estado = 'pagada'), 0)        AS monto_pagadas,
+                COUNT(*) FILTER (WHERE TRUE)                             AS total_ventas,
+                COUNT(*) FILTER (WHERE estado = 'pagada')               AS ventas_pagadas,
+                COUNT(*) FILTER (WHERE estado = 'pendiente')            AS ventas_pendientes,
+                COALESCE(SUM(total) FILTER (WHERE estado = 'pagada'), 0) AS monto_pagadas,
                 COALESCE(SUM(total) FILTER (
                     WHERE estado = 'pagada'
                     AND EXTRACT(MONTH FROM fecha_venta) = $1
@@ -117,10 +125,7 @@ router.get('/api/ventas/stats', requireAuth, async (req, res) => {
 
         res.json({
             ok: true,
-            data: {
-                ...result.rows[0],
-                mes_nombre: meses[mesActual - 1]
-            }
+            data: { ...result.rows[0], mes_nombre: meses[mesActual - 1] }
         });
     } catch (error) {
         console.error('GET /api/ventas/stats:', error);
@@ -128,6 +133,55 @@ router.get('/api/ventas/stats', requireAuth, async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────
+// GET /api/ventas/productos/buscar  — buscador para nueva venta
+// IMPORTANTE: debe ir ANTES de /api/ventas/:id para que Express
+// no confunda "productos" con un id numérico
+// ─────────────────────────────────────────────────────────────
+router.get('/api/ventas/productos/buscar', requireAuth, async (req, res) => {
+    const { q = '' } = req.query;
+    if (q.trim().length < 2)
+        return res.json({ ok: true, data: [] });
+
+    try {
+        const result = await pool.query(
+            `SELECT
+                p.id_producto, p.nombre_producto, p.precio_venta,
+                co.nombre_colegio,
+                COALESCE(
+                    JSON_AGG(
+                        JSON_BUILD_OBJECT(
+                            'id_variante',  vp.id_variante,
+                            'talla',        t.nombre_talla,
+                            'color',        vp.color,
+                            'stock',        vp.stock,
+                            'precio_extra', vp.precio_extra
+                        ) ORDER BY t.nombre_talla, vp.color
+                    ) FILTER (WHERE vp.id_variante IS NOT NULL),
+                    '[]'
+                ) AS variantes
+             FROM productos p
+             LEFT JOIN colegios            co ON co.id_colegio = p.id_colegio
+             LEFT JOIN variantes_producto  vp ON vp.id_producto = p.id_producto
+             LEFT JOIN tallas              t  ON t.id_talla     = vp.id_talla
+             WHERE p.estado = 1
+               AND (p.nombre_producto ILIKE $1 OR co.nombre_colegio ILIKE $1)
+             GROUP BY p.id_producto, p.nombre_producto, p.precio_venta, co.nombre_colegio
+             ORDER BY p.nombre_producto
+             LIMIT 12`,
+            [`%${q.trim()}%`]
+        );
+
+        res.json({ ok: true, data: result.rows });
+    } catch (error) {
+        console.error('GET /api/ventas/productos/buscar:', error);
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────
+// GET /api/ventas/:id  — detalle de una venta
+// ─────────────────────────────────────────────────────────────
 router.get('/api/ventas/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     try {
@@ -140,16 +194,17 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
                 u.nombre AS atendio,
                 pa.metodo_pago, pa.estado AS estado_pago
              FROM ventas v
-             LEFT JOIN clientes  c  ON c.id_cliente  = v.id_cliente
-             LEFT JOIN usuarios  u  ON u.id_usuario  = v.id_usuario
-             LEFT JOIN pedidos   p  ON p.id_pedido   = v.id_pedido
-             LEFT JOIN pagos     pa ON pa.id_pedido  = p.id_pedido
+             LEFT JOIN clientes c  ON c.id_cliente = v.id_cliente
+             LEFT JOIN usuarios u  ON u.id_usuario = v.id_usuario
+             LEFT JOIN pedidos  p  ON p.id_pedido  = v.id_pedido
+             LEFT JOIN pagos    pa ON pa.id_pedido = p.id_pedido
              WHERE v.id_venta = $1`,
             [id]
         );
 
         if (!ventaRes.rows.length)
             return res.json({ ok: false, mensaje: 'Venta no encontrada' });
+
         const itemsRes = await pool.query(
             `SELECT
                 dv.id_detalle_venta,
@@ -157,9 +212,9 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
                 pr.nombre_producto,
                 vp.color, t.nombre_talla
              FROM detalle_venta dv
-             LEFT JOIN productos pr ON pr.id_producto = dv.id_producto
+             LEFT JOIN productos          pr ON pr.id_producto = dv.id_producto
              LEFT JOIN variantes_producto vp ON vp.id_variante = dv.id_variante
-             LEFT JOIN tallas t ON t.id_talla = vp.id_talla
+             LEFT JOIN tallas             t  ON t.id_talla     = vp.id_talla
              WHERE dv.id_venta = $1
              ORDER BY dv.id_detalle_venta`,
             [id]
@@ -167,10 +222,7 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
 
         res.json({
             ok: true,
-            data: {
-                venta: ventaRes.rows[0],
-                items: itemsRes.rows
-            }
+            data: { venta: ventaRes.rows[0], items: itemsRes.rows }
         });
     } catch (error) {
         console.error('GET /api/ventas/:id:', error);
@@ -178,14 +230,54 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────
+// GET /api/ventas/:id/pagos  — historial de pagos de una venta
+// ─────────────────────────────────────────────────────────────
+router.get('/api/ventas/:id/pagos', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Obtener el id_pedido asociado a la venta
+        const ventaRes = await pool.query(
+            'SELECT id_pedido FROM ventas WHERE id_venta = $1',
+            [id]
+        );
+
+        if (!ventaRes.rows.length)
+            return res.json({ ok: false, mensaje: 'Venta no encontrada' });
+
+        const { id_pedido } = ventaRes.rows[0];
+
+        const pagosRes = await pool.query(
+            `SELECT
+                pa.id_pago,
+                pa.metodo_pago,
+                pa.monto,
+                pa.estado,
+                pa.numero_operacion,
+                pa.fecha_pago
+             FROM pagos pa
+             WHERE pa.id_pedido = $1
+             ORDER BY pa.fecha_pago ASC`,
+            [id_pedido]
+        );
+
+        res.json({ ok: true, data: pagosRes.rows });
+    } catch (error) {
+        console.error('GET /api/ventas/:id/pagos:', error);
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+
 router.post('/api/ventas', requireAuth, async (req, res) => {
+    console.log('SESION USUARIO:', req.session.usuario);
     const {
         dni, nombres, apellidos, telefono, correo,
-        tipo_documento = 'nota_venta',
-        metodo_pago = 'efectivo',
-        descuento = 0,
-        observaciones = '',
-        items = []
+        tipo_documento  = 'nota_venta',
+        metodo_pago     = 'efectivo',
+        descuento       = 0,
+        observaciones   = '',
+        items           = []
     } = req.body;
 
     if (!nombres || !nombres.trim())
@@ -195,15 +287,14 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
     if (!items.length)
         return res.json({ ok: false, mensaje: 'Agrega al menos un producto' });
 
-    const id_usuario = req.session.usuario.id_usuario;
-    const client = await pool.connect();
+    const id_usuario = req.session.usuario.id;
+    const client     = await pool.connect();
 
     try {
         await client.query('BEGIN');
 
-        // ── 1. Cliente: buscar por DNI o correo
+        // 1. Cliente: buscar o crear
         let id_cliente;
-
         const buscarCliente = dni
             ? await client.query(
                 'SELECT id_cliente FROM clientes WHERE dni = $1 AND estado != 2 LIMIT 1',
@@ -239,19 +330,19 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
             id_cliente = nuevoCliente.rows[0].id_cliente;
         }
 
-        // ── 2. Calcular totales 
+        // 2. Calcular totales
         let subtotal = 0;
         for (const item of items) {
             subtotal += parseFloat(item.precio_unitario) * parseInt(item.cantidad);
         }
         subtotal = parseFloat(subtotal.toFixed(2));
         const descuentoNum = parseFloat(parseFloat(descuento).toFixed(2));
-        const total = parseFloat((subtotal - descuentoNum).toFixed(2));
+        const total        = parseFloat((subtotal - descuentoNum).toFixed(2));
 
         if (total < 0)
             throw new Error('El descuento no puede ser mayor al subtotal');
 
-        // ── 3. Validar stock de cada ítem 
+        // 3. Validar stock
         for (const item of items) {
             if (item.id_variante) {
                 const stockRes = await client.query(
@@ -261,11 +352,13 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
                 if (!stockRes.rows.length)
                     throw new Error(`Variante ${item.id_variante} no encontrada`);
                 if (stockRes.rows[0].stock < parseInt(item.cantidad))
-                    throw new Error(`Stock insuficiente para el producto (variante ${item.id_variante}). Disponible: ${stockRes.rows[0].stock}`);
+                    throw new Error(
+                        `Stock insuficiente (variante ${item.id_variante}). Disponible: ${stockRes.rows[0].stock}`
+                    );
             }
         }
 
-        // ── 4. Crear pedido
+        // 4. Crear pedido
         const codigoSeg = `LIX-${Date.now()}`;
         const pedidoRes = await client.query(
             `INSERT INTO pedidos (id_cliente, total, estado, codigo_seguimiento)
@@ -275,9 +368,9 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
         );
         const id_pedido = pedidoRes.rows[0].id_pedido;
 
-        // ── 5. Detalle del pedido
+        // 5. Detalle del pedido + descuento de stock
         for (const item of items) {
-            const cant = parseInt(item.cantidad);
+            const cant    = parseInt(item.cantidad);
             const precioU = parseFloat(item.precio_unitario);
             const subItem = parseFloat((cant * precioU).toFixed(2));
 
@@ -285,8 +378,7 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
                 `INSERT INTO detalle_pedido
                  (id_pedido, id_producto, id_variante, cantidad, precio_unitario, subtotal)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [id_pedido, item.id_producto, item.id_variante || null,
-                 cant, precioU, subItem]
+                [id_pedido, item.id_producto, item.id_variante || null, cant, precioU, subItem]
             );
 
             if (item.id_variante) {
@@ -298,23 +390,21 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
                     `INSERT INTO movimiento_stock
                      (id_producto, id_variante, tipo_movimiento, cantidad, motivo)
                      VALUES ($1, $2, 'salida', $3, $4)`,
-                    [item.id_producto, item.id_variante, cant,
-                     `Venta manual desde dashboard`]
+                    [item.id_producto, item.id_variante, cant, 'Venta manual desde dashboard']
                 );
             }
         }
 
-        // ── 6. Pago
+        // 6. Pago (estado pendiente; se confirma al marcar la venta como pagada)
         await client.query(
             `INSERT INTO pagos (id_pedido, metodo_pago, monto, estado)
              VALUES ($1, $2, $3, 'pendiente')`,
             [id_pedido, metodo_pago, total]
         );
 
-        // ── 7. Venta
+        // 7. Encabezado de venta
         const numeroVenta = await generarNumeroVenta(tipo_documento);
-
-        const ventaRes = await client.query(
+        const ventaRes    = await client.query(
             `INSERT INTO ventas
              (numero_venta, id_pedido, id_cliente, id_usuario,
               tipo_documento, subtotal, descuento, total, estado, observaciones)
@@ -326,9 +416,9 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
         );
         const id_venta = ventaRes.rows[0].id_venta;
 
-        //  8. Detalle de venta 
+        // 8. Detalle de venta
         for (const item of items) {
-            const cant = parseInt(item.cantidad);
+            const cant    = parseInt(item.cantidad);
             const precioU = parseFloat(item.precio_unitario);
             const subItem = parseFloat((cant * precioU).toFixed(2));
 
@@ -336,13 +426,11 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
                 `INSERT INTO detalle_venta
                  (id_venta, id_producto, id_variante, cantidad, precio_unitario, subtotal)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [id_venta, item.id_producto, item.id_variante || null,
-                 cant, precioU, subItem]
+                [id_venta, item.id_producto, item.id_variante || null, cant, precioU, subItem]
             );
         }
 
         await client.query('COMMIT');
-
         res.json({
             ok: true,
             mensaje: 'Venta registrada correctamente',
@@ -358,12 +446,14 @@ router.post('/api/ventas', requireAuth, async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────
+// PATCH /api/ventas/:id/estado  — marcar pagada / pendiente
+// ─────────────────────────────────────────────────────────────
 router.patch('/api/ventas/:id/estado', requireAuth, async (req, res) => {
-    const { id } = req.params;
-    const { estado } = req.body; // 'pagada' | 'pendiente'
+    const { id }     = req.params;
+    const { estado } = req.body;
 
-    const estadosValidos = ['pagada', 'pendiente'];
-    if (!estadosValidos.includes(estado))
+    if (!['pagada', 'pendiente'].includes(estado))
         return res.json({ ok: false, mensaje: 'Estado no válido' });
 
     const client = await pool.connect();
@@ -378,28 +468,14 @@ router.patch('/api/ventas/:id/estado', requireAuth, async (req, res) => {
             await client.query('ROLLBACK');
             return res.json({ ok: false, mensaje: 'Venta no encontrada' });
         }
-
-        const estadoActual = ventaRes.rows[0].estado;
-        if (estadoActual === 'anulada')
+        if (ventaRes.rows[0].estado === 'anulada')
             throw new Error('No se puede cambiar el estado de una venta anulada');
 
-        await client.query(
-            'UPDATE ventas SET estado = $1 WHERE id_venta = $2',
-            [estado, id]
-        );
-        if (estado === 'pagada') {
-            await client.query(
-                `UPDATE pagos SET estado = 'pagado'
-                 WHERE id_pedido = $1`,
-                [ventaRes.rows[0].id_pedido]
-            );
-        } else if (estado === 'pendiente') {
-            await client.query(
-                `UPDATE pagos SET estado = 'pendiente'
-                 WHERE id_pedido = $1`,
-                [ventaRes.rows[0].id_pedido]
-            );
-        }
+        const { id_pedido } = ventaRes.rows[0];
+        const estadoPago    = estado === 'pagada' ? 'pagado' : 'pendiente';
+
+        await client.query('UPDATE ventas SET estado=$1 WHERE id_venta=$2', [estado, id]);
+        await client.query('UPDATE pagos  SET estado=$1 WHERE id_pedido=$2', [estadoPago, id_pedido]);
 
         await client.query('COMMIT');
         res.json({ ok: true, mensaje: `Venta marcada como ${estado}` });
@@ -413,8 +489,11 @@ router.patch('/api/ventas/:id/estado', requireAuth, async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────
+// DELETE /api/ventas/:id  — anular venta y restaurar stock
+// ─────────────────────────────────────────────────────────────
 router.delete('/api/ventas/:id', requireAuth, async (req, res) => {
-    const { id } = req.params;
+    const { id }     = req.params;
     const { motivo } = req.body;
 
     if (!motivo || !motivo.trim())
@@ -437,6 +516,7 @@ router.delete('/api/ventas/:id', requireAuth, async (req, res) => {
         if (venta.estado === 'anulada')
             throw new Error('Esta venta ya está anulada');
 
+        // Restaurar stock de variantes
         const itemsRes = await client.query(
             `SELECT id_producto, id_variante, cantidad
              FROM detalle_venta
@@ -482,47 +562,9 @@ router.delete('/api/ventas/:id', requireAuth, async (req, res) => {
     }
 });
 
-router.get('/api/ventas/productos/buscar', requireAuth, async (req, res) => {
-    const { q = '' } = req.query;
-    if (q.trim().length < 2)
-        return res.json({ ok: true, data: [] });
-
-    try {
-        const result = await pool.query(
-            `SELECT
-                p.id_producto, p.nombre_producto, p.precio_venta,
-                co.nombre_colegio,
-                COALESCE(
-                    JSON_AGG(
-                        JSON_BUILD_OBJECT(
-                            'id_variante', vp.id_variante,
-                            'talla', t.nombre_talla,
-                            'color', vp.color,
-                            'stock', vp.stock,
-                            'precio_extra', vp.precio_extra
-                        ) ORDER BY t.nombre_talla, vp.color
-                    ) FILTER (WHERE vp.id_variante IS NOT NULL),
-                    '[]'
-                ) AS variantes
-             FROM productos p
-             LEFT JOIN colegios co ON co.id_colegio = p.id_colegio
-             LEFT JOIN variantes_producto vp ON vp.id_producto = p.id_producto
-             LEFT JOIN tallas t ON t.id_talla = vp.id_talla
-             WHERE p.estado = 1
-               AND (p.nombre_producto ILIKE $1 OR co.nombre_colegio ILIKE $1)
-             GROUP BY p.id_producto, p.nombre_producto, p.precio_venta, co.nombre_colegio
-             ORDER BY p.nombre_producto
-             LIMIT 12`,
-            [`%${q.trim()}%`]
-        );
-
-        res.json({ ok: true, data: result.rows });
-    } catch (error) {
-        console.error('GET /api/ventas/productos/buscar:', error);
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
-
+// ─────────────────────────────────────────────────────────────
+// GET /api/reniec/:dni  — consulta RENIEC (local → API externa)
+// ─────────────────────────────────────────────────────────────
 router.get('/api/reniec/:dni', requireAuth, async (req, res) => {
     const { dni } = req.params;
     if (!/^\d{8}$/.test(dni))
@@ -532,43 +574,46 @@ router.get('/api/reniec/:dni', requireAuth, async (req, res) => {
         // Primero buscar en BD local
         const local = await pool.query(
             `SELECT nombres, apellidos FROM clientes
-            WHERE dni = $1 AND estado != 2 LIMIT 1`,
+             WHERE dni = $1 AND estado != 2 LIMIT 1`,
             [dni]
         );
 
         if (local.rows.length) {
             const c = local.rows[0];
-
             return res.json({
                 ok: true,
-                nombre: `${c.nombres} ${c.apellidos || ''}`.trim(),
-                nombres: c.nombres,
+                nombre:    `${c.nombres} ${c.apellidos || ''}`.trim(),
+                nombres:   c.nombres,
                 apellidos: c.apellidos || '',
-                fuente: 'local'
+                fuente:    'local'
             });
         }
-     
-    const respuesta = await fetch(`https://api.decolecta.com/v1/reniec/dni?numero=${dni}`, {
-        headers: {
-            Authorization: `Bearer ${process.env.API_RENIEC}`,
-            'Content-Type': 'application/json'
-        }
-    });
 
-    const data = await respuesta.json();
-    console.log('RENIEC response:', data);
+        // Si no está en BD, consultar API externa
+        const respuesta = await fetch(
+            `https://api.decolecta.com/v1/reniec/dni?numero=${dni}`,
+            {
+                headers: {
+                    Authorization:  `Bearer ${process.env.API_RENIEC}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
 
-    if (!respuesta.ok) {
-        return res.json({ ok: false, mensaje: 'DNI no encontrado' });
-    }
+        const data = await respuesta.json();
+        console.log('RENIEC response:', data);
 
-    return res.json({
-        ok: true,
-        nombre: `${data.first_name} ${data.first_last_name} ${data.second_last_name}`.trim(),
-        nombres: data.first_name,
-        apellidos: `${data.first_last_name} ${data.second_last_name}`.trim(),
-        fuente: 'reniec'
-    });
+        if (!respuesta.ok)
+            return res.json({ ok: false, mensaje: 'DNI no encontrado' });
+
+        return res.json({
+            ok: true,
+            nombre:    `${data.first_name} ${data.first_last_name} ${data.second_last_name}`.trim(),
+            nombres:   data.first_name,
+            apellidos: `${data.first_last_name} ${data.second_last_name}`.trim(),
+            fuente:    'reniec'
+        });
+
     } catch (error) {
         res.json({ ok: false, mensaje: error.message });
     }

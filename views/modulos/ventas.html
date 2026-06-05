@@ -1,4 +1,4 @@
-
+<!-- STATS -->
 <div class="stats-grid">
   <div class="stat-card">
     <div class="stat-icon"><i data-lucide="receipt"></i></div>
@@ -30,8 +30,6 @@
 <div class="content-card" style="margin-bottom:16px;">
   <div class="content-card-body" style="padding:14px 20px;">
     <div class="filtros-row">
-
-      <!-- DNI + RENIEC -->
       <div class="filtro-dni-wrap">
         <div class="input-wrap">
           <span class="input-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
@@ -44,8 +42,6 @@
           <i data-lucide="user-search"></i> RENIEC
         </button>
       </div>
-
-      <!-- Info cliente verificado -->
       <div class="reniec-result" id="reniecResultFiltro" style="display:none;">
         <i data-lucide="badge-check" style="width:13px;height:13px;"></i>
         <span id="reniecNombreFiltro"></span>
@@ -53,31 +49,24 @@
           <i data-lucide="x" style="width:11px;height:11px;"></i>
         </button>
       </div>
-
-      <!-- Otros filtros -->
       <input type="text" id="filtroNumeroVenta" placeholder="N° venta..."
              style="width:140px;" oninput="aplicarFiltrosVentas()">
-
       <select id="filtroEstadoVenta" onchange="aplicarFiltrosVentas()">
         <option value="">Todos los estados</option>
         <option value="pendiente">Pendiente</option>
         <option value="pagada">Pagada</option>
         <option value="anulada">Anulada</option>
       </select>
-
       <select id="filtroTipoDoc" onchange="aplicarFiltrosVentas()">
         <option value="">Todos los documentos</option>
         <option value="nota_venta">Nota de venta</option>
         <option value="boleta">Boleta</option>
       </select>
-
       <input type="date" id="filtroFechaDesde" onchange="aplicarFiltrosVentas()" title="Desde">
       <input type="date" id="filtroFechaHasta" onchange="aplicarFiltrosVentas()" title="Hasta">
-
       <button class="btn-secondary" onclick="limpiarFiltrosVentas()" style="padding:8px 14px;">
         <i data-lucide="x" style="width:13px;height:13px;"></i> Limpiar
       </button>
-
     </div>
   </div>
 </div>
@@ -96,24 +85,23 @@
       </button>
     </div>
   </div>
-
-  <div class="spinner-wrap" id="spinnerVentas">
-    <div class="spinner"></div>
-  </div>
-
+  <div class="spinner-wrap" id="spinnerVentas"><div class="spinner"></div></div>
   <div id="tablaVentasWrap" style="display:none;">
     <div style="overflow-x:auto;">
       <table class="tabla">
         <thead>
           <tr>
+            <th>ID</th>
             <th>N° Venta</th>
-            <th>Tipo doc.</th>
+            <th>Tipo Doc.</th>
             <th>Cliente</th>
             <th>DNI</th>
-            <th>Total</th>
-            <th>Estado</th>
+            <th>Vendedor</th>
             <th>Fecha</th>
-            <th>Atendió</th>
+            <th>Total</th>
+            <th>Forma Pago</th>
+            <th>Deuda</th>
+            <th>Estado</th>
             <th style="text-align:center;">Acciones</th>
           </tr>
         </thead>
@@ -122,7 +110,6 @@
     </div>
     <div class="pagination" id="ventasPaginacion"></div>
   </div>
-
   <div class="empty-state" id="emptyVentas" style="display:none;">
     <i data-lucide="receipt" style="width:44px;height:44px;opacity:.3;margin-bottom:14px;"></i>
     <p>No se encontraron ventas</p>
@@ -130,29 +117,75 @@
   </div>
 </div>
 
-
-<!-- ═══════════ MODAL DETALLE VENTA ═══════════ -->
+<!-- MODAL DETALLE VENTA -->
 <div class="modal-overlay" id="modalDetalleVenta" style="display:none;">
   <div class="modal modal-lg">
     <div class="modal-header">
       <div>
         <div class="modal-title" id="modalDetalleTitulo">Detalle de venta</div>
-        <div style="font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:3px;"
-             id="modalDetalleSubtitulo"></div>
+        <div style="font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-top:3px;" id="modalDetalleSubtitulo"></div>
       </div>
       <button class="modal-close" onclick="cerrarModalVentas('modalDetalleVenta')">
         <i data-lucide="x" style="width:14px;height:14px;"></i>
       </button>
     </div>
-    <div id="modalDetalleBody">
-      <div class="spinner-wrap"><div class="spinner"></div></div>
-    </div>
+    <div id="modalDetalleBody"><div class="spinner-wrap"><div class="spinner"></div></div></div>
     <div class="modal-footer" id="modalDetalleBotones"></div>
   </div>
 </div>
 
+<!-- MODAL HISTORIAL DE PAGOS -->
+<div class="modal-overlay" id="modalHistorialPagos" style="display:none;">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">💳 Historial de Pagos</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;" id="historialSubtitulo">Gestiona y descarga tus recibos de pago</div>
+      </div>
+      <button class="modal-close" onclick="cerrarModalVentas('modalHistorialPagos')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px 20px;background:var(--bg);border-bottom:1px solid var(--border);">
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Total</div>
+        <div style="font-size:20px;font-weight:700;color:var(--accent);" id="historialTotal">S/ 0.00</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Pagado</div>
+        <div style="font-size:20px;font-weight:700;color:#059669;" id="historialPagado">S/ 0.00</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Deuda</div>
+        <div style="font-size:20px;font-weight:700;color:#dc2626;" id="historialDeuda">S/ 0.00</div>
+      </div>
+    </div>
+    <div style="padding:16px 20px;">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Método</th>
+            <th>N° Operación</th>
+            <th>Estado</th>
+            <th style="text-align:right;">Monto</th>
+          </tr>
+        </thead>
+        <tbody id="historialBody"></tbody>
+      </table>
+      <div id="historialVacio" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:13px;">Sin pagos registrados</div>
+    </div>
+    <div class="modal-footer">
+      <div style="font-size:12px;color:var(--muted);" id="historialFooterInfo"></div>
+      <button class="btn-secondary" onclick="cerrarModalVentas('modalHistorialPagos')">Cerrar</button>
+      <button class="btn-primary" id="historialBtnMarcar" onclick="_marcarPagadoDesdeHistorial()" style="display:none;">
+        <i data-lucide="check-circle"></i> Marcar como pagada
+      </button>
+    </div>
+  </div>
+</div>
 
-<!-- ═══════════ MODAL NUEVA VENTA MANUAL ═══════════ -->
+<!-- MODAL NUEVA VENTA -->
 <div class="modal-overlay" id="modalNuevaVenta" style="display:none;">
   <div class="modal modal-lg">
     <div class="modal-header">
@@ -161,10 +194,7 @@
         <i data-lucide="x" style="width:14px;height:14px;"></i>
       </button>
     </div>
-
     <div id="alertaNuevaVenta"></div>
-
-    <!-- Paso 1: Cliente -->
     <p class="paso-label">1 — Datos del cliente</p>
     <div class="form-grid">
       <div class="field">
@@ -205,19 +235,13 @@
         </select>
       </div>
     </div>
-
     <div class="divider"></div>
-
-    <!-- Paso 2: Productos -->
     <p class="paso-label">2 — Productos</p>
     <div class="input-wrap" style="margin-bottom:10px;">
       <span class="input-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
-      <input type="text" id="nvBuscarProducto"
-             placeholder="Escribe el nombre del producto..."
-             oninput="buscarProductoNV()">
+      <input type="text" id="nvBuscarProducto" placeholder="Escribe el nombre del producto..." oninput="buscarProductoNV()">
     </div>
     <div id="nvDropdownProductos" class="productos-dropdown" style="display:none;"></div>
-
     <div id="nvItemsWrap">
       <div class="empty-state" id="nvSinItems" style="padding:20px;">
         <i data-lucide="package" style="width:32px;height:32px;opacity:.3;margin-bottom:8px;"></i>
@@ -226,26 +250,18 @@
       <table class="tabla" id="nvTablaItems" style="display:none;">
         <thead>
           <tr>
-            <th>Producto</th>
-            <th>Talla / Color</th>
-            <th>Precio unit.</th>
-            <th>Cant.</th>
-            <th>Subtotal</th>
-            <th></th>
+            <th>Producto</th><th>Talla / Color</th><th>Precio unit.</th><th>Cant.</th><th>Subtotal</th><th></th>
           </tr>
         </thead>
         <tbody id="nvItemsBody"></tbody>
       </table>
     </div>
-
-    <!-- Totales -->
     <div id="nvTotalesWrap" style="display:none;">
       <div class="divider" style="margin:12px 0;"></div>
       <div class="totales-grid">
         <div class="field" style="margin-bottom:0;">
           <label>Descuento (S/)</label>
-          <input type="number" id="nvDescuento" value="0" min="0" step="0.50"
-                 oninput="calcularTotalNV()">
+          <input type="number" id="nvDescuento" value="0" min="0" step="0.50" oninput="calcularTotalNV()">
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Método de pago</label>
@@ -258,22 +274,12 @@
           </select>
         </div>
         <div class="totales-resumen">
-          <div class="total-fila">
-            <span>Subtotal</span>
-            <strong id="nvLabelSubtotal">S/ 0.00</strong>
-          </div>
-          <div class="total-fila">
-            <span>Descuento</span>
-            <strong id="nvLabelDescuento" style="color:var(--error);">- S/ 0.00</strong>
-          </div>
-          <div class="total-fila total-final">
-            <span>TOTAL</span>
-            <strong id="nvLabelTotal">S/ 0.00</strong>
-          </div>
+          <div class="total-fila"><span>Subtotal</span><strong id="nvLabelSubtotal">S/ 0.00</strong></div>
+          <div class="total-fila"><span>Descuento</span><strong id="nvLabelDescuento" style="color:var(--error);">- S/ 0.00</strong></div>
+          <div class="total-fila total-final"><span>TOTAL</span><strong id="nvLabelTotal">S/ 0.00</strong></div>
         </div>
       </div>
     </div>
-
     <div class="modal-footer">
       <button class="btn-secondary" onclick="cerrarModalVentas('modalNuevaVenta')">Cancelar</button>
       <button class="btn-primary" onclick="guardarNuevaVenta()" id="btnGuardarNV">
@@ -283,8 +289,7 @@
   </div>
 </div>
 
-
-<!-- ═══════════ MODAL ANULAR ═══════════ -->
+<!-- MODAL ANULAR -->
 <div class="modal-overlay" id="modalAnularVenta" style="display:none;">
   <div class="modal" style="max-width:420px;">
     <div class="modal-header">
@@ -295,14 +300,11 @@
     </div>
     <div class="alert alert-warning" style="margin-bottom:16px;">
       <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
-      <span>Esta acción <strong>no se puede deshacer</strong>.
-            El stock de los productos se restaurará automáticamente.</span>
+      <span>Esta acción <strong>no se puede deshacer</strong>. El stock se restaurará automáticamente.</span>
     </div>
     <div class="field">
       <label>Motivo de anulación *</label>
-      <textarea id="motivoAnulacion"
-                placeholder="Ej: Error en el pedido, cliente canceló..."
-                rows="3"></textarea>
+      <textarea id="motivoAnulacion" placeholder="Ej: Error en el pedido, cliente canceló..." rows="3"></textarea>
     </div>
     <input type="hidden" id="anularIdVenta">
     <div class="modal-footer">
@@ -314,8 +316,7 @@
   </div>
 </div>
 
-
-<!-- ═══════════ MODAL IMPRIMIR DOCUMENTO ═══════════ -->
+<!-- MODAL IMPRIMIR -->
 <div class="modal-overlay" id="modalImprimirVenta" style="display:none;">
   <div class="modal modal-xl">
     <div class="modal-header">
