@@ -140,6 +140,7 @@ async function abrirEditarProducto(id) {
         document.getElementById('producto-colegio').value     = p.id_colegio || '';
         document.getElementById('producto-genero').value      = p.genero || '';
         document.getElementById('producto-estado').value      = p.estado;
+        document.getElementById('producto-stock-minimo').value = p.stock_minimo || 10;
     } catch (err) {
         _mostrarAlertaProducto('No se pudo cargar el producto');
     }
@@ -159,6 +160,7 @@ async function guardarProducto() {
     const id_colegio     = document.getElementById('producto-colegio').value;
     const genero         = document.getElementById('producto-genero').value;
     const estado         = document.getElementById('producto-estado').value;
+    const stock_minimo   = document.getElementById('producto-stock-minimo').value;
 
     if (!nombre_producto) { _mostrarAlertaProducto('El nombre es requerido'); return; }
     if (!precio_costo || parseFloat(precio_costo) <= 0) { _mostrarAlertaProducto('El precio costo debe ser mayor a 0'); return; }
@@ -188,7 +190,8 @@ async function guardarProducto() {
                 id_categoria: id_categoria || null,
                 id_colegio:   id_colegio   || null,
                 genero:       genero       || null,
-                estado:       parseInt(estado)
+                estado:       parseInt(estado),
+                stock_minimo: stock_minimo ? parseInt(stock_minimo) : 10
             })
         });
         const json = await res.json();
@@ -296,6 +299,7 @@ function _limpiarModalProducto() {
     document.getElementById('producto-precio-venta').value = '';
     document.getElementById('producto-genero').value      = '';
     document.getElementById('producto-estado').value      = '1';
+    document.getElementById('producto-stock-minimo').value = '';
     document.getElementById('modal-producto-alert').style.display = 'none';
 }
 

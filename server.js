@@ -28,6 +28,9 @@ app.use('/', rutasCliente);
 const rutasCompras = require('./routes/rutasCompras');
 app.use('/', rutasCompras);
 
+const rutasVentas = require('./routes/rutasVentas');
+app.use('/', rutasVentas);
+
 app.listen(PORT, () => {
     console.log(`Servidor en http://localhost:${PORT}`);
 });
