@@ -1,0 +1,405 @@
+<div class="modulo-header">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h2 class="modulo-titulo" style="display:flex;align-items:center;gap:8px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Gestión de Imágenes
+      </h2>
+      <p class="modulo-subtitulo">Administra el logo, sliders y redes sociales de tu tienda</p>
+    </div>
+    <div id="gt-header-btn" style="display:none;">
+      <button class="btn-primary" id="btn-nuevo-logo" type="button" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Subir Logo
+      </button>
+      <button class="btn-primary" id="btn-nuevo-slider" type="button" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar Slider
+      </button>
+      <button class="btn-primary" id="btn-nueva-red" type="button" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar Red Social
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.gt-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 20px;
+  margin-top: 4px;
+}
+.gt-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.gt-tab:hover { color: var(--text); }
+.gt-tab.active {
+  color: var(--accent, #6366f1);
+  border-bottom-color: var(--accent, #6366f1);
+}
+.gt-panel { display: none; }
+.gt-panel.active { display: block; }
+
+.logo-card {
+  background: var(--card, #fff);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.logo-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.logo-card-img {
+  width: 100%;
+  aspect-ratio: 16/8;
+  object-fit: contain;
+  padding: 16px;
+  background: var(--surface, #f8f9fa);
+  border-bottom: 1px solid var(--border);
+}
+.logo-card-body { padding: 12px 14px; }
+.logo-card-name { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.logo-card-actions { display: flex; gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+.logo-btn-toggle {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+.logo-btn-toggle:hover { opacity: 0.85; }
+.logo-btn-toggle.activo { background: #22c55e; color: #fff; }
+.logo-btn-toggle.inactivo { background: #ef4444; color: #fff; }
+.logo-btn-del {
+  padding: 8px 12px;
+  background: var(--surface, #f8f9fa);
+  border: none;
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+}
+.logo-btn-del:hover { background: #fee2e2; color: #ef4444; }
+
+.gt-table { width: 100%; border-collapse: collapse; }
+.gt-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.gt-table td {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.gt-table tr:last-child td { border-bottom: none; }
+.gt-table tr:hover td { background: var(--surface, rgba(0,0,0,0.02)); }
+.slider-thumb {
+  width: 72px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.badge-activo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.badge-activo.on { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+.badge-activo.off { background: #fef9c3; color: #a16207; border: 1px solid #fde68a; }
+.gt-table-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.red-card {
+  border-radius: 14px;
+  padding: 18px 20px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.red-card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.red-card-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.red-card-name { font-size: 18px; font-weight: 700; }
+.red-card-sub { font-size: 13px; opacity: 0.8; }
+.red-card-actions { display: flex; gap: 8px; }
+.red-card-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  transition: background 0.15s;
+}
+.red-card-btn:hover { background: rgba(255,255,255,0.28); }
+.red-card-btn.estado-on { background: rgba(255,255,255,0.18); }
+.red-card-btn.estado-off { background: rgba(0,0,0,0.18); }
+
+.red-facebook  { background: linear-gradient(135deg,#1877f2,#0c5ac1); }
+.red-instagram { background: linear-gradient(135deg,#f56040,#c13584); }
+.red-tiktok    { background: linear-gradient(135deg,#111,#2f2f2f); }
+.red-whatsapp  { background: linear-gradient(135deg,#25d366,#128c7e); }
+.red-youtube   { background: linear-gradient(135deg,#ff0000,#cc0000); }
+.red-telegram  { background: linear-gradient(135deg,#2aabee,#1a7fc4); }
+.red-otro      { background: linear-gradient(135deg,#6366f1,#4f46e5); }
+
+[data-theme="dark"] .logo-card { background: var(--card, #1e1e2e); }
+[data-theme="dark"] .logo-card-img { background: var(--surface, #2a2a3e); }
+[data-theme="dark"] .logo-btn-del { background: var(--surface, #2a2a3e); }
+[data-theme="dark"] .gt-table tr:hover td { background: rgba(255,255,255,0.03); }
+[data-theme="dark"] .badge-activo.on { background: #14532d; color: #4ade80; border-color: #166534; }
+[data-theme="dark"] .badge-activo.off { background: #422006; color: #fbbf24; border-color: #713f12; }
+</style>
+
+<div class="content-card">
+  <div class="gt-tabs">
+    <button class="gt-tab active" data-tab="logos" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Logo
+    </button>
+    <button class="gt-tab" data-tab="sliders" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8"/></svg>
+      Sliders
+    </button>
+    <button class="gt-tab" data-tab="redes" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Redes Sociales
+    </button>
+  </div>
+
+  <div class="gt-panel active" id="panel-logos">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;color:var(--text);">Logos Disponibles</h3>
+    </div>
+    <div id="logos-loading" class="spinner-wrap"><div class="spinner"></div></div>
+    <div id="logos-empty" class="empty-state" style="display:none;">
+      <p>No hay logos registrados</p>
+      <small>Sube uno nuevo con el botón de arriba</small>
+    </div>
+    <div id="logos-lista" style="display:none;"></div>
+  </div>
+
+  <div class="gt-panel" id="panel-sliders">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;color:var(--text);">Sliders Disponibles</h3>
+    </div>
+    <div id="sliders-loading" class="spinner-wrap"><div class="spinner"></div></div>
+    <div id="sliders-empty" class="empty-state" style="display:none;">
+      <p>No hay sliders registrados</p>
+      <small>Agrega banners para la portada de la tienda</small>
+    </div>
+    <div id="sliders-lista" style="display:none;overflow-x:auto;">
+      <table class="gt-table">
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Estado</th>
+            <th style="text-align:right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="sliders-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="gt-panel" id="panel-redes">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:15px;font-weight:700;color:var(--text);">Redes Sociales</h3>
+    </div>
+    <div id="redes-loading" class="spinner-wrap"><div class="spinner"></div></div>
+    <div id="redes-empty" class="empty-state" style="display:none;">
+      <p>No hay redes registradas</p>
+      <small>Agrega enlaces como Facebook, Instagram o WhatsApp</small>
+    </div>
+    <div id="redes-lista" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-logo" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Nuevo logo</span>
+      <button class="modal-close" id="btn-cerrar-modal-logo" type="button">×</button>
+    </div>
+    <div class="field">
+      <label for="logo-nombre">Nombre archivo</label>
+      <div class="input-wrap">
+        <input type="text" id="logo-nombre" placeholder="logo-principal">
+      </div>
+    </div>
+    <div class="field">
+      <label>Imagen del logo</label>
+      <input type="file" id="logo-file" accept="image/*" style="display:none;">
+      <label for="logo-file" class="dropzone" id="drop-logo" style="display:block;border:2px dashed var(--border);border-radius:14px;padding:18px;text-align:center;cursor:pointer;background:rgba(255,255,255,.02);">
+        <div id="logo-drop-text">
+          <strong>Arrastra una imagen aquí</strong>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">o haz clic para seleccionar</div>
+        </div>
+        <img id="logo-preview" alt="Preview logo" style="display:none;max-width:100%;max-height:180px;border-radius:12px;margin-top:12px;">
+      </label>
+    </div>
+    <div class="field" style="display:none;">
+      <label for="logo-url">URL imagen</label>
+      <div class="input-wrap"><input type="text" id="logo-url"></div>
+    </div>
+    <div class="field">
+      <label for="logo-activo">Estado</label>
+      <div class="input-wrap">
+        <select id="logo-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-logo" type="button">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-logo" type="button">Guardar logo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-slider" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-slider-titulo">Nuevo slider</span>
+      <button class="modal-close" id="btn-cerrar-modal-slider" type="button">×</button>
+    </div>
+    <input type="hidden" id="slider-id">
+    <div class="field">
+      <label for="slider-titulo">Título</label>
+      <div class="input-wrap"><input type="text" id="slider-titulo" placeholder="Título del banner"></div>
+    </div>
+    <div class="field">
+      <label for="slider-nombre">Nombre archivo</label>
+      <div class="input-wrap"><input type="text" id="slider-nombre" placeholder="banner-portada"></div>
+    </div>
+    <div class="field">
+      <label>Imagen del slider</label>
+      <input type="file" id="slider-file" accept="image/*" style="display:none;">
+      <label for="slider-file" class="dropzone" id="drop-slider" style="display:block;border:2px dashed var(--border);border-radius:14px;padding:18px;text-align:center;cursor:pointer;background:rgba(255,255,255,.02);">
+        <div id="slider-drop-text">
+          <strong>Arrastra una imagen aquí</strong>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">o haz clic para seleccionar</div>
+        </div>
+        <img id="slider-preview" alt="Preview slider" style="display:none;max-width:100%;max-height:180px;border-radius:12px;margin-top:12px;">
+      </label>
+    </div>
+    <div class="field" style="display:none;">
+      <label for="slider-url">URL imagen</label>
+      <div class="input-wrap"><input type="text" id="slider-url"></div>
+    </div>
+    <div class="field">
+      <label for="slider-orden">Orden</label>
+      <div class="input-wrap"><input type="number" id="slider-orden" min="0" value="0"></div>
+    </div>
+    <div class="field">
+      <label for="slider-activo">Estado</label>
+      <div class="input-wrap">
+        <select id="slider-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-slider" type="button">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-slider" type="button">Guardar slider</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-red" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-red-titulo">Nueva red social</span>
+      <button class="modal-close" id="btn-cerrar-modal-red" type="button">×</button>
+    </div>
+    <input type="hidden" id="red-id">
+    <div class="field">
+      <label for="red-tipo">Tipo</label>
+      <div class="input-wrap">
+        <select id="red-tipo">
+          <option value="facebook">Facebook</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="youtube">YouTube</option>
+          <option value="telegram">Telegram</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="red-nombre">Nombre</label>
+      <div class="input-wrap"><input type="text" id="red-nombre" placeholder="instagram-lix"></div>
+    </div>
+    <div class="field">
+      <label for="red-url">URL</label>
+      <div class="input-wrap"><input type="text" id="red-url" placeholder="https://..."></div>
+    </div>
+    <div class="field">
+      <label for="red-activo">Estado</label>
+      <div class="input-wrap">
+        <select id="red-activo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-red" type="button">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-red" type="button">Guardar red</button>
+    </div>
+  </div>
+</div>

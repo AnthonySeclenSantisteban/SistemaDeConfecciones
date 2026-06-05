@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel='stylesheet' href='/css/dashboard.css'>
     <link rel="stylesheet" href="/css/modulos/perfiles.css">
-    <link rel="stylesheet" href="/css/modulos/ventas.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     
 </head>
@@ -16,12 +15,16 @@
     
     <aside class="sidebar">
         <div class="logo">
-            <div class="logo-icon">🧵</div>
-            <div class="logo-text">
-                <strong>Confecciones <span>Lix</span></strong>
-                <small>Sistema de gestión</small>
-            </div>
-        </div>
+    <div class="logo-image-wrap">
+        <img id="sidebar-logo-img" src="" alt="Logo Confecciones Lix" style="display:none;">
+        <div id="sidebar-logo-fallback" class="logo-icon">🧵</div>
+    </div>
+
+    <div class="logo-text">
+        <strong>Confecciones <span>Lix</span></strong>
+        <small>Sistema de gestión</small>
+    </div>
+</div>  
 
         <nav>
             <div class="nav-section">Principal</div>
@@ -54,9 +57,6 @@
             </a>
             <a href="#" class="nav-item" data-modulo="pedidos">
                 <i data-lucide="shopping-bag"></i> Pedidos
-            </a>
-            <a href="#" class="nav-item" data-modulo="ventas">
-                <i data-lucide="shopping-bag"></i> Ventas
             </a>
             <a href="#" class="nav-item" data-modulo="envios">
                 <i data-lucide="truck"></i> Envíos
@@ -113,8 +113,7 @@
 
     <script src="/js/dashboard.js"></script>
     <script>lucide.createIcons();</script>
-    <script src="/js/modulos/clientes.js"></script>
-    <script src="/js/modulos/pedidos.js"></script>
+    
     
 </body>
 </html>

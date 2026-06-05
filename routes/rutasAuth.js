@@ -3,6 +3,7 @@ const router = express.Router();
 const controladorAuth = require('../controllers/controladorAuth');
 const path = require('path'); 
 const pool = require('../config/bd');
+const { uploadLogo, uploadSlider } = require('../utils/uploadTienda');
 
 const verificarSesion = (req, res, next) => {
     if (!req.session.usuario) {
@@ -492,7 +493,7 @@ router.delete('/api/productos/:id', verificarSesion, async (req, res) => {
 
 
 router.post('/api/productos', verificarSesion, async (req, res) => {
-    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, stock_minimo } = req.body;
+    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio } = req.body;
     const id_usuario = req.session.usuario.id;
     if (!nombre_producto || !precio_costo || !precio_venta)
         return res.json({ ok: false, mensaje: 'Nombre y precios son requeridos' });
@@ -511,21 +512,21 @@ router.post('/api/productos', verificarSesion, async (req, res) => {
             await pool.query(
                 `UPDATE productos
                  SET descripcion=$1, precio_costo=$2, precio_venta=$3, id_categoria=$4,
-                     genero=$5, id_colegio=$6, estado=1, stock_minimo=$7,
-                     updated_at=NOW(), updated_by=$8,
+                     genero=$5, id_colegio=$6, estado=1,
+                     updated_at=NOW(), updated_by=$7,
                      deleted_at=NULL, deleted_by=NULL
-                 WHERE id_producto=$9`,
+                 WHERE id_producto=$8`,
                 [descripcion || null, precio_costo, precio_venta, id_categoria || null,
-                 genero || null, id_colegio || null, stock_minimo || 10, id_usuario, eliminado.rows[0].id_producto]
+                 genero || null, id_colegio || null, id_usuario, eliminado.rows[0].id_producto]
             );
             return res.json({ ok: true, mensaje: 'Producto reactivado correctamente' });
         }
         await pool.query(
             `INSERT INTO productos
-             (nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, stock_minimo, estado, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9)`,
+             (nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, estado, created_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8)`,
             [nombre_producto, descripcion || null, precio_costo, precio_venta,
-             id_categoria || null, genero || null, id_colegio || null, stock_minimo || 10, id_usuario]
+             id_categoria || null, genero || null, id_colegio || null, id_usuario]
         );
         res.json({ ok: true, mensaje: 'Producto creado correctamente' });
     } catch (error) {
@@ -537,7 +538,7 @@ router.post('/api/productos', verificarSesion, async (req, res) => {
 
 router.put('/api/productos/:id', verificarSesion, async (req, res) => {
     const { id } = req.params;
-    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, estado, stock_minimo } = req.body;
+    const { nombre_producto, descripcion, precio_costo, precio_venta, id_categoria, genero, id_colegio, estado } = req.body;
     const id_usuario = req.session.usuario.id;
     if (!nombre_producto || !precio_costo || !precio_venta)
         return res.json({ ok: false, mensaje: 'Nombre y precio son requeridos' });
@@ -553,11 +554,11 @@ router.put('/api/productos/:id', verificarSesion, async (req, res) => {
     await pool.query(
         `UPDATE productos
         SET nombre_producto=$1, descripcion=$2, precio_costo=$3, precio_venta=$4, id_categoria=$5,
-            genero=$6, id_colegio=$7, estado=$8, stock_minimo=$9,
-            updated_at=NOW(), updated_by=$10
-        WHERE id_producto=$11`,
+            genero=$6, id_colegio=$7, estado=$8,
+            updated_at=NOW(), updated_by=$9
+        WHERE id_producto=$10`,
         [nombre_producto, descripcion || null, precio_costo, precio_venta, id_categoria || null,
-        genero || null, id_colegio || null, estado ?? 1, stock_minimo || 10, id_usuario, id]
+        genero || null, id_colegio || null, estado ?? 1, id_usuario, id]
     );
         res.json({ ok: true, mensaje: 'Producto actualizado correctamente' });
     } catch (error) {
@@ -566,324 +567,6 @@ router.put('/api/productos/:id', verificarSesion, async (req, res) => {
     }
     res.json({ ok: false, mensaje: error.message });
 }
-});
-
-// ==========================================
-// ENDPOINTS DE INVENTARIO
-// ==========================================
-
-router.get('/api/inventario', verificarSesion, async (req, res) => {
-    try {
-        const resultado = await pool.query(
-            `SELECT p.id_producto, p.nombre_producto, c.nombre as categoria_nombre, 
-                    COALESCE(SUM(v.stock), 0) as stock_general,
-                    COALESCE(p.stock_minimo, 10) as stock_minimo,
-                    p.estado,
-                    COALESCE(SUM(v.stock * p.precio_costo), 0) as valor
-             FROM productos p
-             LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
-             LEFT JOIN variantes_producto v ON v.id_producto = p.id_producto
-             WHERE p.estado != 2
-             GROUP BY p.id_producto, c.nombre
-             ORDER BY p.id_producto`
-        );
-        res.json({ ok: true, data: resultado.rows });
-    } catch (error) {
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
-
-router.get('/api/inventario/:id', verificarSesion, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const prodResult = await pool.query(
-            `SELECT p.id_producto, p.nombre_producto, c.nombre as categoria_nombre,
-                    COALESCE(p.stock_minimo, 10) as stock_minimo
-             FROM productos p
-             LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
-             WHERE p.id_producto = $1 AND p.estado != 2`,
-            [id]
-        );
-
-        if (!prodResult.rows.length) {
-            return res.json({ ok: false, mensaje: 'Producto no encontrado' });
-        }
-
-        const varResult = await pool.query(
-            `SELECT v.id_variante, v.color, v.stock, v.precio_extra, t.nombre_talla, tu.nombre_tipo
-             FROM variantes_producto v
-             LEFT JOIN tallas t ON t.id_talla = v.id_talla
-             LEFT JOIN tipos_uniforme tu ON tu.id_tipo = v.id_tipo
-             WHERE v.id_producto = $1
-             ORDER BY t.id_talla, v.color`,
-            [id]
-        );
-
-        res.json({
-            ok: true,
-            producto: prodResult.rows[0],
-            variantes: varResult.rows
-        });
-    } catch (error) {
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
-
-router.get('/api/inventario/variante/:id_variante/historial', verificarSesion, async (req, res) => {
-    const { id_variante } = req.params;
-    try {
-        const resultado = await pool.query(
-            `SELECT m.fecha_movimiento, m.tipo_movimiento, m.cantidad, m.motivo, 
-                    m.stock_antes, m.stock_despues, m.boleta, m.observacion,
-                    v.color, t.nombre_talla
-             FROM movimiento_stock m
-             JOIN variantes_producto v ON v.id_variante = m.id_variante
-             LEFT JOIN tallas t ON t.id_talla = v.id_talla
-             WHERE m.id_variante = $1
-             ORDER BY m.fecha_movimiento DESC
-             LIMIT 50`,
-            [id_variante]
-        );
-        res.json({ ok: true, data: resultado.rows });
-    } catch (error) {
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
-
-router.post('/api/inventario/actualizar', verificarSesion, async (req, res) => {
-    const { id_variante, operacion, cantidad, boleta, observacion } = req.body;
-    const cantVal = parseInt(cantidad);
-
-    if (!id_variante || !operacion || isNaN(cantVal) || cantVal < 0) {
-        return res.json({ ok: false, mensaje: 'Parámetros inválidos' });
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        // Obtener stock actual
-        const varRes = await client.query(
-            `SELECT stock, id_producto FROM variantes_producto WHERE id_variante = $1 FOR UPDATE`,
-            [id_variante]
-        );
-
-        if (!varRes.rows.length) {
-            throw new Error('La presentación/variante no existe');
-        }
-
-        const stockAntes = varRes.rows[0].stock;
-        const idProducto = varRes.rows[0].id_producto;
-        let stockDespues = stockAntes;
-        let tipoMovimiento = 'entrada';
-        let diff = cantVal;
-
-        if (operacion === 'ingreso') {
-            stockDespues = stockAntes + cantVal;
-            tipoMovimiento = 'entrada';
-        } else if (operacion === 'egreso') {
-            stockDespues = stockAntes - cantVal;
-            tipoMovimiento = 'salida';
-            if (stockDespues < 0) {
-                throw new Error(`Stock insuficiente para realizar el egreso. Disponible: ${stockAntes}`);
-            }
-        } else if (operacion === 'ajuste') {
-            stockDespues = cantVal;
-            diff = Math.abs(stockDespues - stockAntes);
-            tipoMovimiento = stockDespues >= stockAntes ? 'entrada' : 'salida';
-        } else {
-            throw new Error('Operación no permitida');
-        }
-
-        // Actualizar el stock
-        await client.query(
-            `UPDATE variantes_producto SET stock = $1 WHERE id_variante = $2`,
-            [stockDespues, id_variante]
-        );
-
-        // Insertar movimiento
-        const motivo = operacion === 'ajuste' ? 'Ajuste de inventario' : (operacion === 'ingreso' ? 'Ingreso manual' : 'Egreso manual');
-        await client.query(
-            `INSERT INTO movimiento_stock (
-                id_producto, id_variante, tipo_movimiento, cantidad, motivo,
-                stock_antes, stock_despues, boleta, observacion
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-            [idProducto, id_variante, tipoMovimiento, diff, motivo, stockAntes, stockDespues, boleta || null, observacion || null]
-        );
-
-        await client.query('COMMIT');
-        res.json({ ok: true, mensaje: 'Stock actualizado correctamente', stock_despues: stockDespues });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        res.json({ ok: false, mensaje: error.message });
-    } finally {
-        client.release();
-    }
-});
-
-// ==========================================
-// ENDPOINTS DE ENVÍOS
-// ==========================================
-
-router.get('/api/envios', verificarSesion, async (req, res) => {
-    try {
-        const resultado = await pool.query(
-            `SELECT e.id_envio, v.numero_venta AS codigo_venta,
-                    c.nombres || ' ' || COALESCE(c.apellidos, '') AS cliente,
-                    c.telefono AS telefono, e.tipo_entrega, d.direccion AS direccion,
-                    e.fecha_estimada, e.fecha_entrega, e.estado_entrega, e.observaciones,
-                    e.id_pedido AS pedido_id
-             FROM envios e
-             JOIN pedidos p ON p.id_pedido = e.id_pedido
-             JOIN clientes c ON c.id_cliente = p.id_cliente
-             LEFT JOIN direcciones_cliente d ON d.id_direccion = e.id_direccion
-             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
-             ORDER BY e.id_envio DESC`
-        );
-        res.json({ ok: true, data: resultado.rows });
-    } catch (error) {
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
-
-router.get('/api/envios/:id', verificarSesion, async (req, res) => {
-    const { id } = req.params;
-    try {
-        // 1. Obtener datos generales del envío
-        const envioRes = await pool.query(
-            `SELECT e.id_envio, e.id_pedido AS pedido_id, e.tipo_entrega, e.fecha_estimada, e.fecha_entrega, e.estado_entrega, e.observaciones,
-                    p.codigo_seguimiento, p.total AS total_pedido, p.fecha_pedido,
-                    c.nombres || ' ' || COALESCE(c.apellidos, '') AS cliente, c.telefono AS telefono, c.correo AS correo,
-                    d.direccion, d.distrito, d.provincia, d.referencia,
-                    v.numero_venta AS codigo_venta,
-                    pa.metodo_pago
-             FROM envios e
-             JOIN pedidos p ON p.id_pedido = e.id_pedido
-             JOIN clientes c ON c.id_cliente = p.id_cliente
-             LEFT JOIN direcciones_cliente d ON d.id_direccion = e.id_direccion
-             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
-             LEFT JOIN pagos pa ON pa.id_pedido = p.id_pedido
-             WHERE e.id_envio = $1`,
-            [id]
-        );
-
-        if (envioRes.rows.length === 0) {
-            return res.json({ ok: false, mensaje: 'Envío no encontrado' });
-        }
-
-        const envio = envioRes.rows[0];
-
-        // 2. Obtener los productos (items) del pedido asociado
-        const itemsRes = await pool.query(
-            `SELECT dp.cantidad, dp.precio_unitario, dp.subtotal,
-                    p.nombre_producto,
-                    v.color, t.nombre_talla
-             FROM detalle_pedido dp
-             JOIN productos p ON p.id_producto = dp.id_producto
-             LEFT JOIN variantes_producto v ON v.id_variante = dp.id_variante
-             LEFT JOIN tallas t ON t.id_talla = v.id_talla
-             WHERE dp.id_pedido = $1`,
-            [envio.pedido_id]
-        );
-
-        res.json({
-            ok: true,
-            envio,
-            items: itemsRes.rows
-        });
-    } catch (error) {
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
-
-router.put('/api/envios/:id', verificarSesion, async (req, res) => {
-    const { id } = req.params;
-    const { estado_entrega, fecha_estimada, fecha_entrega, observaciones } = req.body;
-
-    if (!estado_entrega) {
-        return res.json({ ok: false, mensaje: 'El estado de entrega es requerido' });
-    }
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        // Obtener datos actuales del envío
-        const envioRes = await client.query(
-            `SELECT id_pedido, estado_entrega FROM envios WHERE id_envio = $1 FOR UPDATE`,
-            [id]
-        );
-
-        if (envioRes.rows.length === 0) {
-            throw new Error('Envío no encontrado');
-        }
-
-        const estadoActual = envioRes.rows[0].estado_entrega;
-        const idPedido = envioRes.rows[0].id_pedido;
-
-        // Impedir retrocesos peligrosos
-        if (estadoActual === 'entregado' && estado_entrega !== 'entregado') {
-            throw new Error('No se permite cambiar el estado de un envío que ya ha sido entregado.');
-        }
-
-        // Validaciones específicas
-        if (estado_entrega === 'entregado' && !fecha_entrega) {
-            throw new Error('Es obligatorio ingresar la fecha real de entrega para marcarlo como entregado.');
-        }
-        if (estado_entrega === 'fallido' && (!observaciones || observaciones.trim() === '')) {
-            throw new Error('Es obligatorio detallar las observaciones/motivos de entrega fallida.');
-        }
-        if (estado_entrega === 'demora') {
-            if (!observaciones || observaciones.trim() === '') {
-                throw new Error('Es obligatorio detallar las observaciones/motivos de la demora.');
-            }
-            if (!fecha_estimada) {
-                throw new Error('Es obligatorio ingresar una nueva fecha estimada de entrega.');
-            }
-        }
-
-        // Formatear fechas
-        const fEstimada = fecha_estimada ? new Date(fecha_estimada) : null;
-        const fEntrega = fecha_entrega ? new Date(fecha_entrega) : null;
-
-        // Actualizar envío
-        await client.query(
-            `UPDATE envios
-             SET estado_entrega = $1,
-                 fecha_estimada = $2,
-                 fecha_entrega = $3,
-                 observaciones = $4
-             WHERE id_envio = $5`,
-            [estado_entrega, fEstimada, fEntrega, observaciones || null, id]
-        );
-
-        // Sincronizar estado del pedido correspondiente
-        let nuevoEstadoPedido = null;
-        if (estado_entrega === 'pendiente') {
-            nuevoEstadoPedido = 'pendiente';
-        } else if (estado_entrega === 'en_camino') {
-            nuevoEstadoPedido = 'enviado';
-        } else if (estado_entrega === 'entregado') {
-            nuevoEstadoPedido = 'entregado';
-        } else if (estado_entrega === 'fallido') {
-            nuevoEstadoPedido = 'cancelado';
-        }
-
-        if (nuevoEstadoPedido) {
-            await client.query(
-                `UPDATE pedidos SET estado = $1 WHERE id_pedido = $2`,
-                [nuevoEstadoPedido, idPedido]
-            );
-        }
-
-        await client.query('COMMIT');
-        res.json({ ok: true, mensaje: 'Envío actualizado correctamente' });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        res.json({ ok: false, mensaje: error.message });
-    } finally {
-        client.release();
-    }
 });
 
 router.get('/catalogo', (req, res) => {
@@ -936,14 +619,16 @@ router.get('/api/catalogo/categorias', async (req, res) => {
 
 router.get('/api/catalogo/slider', async (req, res) => {
     try {
-        const resultado = await pool.query(
-            `SELECT url_imagen, titulo FROM imagenes_producto 
-             WHERE id_producto IS NULL 
-             ORDER BY id_imagen LIMIT 10`
-        );
+        const resultado = await pool.query(`
+            SELECT imagen_url AS url_imagen, titulo
+            FROM sliders
+            WHERE activo = true
+            ORDER BY orden ASC, id_slider DESC
+            LIMIT 10
+        `);
         res.json({ ok: true, data: resultado.rows });
     } catch (error) {
-        res.json({ ok: true, data: [] }); // siempre retorna array vacío si falla
+        res.json({ ok: true, data: [] });
     }
 });
 
@@ -1044,131 +729,394 @@ router.delete('/api/clientes/:id', verificarSesion, async (req, res) => {
 });
 
 
-router.get('/api/pedidos', verificarSesion, async (req, res) => {
-    const { estado, fecha_desde, fecha_hasta, codigo, page = 1, limit = 15 } = req.query;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const params = [];
-    const conds = ['p.id_pedido IS NOT NULL'];
 
-    if (estado) { params.push(estado); conds.push(`p.estado = $${params.length}`); }
-    if (codigo) { params.push(`%${codigo}%`); conds.push(`p.codigo_seguimiento ILIKE $${params.length}`); }
-    if (fecha_desde) { params.push(fecha_desde); conds.push(`p.fecha_pedido::date >= $${params.length}::date`); }
-    if (fecha_hasta) { params.push(fecha_hasta); conds.push(`p.fecha_pedido::date <= $${params.length}::date`); }
+// =====================================================
+// GESTIÓN TIENDA - LOGOS
+// =====================================================
 
-    const where = conds.join(' AND ');
+router.get('/api/gestion-tienda/logos', verificarSesion, async (req, res) => {
     try {
-        const countRes = await pool.query(
-            `SELECT COUNT(*) AS total FROM pedidos p WHERE ${where}`, params
-        );
-        const total = parseInt(countRes.rows[0].total);
-        params.push(parseInt(limit));
-        params.push(offset);
+        const resultado = await pool.query(`
+            SELECT id_recurso, tipo, nombre_archivo, url, activo, creado_en
+            FROM recursos_tienda
+            WHERE tipo = 'logo'
+            ORDER BY id_recurso DESC
+        `);
 
-        const resultado = await pool.query(
-            `SELECT p.id_pedido, p.codigo_seguimiento, p.fecha_pedido, p.total, p.estado,
-                    c.nombres, c.apellidos, c.telefono, c.dni,
-                    e.tipo_entrega, e.estado_entrega,
-                    d.direccion, d.distrito
-             FROM pedidos p
-             LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
-             LEFT JOIN envios e ON e.id_pedido = p.id_pedido
-             LEFT JOIN direcciones_cliente d ON d.id_direccion = p.id_direccion
-             WHERE ${where}
-             ORDER BY p.fecha_pedido DESC
-             LIMIT $${params.length - 1} OFFSET $${params.length}`,
-            params
-        );
-        res.json({ ok: true, data: resultado.rows, total, pages: Math.ceil(total / parseInt(limit)), page: parseInt(page) });
+        res.json({ ok: true, data: resultado.rows });
     } catch (error) {
         res.json({ ok: false, mensaje: error.message });
     }
 });
 
-router.get('/api/pedidos/:id', verificarSesion, async (req, res) => {
-    const { id } = req.params;
+router.post('/api/gestion-tienda/logo', verificarSesion, async (req, res) => {
+    const { tipo, nombre_archivo, url, activo } = req.body;
+
     try {
-        const pedidoRes = await pool.query(
-            `SELECT p.id_pedido, p.codigo_seguimiento, p.fecha_pedido, p.total, p.estado,
-                    c.id_cliente, c.nombres, c.apellidos, c.telefono, c.dni, c.correo,
-                    e.tipo_entrega, e.estado_entrega, e.fecha_estimada, e.observaciones,
-                    d.direccion, d.distrito, d.referencia,
-                    pa.metodo_pago, pa.estado AS estado_pago, pa.monto
-             FROM pedidos p
-             LEFT JOIN clientes c ON c.id_cliente = p.id_cliente
-             LEFT JOIN envios e ON e.id_pedido = p.id_pedido
-             LEFT JOIN direcciones_cliente d ON d.id_direccion = p.id_direccion
-             LEFT JOIN pagos pa ON pa.id_pedido = p.id_pedido
-             WHERE p.id_pedido = $1`,
-            [id]
-        );
-        if (!pedidoRes.rows.length) return res.json({ ok: false, mensaje: 'Pedido no encontrado' });
-
-        const itemsRes = await pool.query(
-            `SELECT dp.cantidad, dp.precio_unitario, dp.subtotal,
-                    pr.nombre_producto,
-                    vp.color, t.nombre_talla
-             FROM detalle_pedido dp
-             LEFT JOIN productos pr ON pr.id_producto = dp.id_producto
-             LEFT JOIN variantes_producto vp ON vp.id_variante = dp.id_variante
-             LEFT JOIN tallas t ON t.id_talla = vp.id_talla
-             WHERE dp.id_pedido = $1`,
-            [id]
-        );
-        res.json({ ok: true, data: { pedido: pedidoRes.rows[0], items: itemsRes.rows } });
-    } catch (error) {
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
-
-router.patch('/api/pedidos/:id/estado', verificarSesion, async (req, res) => {
-    const { id } = req.params;
-    const { estado } = req.body;
-    const estadosValidos = ['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'];
-
-    if (!estadosValidos.includes(estado))
-        return res.json({ ok: false, mensaje: 'Estado no válido' });
-
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-
-        const pedidoRes = await client.query(
-            'SELECT estado FROM pedidos WHERE id_pedido = $1', [id]
-        );
-        if (!pedidoRes.rows.length) throw new Error('Pedido no encontrado');
-
-        const estadoActual = pedidoRes.rows[0].estado;
-        if (estadoActual === 'cancelado')
-            throw new Error('No se puede cambiar el estado de un pedido cancelado');
-        if (estadoActual === 'entregado' && estado !== 'cancelado')
-            throw new Error('Un pedido entregado no puede cambiar de estado');
-
-        await client.query('UPDATE pedidos SET estado = $1 WHERE id_pedido = $2', [estado, id]);
-
-        if (estado === 'entregado') {
-            await client.query(
-                `UPDATE ventas SET estado = 'pagada' WHERE id_pedido = $1`, [id]
-            );
-            await client.query(
-                `UPDATE pagos SET estado = 'pagado' WHERE id_pedido = $1`, [id]
-            );
+        if (!url) {
+            return res.json({ ok: false, mensaje: 'La URL es requerida' });
         }
 
-        if (estado !== 'cancelado') {
-            await client.query(
-                `UPDATE envios SET estado_entrega = $1 WHERE id_pedido = $2`,
-                [estado === 'enviado' ? 'en_camino' : estado === 'entregado' ? 'entregado' : 'pendiente', id]
-            );
+        const resultado = await pool.query(`
+            INSERT INTO recursos_tienda (tipo, nombre_archivo, url, activo)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id_recurso, tipo, nombre_archivo, url, activo, creado_en
+        `, [
+            tipo || 'logo',
+            nombre_archivo || null,
+            url,
+            activo ?? true
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Logo guardado correctamente',
+            data: resultado.rows[0]
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.patch('/api/gestion-tienda/logo/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { activo } = req.body;
+
+    try {
+        await pool.query(`
+            UPDATE recursos_tienda
+            SET activo = $1
+            WHERE id_recurso = $2 AND tipo = 'logo'
+        `, [activo, id]);
+
+        res.json({ ok: true, mensaje: 'Estado del logo actualizado' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.delete('/api/gestion-tienda/logo/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query(`
+            DELETE FROM recursos_tienda
+            WHERE id_recurso = $1 AND tipo = 'logo'
+        `, [id]);
+
+        res.json({ ok: true, mensaje: 'Logo eliminado correctamente' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+
+// =====================================================
+// GESTIÓN TIENDA - SLIDERS
+// =====================================================
+
+router.get('/api/gestion-tienda/sliders', verificarSesion, async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT id_slider, imagen_url, nombre_archivo, titulo, orden, activo, creado_en
+            FROM sliders
+            ORDER BY orden ASC, id_slider DESC
+        `);
+
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.post('/api/gestion-tienda/sliders', verificarSesion, async (req, res) => {
+    const { imagen_url, nombre_archivo, titulo, orden, activo } = req.body;
+
+    try {
+        if (!imagen_url) {
+            return res.json({ ok: false, mensaje: 'La imagen es requerida' });
+        }
+
+        const resultado = await pool.query(`
+            INSERT INTO sliders (imagen_url, nombre_archivo, titulo, orden, activo)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id_slider, imagen_url, nombre_archivo, titulo, orden, activo, creado_en
+        `, [
+            imagen_url,
+            nombre_archivo || null,
+            titulo || null,
+            orden ?? 0,
+            activo ?? true
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Slider guardado correctamente',
+            data: resultado.rows[0]
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.put('/api/gestion-tienda/sliders/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { imagen_url, nombre_archivo, titulo, orden, activo } = req.body;
+
+    try {
+        const resultado = await pool.query(`
+            UPDATE sliders
+            SET imagen_url = $1,
+                nombre_archivo = $2,
+                titulo = $3,
+                orden = $4,
+                activo = $5
+            WHERE id_slider = $6
+            RETURNING id_slider, imagen_url, nombre_archivo, titulo, orden, activo, creado_en
+        `, [
+            imagen_url,
+            nombre_archivo || null,
+            titulo || null,
+            orden ?? 0,
+            activo ?? true,
+            id
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Slider actualizado correctamente',
+            data: resultado.rows[0] || null
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.patch('/api/gestion-tienda/sliders/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { activo } = req.body;
+
+    try {
+        await pool.query(`
+            UPDATE sliders
+            SET activo = $1
+            WHERE id_slider = $2
+        `, [activo, id]);
+
+        res.json({ ok: true, mensaje: 'Estado del slider actualizado' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.delete('/api/gestion-tienda/sliders/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query(`
+            DELETE FROM sliders
+            WHERE id_slider = $1
+        `, [id]);
+
+        res.json({ ok: true, mensaje: 'Slider eliminado correctamente' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+
+// =====================================================
+// GESTIÓN TIENDA - REDES
+// =====================================================
+
+router.get('/api/gestion-tienda/redes', verificarSesion, async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT id_recurso, tipo, nombre_archivo, url, activo, creado_en
+            FROM recursos_tienda
+            WHERE tipo IN ('facebook', 'instagram', 'tiktok', 'whatsapp', 'youtube', 'telegram', 'otro')
+            ORDER BY id_recurso DESC
+        `);
+
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.post('/api/gestion-tienda/redes', verificarSesion, async (req, res) => {
+    const { tipo, nombre_archivo, url, activo } = req.body;
+
+    try {
+        if (!tipo || !url) {
+            return res.json({ ok: false, mensaje: 'Tipo y URL son requeridos' });
+        }
+
+        const resultado = await pool.query(`
+            INSERT INTO recursos_tienda (tipo, nombre_archivo, url, activo)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id_recurso, tipo, nombre_archivo, url, activo, creado_en
+        `, [
+            tipo,
+            nombre_archivo || null,
+            url,
+            activo ?? true
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Red social guardada correctamente',
+            data: resultado.rows[0]
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.put('/api/gestion-tienda/redes/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { tipo, nombre_archivo, url, activo } = req.body;
+
+    try {
+        const resultado = await pool.query(`
+            UPDATE recursos_tienda
+            SET tipo = $1,
+                nombre_archivo = $2,
+                url = $3,
+                activo = $4
+            WHERE id_recurso = $5
+            RETURNING id_recurso, tipo, nombre_archivo, url, activo, creado_en
+        `, [
+            tipo,
+            nombre_archivo || null,
+            url,
+            activo ?? true,
+            id
+        ]);
+
+        res.json({
+            ok: true,
+            mensaje: 'Red social actualizada correctamente',
+            data: resultado.rows[0] || null
+        });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.patch('/api/gestion-tienda/redes/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    const { activo } = req.body;
+
+    try {
+        await pool.query(`
+            UPDATE recursos_tienda
+            SET activo = $1
+            WHERE id_recurso = $2
+        `, [activo, id]);
+
+        res.json({ ok: true, mensaje: 'Estado de la red actualizado' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+router.delete('/api/gestion-tienda/redes/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await pool.query(`
+            DELETE FROM recursos_tienda
+            WHERE id_recurso = $1
+        `, [id]);
+
+        res.json({ ok: true, mensaje: 'Red social eliminada correctamente' });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
+
+router.post('/api/upload/logo', verificarSesion, (req, res) => {
+    uploadLogo.single('imagen')(req, res, function (error) {
+        if (error) {
+            return res.json({ ok: false, mensaje: error.message });
+        }
+
+        if (!req.file) {
+            return res.json({ ok: false, mensaje: 'No se recibió ninguna imagen' });
+        }
+
+        return res.json({
+            ok: true,
+            mensaje: 'Logo subido correctamente',
+            data: {
+                nombre_archivo: req.file.filename,
+                url: `/uploads/logos/${req.file.filename}`
+            }
+        });
+    });
+});
+
+router.post('/api/upload/slider', verificarSesion, (req, res) => {
+    uploadSlider.single('imagen')(req, res, function (error) {
+        if (error) {
+            return res.json({ ok: false, mensaje: error.message });
+        }
+
+        if (!req.file) {
+            return res.json({ ok: false, mensaje: 'No se recibió ninguna imagen' });
+        }
+
+        return res.json({
+            ok: true,
+            mensaje: 'Slider subido correctamente',
+            data: {
+                nombre_archivo: req.file.filename,
+                url: `/uploads/sliders/${req.file.filename}`
+            }
+        });
+    });
+
+});
+
+
+router.put('/api/gestion-tienda/logos/:id/estado', async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const id = Number(req.params.id);
+        const { activo } = req.body;
+
+        await client.query('BEGIN');
+
+        if (activo === true) {
+            await client.query(`
+                UPDATE recursos_tienda
+                SET activo = false
+                WHERE tipo = 'logo'
+            `);
+
+            await client.query(`
+                UPDATE recursos_tienda
+                SET activo = true
+                WHERE id_recurso = $1 AND tipo = 'logo'
+            `, [id]);
+        } else {
+            await client.query(`
+                UPDATE recursos_tienda
+                SET activo = false
+                WHERE id_recurso = $1 AND tipo = 'logo'
+            `, [id]);
         }
 
         await client.query('COMMIT');
-        res.json({ ok: true, mensaje: `Pedido actualizado a ${estado}` });
+        res.json({ ok: true, msg: 'Estado actualizado' });
     } catch (error) {
         await client.query('ROLLBACK');
-        res.json({ ok: false, mensaje: error.message });
+        console.error(error);
+        res.status(500).json({ ok: false, msg: 'Error al actualizar estado' });
     } finally {
         client.release();
     }
 });
-
 module.exports = router;
