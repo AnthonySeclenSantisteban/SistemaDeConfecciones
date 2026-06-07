@@ -1,14 +1,14 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
-
+ 
 const app = express();
 const PORT = 3000;
-
+ 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-
+ 
 app.use(session({
     secret: 'confecciones_lix_2026',
     resave: false,
@@ -18,21 +18,36 @@ app.use(session({
         maxAge: 1000 * 60 * 60 * 8
     }
 }));
-const rutasPagos = require('./routes/rutasPagos');
-app.use('/', rutasPagos);
+ 
+app.use('/', require('./routes/rutasAuth'));
+app.use('/', require('./routes/rutasClientes'));
+app.use('/', require('./routes/rutasCompras'));
+app.use('/', require('./routes/Rutaspagos'));  
+app.use('/', require('./routes/rutasVentas'));
+app.use('/', require('./routes/rutasPedidos'));
+ 
+app.get('/vistas/modulos/:vista', (req, res) => {
+    const filePath = path.join(__dirname, 'views', 'modulos', req.params.vista);
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.warn(`Vista no encontrada: ${req.params.vista}`);
+            res.status(404).send(`
+                <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+                <title>Módulo no disponible</title></head>
+                <body style="font-family:sans-serif;padding:2rem">
+                <h2>⚠️ Módulo en construcción</h2>
+                <p>La vista <b>${req.params.vista}</b> aún no está disponible.</p>
+                <a href="/dashboard">← Volver al dashboard</a>
+                </body></html>
+            `);
+        }
+    });
+});
 
-const rutasAuth = require('./routes/rutasAuth');
-app.use('/', rutasAuth);
-
-const rutasCliente = require('./routes/rutasClientes');
-app.use('/', rutasCliente);
-
-const rutasCompras = require('./routes/rutasCompras');
-app.use('/', rutasCompras);
-
-const rutasVentas = require('./routes/rutasVentas');
-app.use('/', rutasVentas);
-
+ 
 app.listen(PORT, () => {
     console.log(`Servidor en http://localhost:${PORT}`);
 });
+
+
+ 

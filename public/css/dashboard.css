@@ -649,6 +649,10 @@ textarea { resize: vertical; min-height: 90px; }
   border-radius: 50%;
   animation: spin .65s linear infinite;
 }
+.modal-lg {
+  max-width: 900px;
+  width: 90vw;
+}
 
 .modal-overlay {
   position: fixed; inset: 0;

@@ -59,6 +59,7 @@ async function cargarModulo(modulo) {
             variantes: 'Variantes',
             clientes: 'Clientes',
             pedidos: 'Pedidos',
+            ventas: 'Ventas',
             envios: 'Envíos',
             'verificacion-pagos': 'Verificación de Pagos',
             inventario: 'Inventario',
