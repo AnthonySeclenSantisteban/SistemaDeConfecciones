@@ -10,7 +10,7 @@ let _envOrdenDireccion = 'desc';
 let _envioSeleccionado = null;
 let _envioGuardando = false;
 
-// Llamado por dashboard.js al cargar el módulo
+
 function cargar_envios() {
     cargarEnvios();
 }
@@ -437,7 +437,6 @@ async function guardarEdicionEnvio() {
     const fecha_entrega = document.getElementById('edit-envio-fecha-entrega').value;
     const observaciones = document.getElementById('edit-envio-observaciones').value.trim();
 
-    // Validaciones del cliente
     if (estado_entrega === 'entregado' && !fecha_entrega) {
         _mostrarAlertaEnvio('Es obligatorio ingresar la fecha real de entrega.');
         return;
@@ -466,7 +465,7 @@ async function guardarEdicionEnvio() {
     btnText.textContent = 'Guardando…';
     spinner.style.display = 'block';
 
-    try {
+        try {
         const res = await fetch(`/api/envios/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -480,14 +479,16 @@ async function guardarEdicionEnvio() {
         const json = await res.json();
 
         if (json.ok) {
-            _envioToast(json.mensaje, 'success');
+            _envToast(json.mensaje, 'success');
             cerrarModalEditarEnvio();
-            cargarEnvios(); // Recargar datos
+            cargarEnvios();
         } else {
             _mostrarAlertaEnvio(json.mensaje || 'Error al actualizar envío');
         }
     } catch (err) {
-        _mostrarAlertaEnvio('Error de conexión con el servidor');
+        console.error('Error guardar envio:', err); 
+        _mostrarAlertaEnvio(`Error: ${err.message}`); 
+
     } finally {
         _envioGuardando = false;
         btn.disabled = false;
@@ -510,10 +511,6 @@ function _mostrarAlertaEnvio(msg) {
     document.getElementById('modal-envio-alert-msg').textContent = msg;
     el.style.display = 'flex';
 }
-
-// ────────────────────────────────────────────────────────
-// EVENT LISTENERS Y DELEGACIÓN
-// ────────────────────────────────────────────────────────
 
 document.addEventListener('click', function(e) {
     // 1. Acciones en la tabla

@@ -120,6 +120,7 @@ async function abrirNuevoProducto() {
 }
 
 async function abrirEditarProducto(id) {
+    if (!document.getElementById('modal-producto')) return;
     _limpiarModalProducto();
     document.getElementById('modal-producto-titulo').textContent     = 'Editar producto';
     document.getElementById('btn-guardar-producto-text').textContent = 'Guardar cambios';
@@ -292,6 +293,7 @@ async function _cargarColegiosSelect() {
 }
 
 function _limpiarModalProducto() {
+    if (!document.getElementById('producto-id')) return;
     document.getElementById('producto-id').value          = '';
     document.getElementById('producto-nombre').value      = '';
     document.getElementById('producto-descripcion').value = '';

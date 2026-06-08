@@ -20,7 +20,7 @@ router.get('/admin/pagos/verificacion', verificarSesion, async (req, res) => {
                 c.correo AS cliente_email,
                 p.monto,
                 ped.total AS total_orden,
-                p.numero_operacion AS codigo_operacion,
+                cp.numero_operacion AS codigo_operacion,
                 p.metodo_pago,
                 p.estado,
                 p.fecha_pago,
@@ -30,21 +30,22 @@ router.get('/admin/pagos/verificacion', verificarSesion, async (req, res) => {
             JOIN pedidos ped ON ped.id_pedido = p.id_pedido
             JOIN clientes c ON c.id_cliente = ped.id_cliente
             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
+            LEFT JOIN comprobantes_pago cp ON cp.id_pago = p.id_pago
             ORDER BY
-                CASE p.estado WHEN 'pendiente' THEN 0 WHEN 'rechazado' THEN 1 ELSE 2 END,
+                CASE p.estado WHEN 'pendiente' THEN 0 ELSE 1 END,
                 p.fecha_pago DESC
         `);
  
-        const stats = await pool.query(`
+       const stats = await pool.query(`
             SELECT
-                COUNT(*) FILTER (WHERE estado = 'pendiente') AS pendientes,
-                COUNT(*) FILTER (WHERE estado = 'pagado') AS verificados,
-                COUNT(*) FILTER (WHERE estado = 'rechazado') AS rechazados,
+                COUNT(*) FILTER (WHERE estado = 'pendiente')  AS pendientes,
+                COUNT(*) FILTER (WHERE estado = 'pagado')     AS verificados,
+                COUNT(*) FILTER (WHERE estado = 'rechazado')  AS rechazados,
                 COALESCE(SUM(monto) FILTER (WHERE estado = 'pendiente'), 0) AS monto_pendiente
-            FROM pagos
-        `);
+            FROM pagos `
+        );
  
-        res.json({ pagos: pagos.rows, stats: stats.rows[0] });
+        res.json({ ok: true, data: pagos.rows, stats: stats.rows[0] });
     } catch (e) {
         console.error('GET /admin/pagos/verificacion:', e);
         res.status(500).json({ error: 'Error al obtener pagos', detalle: e.message });
@@ -64,11 +65,13 @@ router.get('/admin/pagos/:id', verificarSesion, async (req, res) => {
                 c.telefono AS cliente_telefono,
                 c.correo AS cliente_email,
                 ABS(p.monto - ped.total) < 0.01 AS monto_coincide,
+                cp.numero_operacion AS codigo_operacion,   
                 v.numero_venta AS nota_venta_numero
             FROM pagos p
             JOIN pedidos ped ON ped.id_pedido = p.id_pedido
             JOIN clientes c ON c.id_cliente = ped.id_cliente
             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
+            LEFT JOIN comprobantes_pago cp ON cp.id_pago = p.id_pago 
             WHERE p.id_pago = $1
         `, [id]);
  
@@ -134,8 +137,8 @@ router.post('/admin/pagos/:id/rechazar', verificarSesion, async (req, res) => {
  
         const pago = await client.query(
             `UPDATE pagos SET estado = 'rechazado', fecha_pago = NOW()
-             WHERE id_pago = $1 AND estado = 'pendiente' RETURNING *`,
-            [motivo, id]
+            WHERE id_pago = $1 AND estado = 'pendiente' RETURNING *`,
+            [id]
         );
         if (!pago.rows.length) throw new Error('Pago no encontrado o ya procesado');
  

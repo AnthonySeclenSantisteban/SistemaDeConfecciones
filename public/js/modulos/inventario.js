@@ -11,7 +11,6 @@ let _invProductoSeleccionado = null;
 let _invVarianteSeleccionada = null;
 let _invGuardandoActualizacion = false;
 
-// Función principal llamada por dashboard.js
 function cargar_inventario() {
     cargarInventario();
 }
@@ -278,10 +277,8 @@ function _renderTablaInventario(data) {
     }
 }
 
-// ────────────────────────────────────────────────────────
-// MODAL: VER DETALLE INVENTARIO
-// ────────────────────────────────────────────────────────
 async function abrirVerDetalle(id) {
+    if (!document.getElementById('modal-inv-ver')) return;
     const modal = document.getElementById('modal-inv-ver');
     
     document.getElementById('ver-producto-nombre').textContent = 'Cargando…';
@@ -322,8 +319,6 @@ async function abrirVerDetalle(id) {
             badgeHtml = '<span class="badge badge-inv-optimo" style="font-size:11px;padding:2px 8px;">ÓPTIMO</span>';
         }
         document.getElementById('ver-estado-badge').innerHTML = badgeHtml;
-
-        // Pintar presentaciones
         if (variantes.length === 0) {
             document.getElementById('ver-presentaciones-lista').innerHTML = `
                 <div style="text-align:center;padding:12px;color:var(--muted);font-size:13px;">
@@ -374,10 +369,8 @@ async function abrirVerDetalle(id) {
     }
 }
 
-// ────────────────────────────────────────────────────────
-// MODAL: ACTUALIZAR STOCK
-// ────────────────────────────────────────────────────────
 async function abrirActualizarStock(id) {
+    if (!document.getElementById('modal-inv-actualizar')) return;
     const modal = document.getElementById('modal-inv-actualizar');
     _invProductoSeleccionado = null;
     _invVarianteSeleccionada = null;
@@ -440,8 +433,11 @@ async function abrirActualizarStock(id) {
 }
 
 function _pintarPresentacionesDeActualizacion(variantes) {
+    
     const lista = document.getElementById('act-presentaciones-lista');
-    lista.innerHTML = variantes.map(v => {
+    window._invVariantesTemp = variantes;
+    
+    lista.innerHTML = variantes.map((v, idx) => {
         const stock = parseInt(v.stock);
         const seleccionado = _invVarianteSeleccionada && _invVarianteSeleccionada.id_variante === v.id_variante;
         
@@ -458,13 +454,13 @@ function _pintarPresentacionesDeActualizacion(variantes) {
         const label = `Color: ${v.color} - Talla: ${v.nombre_talla}${v.nombre_tipo ? ` (${v.nombre_tipo})` : ''}`;
 
         return `
-            <div class="${claseCard}" style="cursor:pointer;" onclick="_seleccionarVarianteParaStock(${JSON.stringify(v).replace(/"/g, '&quot;')})">
+            <div class="${claseCard}" style="cursor:pointer;" onclick="_seleccionarVarianteParaStock(window._invVariantesTemp[${idx}])">
                 <div style="flex:1;">
                     <div class="pres-card-nombre">${label}</div>
                     <div class="pres-card-precio" style="color:var(--muted);font-size:12px;">ID Variante: #${v.id_variante}</div>
                 </div>
                 <div class="pres-card-stock ${claseStock}" style="margin-left:auto;margin-right:12px;">${stock}</div>
-                <button class="btn-primary" style="font-size:11.5px;padding:5px 12px;border-radius:6px;height:auto;">
+                <button class="btn-primary" style="font-size:11.5px;padding:5px 12px;border-radius:6px;height:auto;" onclick="event.stopPropagation();_seleccionarVarianteParaStock(window._invVariantesTemp[${idx}])">
                     Seleccionar
                 </button>
             </div>
@@ -473,10 +469,8 @@ function _pintarPresentacionesDeActualizacion(variantes) {
 }
 
 function _seleccionarVarianteParaStock(variante) {
+    console.log('variante recibida:', variante);
     _invVarianteSeleccionada = variante;
-    
-    // Volver a renderizar lista para marcar activa
-    // Para no volver a fetch, buscamos de los elementos visuales
     const cards = document.querySelectorAll('#act-presentaciones-lista .pres-card');
     cards.forEach(card => {
         card.classList.remove('pres-activa');
@@ -485,21 +479,15 @@ function _seleccionarVarianteParaStock(variante) {
         }
     });
 
-    // Rellenar formulario
     document.getElementById('act-form-presentacion-nombre').textContent = `Color: ${variante.color} - Talla: ${variante.nombre_talla}`;
     document.getElementById('act-form-stock-antes').textContent = variante.stock;
     document.getElementById('act-form-stock-despues').textContent = variante.stock;
-    
-    // Reset inputs
     document.getElementById('act-operacion').value = 'ingreso';
     document.getElementById('act-cantidad').value = '';
     document.getElementById('act-boleta').value = '';
     document.getElementById('act-observacion').value = '';
-
     document.getElementById('act-form-movimiento').style.display = 'block';
     document.getElementById('btn-guardar-inv-actualizar').style.display = 'inline-flex';
-
-    // Cargar historial
     _cargarHistorialVariante(variante.id_variante);
 }
 
@@ -562,8 +550,6 @@ async function _cargarHistorialVariante(idVariante) {
         `;
     }
 }
-
-// Escuchar cambios en la cantidad u operación para calcular el stock previsto
 function _actualizarCalculoStockPrevisto() {
     if (!_invVarianteSeleccionada) return;
 
@@ -640,15 +626,8 @@ async function guardarActualizacionStock() {
 
         if (json.ok) {
             _invToast(json.mensaje, 'success');
-
-            // Actualizar stock local de la variante activa
             _invVarianteSeleccionada.stock = json.stock_despues;
-
-            // Recargar datos principales del inventario en segundo plano
             cargarInventario();
-
-            // Refrescar el modal:
-            // 1. Recargar información del producto total
             const idProd = _invProductoSeleccionado.id_producto;
             const resProd = await fetch(`/api/inventario/${idProd}`);
             const jsonProd = await resProd.rows ? { ok: false } : await resProd.json();
@@ -656,17 +635,12 @@ async function guardarActualizacionStock() {
                 const variantes = jsonProd.variantes;
                 const stockGeneral = variantes.reduce((sum, v) => sum + parseInt(v.stock), 0);
                 document.getElementById('act-stock-actual').textContent = stockGeneral;
-                
-                // Repintar lista de presentaciones en el modal
                 _pintarPresentacionesDeActualizacion(variantes);
-                
-                // Encontrar la variante actualizada en la nueva lista y marcarla seleccionada
                 const nuevaVar = variantes.find(v => v.id_variante === _invVarianteSeleccionada.id_variante);
                 if (nuevaVar) {
                     _seleccionarVarianteParaStock(nuevaVar);
                 }
             } else {
-                // Si falla recargar la lista pero tenemos la local, cerramos
                 cerrarModalActualizarStock();
             }
 
@@ -693,15 +667,9 @@ function cerrarModalActualizarStock() {
     _invVarianteSeleccionada = null;
 }
 
-// ────────────────────────────────────────────────────────
-// EVENT LISTENERS Y EVENT DELEGATION
-// ────────────────────────────────────────────────────────
-
-// Event Delegation en el documento
 document.addEventListener('click', function (e) {
-    // 1. Botones de acción en tabla de inventario
     const btnAccion = e.target.closest('[data-accion]');
-    if (btnAccion) {
+    if (btnAccion && btnAccion.closest('#inv-tabla-wrap')) { 
         const accion = btnAccion.dataset.accion;
         const id = btnAccion.dataset.id;
         if (accion === 'ver') {
@@ -714,7 +682,6 @@ document.addEventListener('click', function (e) {
         }
     }
 
-    // 2. Controladores de cierre de modales
     const clickId = e.target.closest('button')?.id || e.target.id;
     if (clickId === 'btn-cerrar-inv-ver' || clickId === 'btn-cerrar-inv-ver2') {
         cerrarModalVerDetalle();
@@ -729,7 +696,6 @@ document.addEventListener('click', function (e) {
         return;
     }
 
-    // Click fuera del modal cierra
     if (e.target.id === 'modal-inv-ver') {
         cerrarModalVerDetalle();
         return;
@@ -739,7 +705,6 @@ document.addEventListener('click', function (e) {
         return;
     }
 
-    // 3. Ordenación por cabeceras de tabla
     const thSort = e.target.closest('[data-col]');
     if (thSort && thSort.closest('#inv-tabla-wrap')) {
         const col = thSort.dataset.col;
@@ -750,7 +715,6 @@ document.addEventListener('click', function (e) {
             _invOrdenDireccion = 'asc';
         }
 
-        // Modificar flechas visuales en las cabeceras
         const headers = thSort.closest('tr').querySelectorAll('[data-col]');
         headers.forEach(h => {
             const cleanColName = h.textContent.replace(' ▲', '').replace(' ▼', '').replace(' ↕', '');
@@ -765,7 +729,6 @@ document.addEventListener('click', function (e) {
     }
 });
 
-// Eventos en inputs de filtros
 document.addEventListener('input', function(e) {
     if (e.target.id === 'inv-filtro-nombre') {
         _invPaginaActual = 1;
@@ -795,7 +758,6 @@ document.addEventListener('change', function(e) {
     }
 });
 
-// Helpers locales
 function _invEsc(str) {
     return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }

@@ -9,9 +9,9 @@ async function vpCargarDatos() {
   document.getElementById('vpTablaWrap').style.display = 'none';
   document.getElementById('vpEmpty').style.display = 'none';
   try {
-    const res = await fetch(`${API_BASE}/admin/pagos/verificacion`, { headers: authHeaders() });
+    const res = await fetch('/admin/pagos/verificacion'); 
     const data = await res.json();
-    vpPagos = data.pagos || [];
+    vpPagos = data.data || [];          
     vpActualizarStats(data.stats || {});
     vpPagosFiltrados = [...vpPagos];
     vpRenderizarTabla();
@@ -175,7 +175,7 @@ async function vpVerDetalle(idPago) {
   document.getElementById('vpModalBody').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
   document.getElementById('vpModalBotones').innerHTML = '';
   try {
-    const res = await fetch(`${API_BASE}/admin/pagos/${idPago}`, { headers: authHeaders() });
+    const res = await fetch(`/admin/pagos/${idPago}`);
     const d = await res.json();
     const p = d.pago;
     document.getElementById('vpModalTitulo').textContent = `Pago de ORD-${p.orden_codigo}`;
@@ -238,9 +238,9 @@ async function vpVerDetalle(idPago) {
 async function vpVerificar(idPago) {
   if (!confirm('¿Confirmar verificación de este pago?')) return;
   try {
-    const res = await fetch(`${API_BASE}/admin/pagos/${idPago}/verificar`, {
-      method: 'POST',
-      headers: authHeaders()
+    const res = await fetch(`/admin/pagos/${idPago}/verificar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
     });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || 'Error');
@@ -272,10 +272,10 @@ async function vpConfirmarRechazo() {
   const motivo = document.getElementById('vpMotivoRechazo').value.trim();
   if (!motivo) { mostrarToast('Ingresa el motivo del rechazo', 'warning'); return; }
   try {
-    const res = await fetch(`${API_BASE}/admin/pagos/${idPago}/rechazar`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ motivo })
+    const res = await fetch(`/admin/pagos/${idPago}/rechazar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo })
     });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || 'Error');
@@ -305,10 +305,10 @@ async function vpConfirmarGenerarVenta() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Creando...';
   try {
-    const res = await fetch(`${API_BASE}/admin/ventas/generar`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id_pedido: idPedido, id_pago: idPago, tipo_comprobante: tipoDoc })
+    const res = await fetch(`/admin/ventas/generar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_pedido: idPedido, id_pago: idPago, tipo_comprobante: tipoDoc })
     });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || 'Error');
@@ -357,14 +357,13 @@ document.addEventListener('keydown', e => {
   }
 });
 
-['vpModalDetalle', 'vpModalImagen', 'vpModalRechazar', 'vpModalGenerarVenta'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('click', function(e) {
-    if (e.target === this) vpCerrarModal(id);
-  });
-});
-
 function cargar_verificacion_pagos() {
     vpCargarDatos();
+    ['vpModalDetalle', 'vpModalImagen', 'vpModalRechazar', 'vpModalGenerarVenta'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', function(e) {
+            if (e.target === this) vpCerrarModal(id);
+        });
+    });
 }
  

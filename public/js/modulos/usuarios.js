@@ -102,6 +102,7 @@ function abrirNuevoUsuario() {
 }
  
 async function abrirEditarUsuario(id) {
+    if (!document.getElementById('modal-usuario')) return;
     _limpiarModalUsuario();
     document.getElementById('modal-usuario-titulo').textContent = 'Editar usuario';
     document.getElementById('btn-guardar-usuario-text').textContent = 'Guardar cambios';
@@ -287,6 +288,7 @@ async function _cargarPerfilesSelect() {
 }
  
 function _limpiarModalUsuario() {
+    if (!document.getElementById('usuario-id')) return;
     document.getElementById('usuario-id').value          = '';
     document.getElementById('usuario-nombre').value      = '';
     document.getElementById('usuario-correo').value      = '';
@@ -343,8 +345,11 @@ function mostrarToast(msg, tipo = 'success') {
     }, 3500);
 }
 
-document.getElementById('usuario-correo').addEventListener('input', function () {
-    const validarCorreo = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-    const valido = validarCorreo.test(this.value.trim());
-    this.style.borderColor = this.value && !valido ? 'var(--danger, #e24b4a)' : '';
-});
+const _inputCorreoUsuario = document.getElementById('usuario-correo');
+if (_inputCorreoUsuario) {
+    _inputCorreoUsuario.addEventListener('input', function () {
+        const validarCorreo = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        const valido = validarCorreo.test(this.value.trim());
+        this.style.borderColor = this.value && !valido ? 'var(--danger, #e24b4a)' : '';
+    });
+}

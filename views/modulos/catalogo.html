@@ -3,121 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo — Confecciones Lix</title>
+    <title>Confecciones Lix — Uniformes Escolares</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/modulos/catalogo.css">
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">  
 </head>
 <body>
 
+<!-- BARRA ANUNCIO -->
+<div class="anuncio-bar">
+    <span>🎒 Uniformes escolares personalizados · Chiclayo · <strong>Envío a todo el Perú</strong></span>
+</div>
+
+<!-- HEADER -->
 <header class="header">
     <div class="header-inner">
-        <a class="brand" href="/catalogo">
-            <span class="brand-logo">🧵</span>
+        <a href="/catalogo" class="brand">
+            <div class="brand-icon">🧵</div>
             <div>
-                <h1>Confecciones Lix</h1>
-                <p>Uniformes escolares · Chiclayo</p>
+                <div class="brand-nombre">Confecciones <span>Lix</span></div>
+                <div class="brand-sub">Uniformes Escolares</div>
             </div>
         </a>
-        <div class="header-actions">
-            <button class="btn-outline" onclick="abrirModalSeguimiento()">
-                <i class="ti ti-package"></i> Mis pedidos
+
+        <nav class="nav-desktop">
+            <a href="#" class="nav-link" data-filtro-colegio="">Todos</a>
+            <a href="#" class="nav-link" data-filtro-colegio="San José">San José</a>
+            <a href="#" class="nav-link" data-filtro-colegio="Fe y Alegría N28">Fe y Alegría</a>
+            <a href="#" class="nav-link" data-filtro-colegio="Santa María Reina">Santa María</a>
+        </nav>
+
+        <div class="header-right">
+            <button class="btn-buscar" id="btnAbrirBuscar" aria-label="Buscar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <a class="btn-outline" href="https://wa.me/51945952450" target="_blank">
-                <i class="ti ti-brand-whatsapp"></i> Contacto
-            </a>
-            <button class="btn-carrito" onclick="abrirCarrito()">
-                <i class="ti ti-shopping-cart"></i> Carrito
-                <span class="badge-carrito" id="badgeCarrito">0</span>
+            <button class="btn-carrito" id="btnAbrirCarrito" aria-label="Carrito">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                <span class="carrito-badge" id="carritoBadge" style="display:none;">0</span>
             </button>
         </div>
     </div>
 
-    <!-- NAV SECUNDARIA -->
-    <nav class="nav-bar">
-        <div class="nav-inner">
-            <a class="nav-link active" href="/catalogo">
-                <i class="ti ti-home"></i> Inicio
-            </a>
-
-            <div class="nav-dropdown">
-                <a class="nav-link">
-                    <i class="ti ti-building-community"></i> Colegios <span class="nav-chev">▾</span>
-                </a>
-                <div class="nav-dropdown-menu" id="menuColegios">
-                    <!-- se llena desde JS -->
-                </div>
-            </div>
-
-            <a class="nav-link" href="#promociones">
-                <i class="ti ti-tag"></i> Promociones
-            </a>
-            <a class="nav-link" href="#nosotros" onclick="abrirNosotros()">
-                <i class="ti ti-info-circle"></i> Nosotros
-            </a>
-            <a class="nav-link" href="https://wa.me/51945952450" target="_blank">
-                <i class="ti ti-headset"></i> Contacto
-            </a>
+    <!-- Buscador expandible -->
+    <div class="buscador-panel" id="buscadorPanel">
+        <div class="buscador-inner">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="inputBuscar" placeholder="Buscar uniformes, colegios..." autocomplete="off">
+            <button id="btnCerrarBuscar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
         </div>
-    </nav>
+    </div>
 </header>
 
-<section class="slider-section" id="sliderSection" style="display:none;">
-    <div class="slider-track" id="sliderTrack"></div>
-    <button class="slider-prev" onclick="moverSlider(-1)">&#8249;</button>
-    <button class="slider-next" onclick="moverSlider(1)">&#8250;</button>
-    <div class="slider-dots" id="sliderDots"></div>
-</section>
- 
-<section class="hero">
-    <div class="hero-inner">
-        <h2>Uniformes escolares de calidad</h2>
-        <p>Encuentra los uniformes de los principales colegios de Chiclayo.</p>
-        <div class="hero-stats">
-            <div class="stat"><strong id="totalProductos">—</strong><span>Productos</span></div>
-            <div class="stat"><strong id="totalColegios">—</strong><span>Colegios</span></div>
-            <div class="stat"><strong>📱</strong><span>Yape / Plin</span></div>
-            <div class="stat"><strong>🚚</strong><span>Delivery</span></div>
+<!-- HERO -->
+<section class="hero" id="seccionInicio">
+    <div class="hero-content">
+        <div class="hero-badge">Temporada 2026</div>
+        <h1 class="hero-titulo">Uniformes que<br><em>inspiran</em> confianza</h1>
+        <p class="hero-sub">Confecciones escolares de calidad para los colegios de Chiclayo</p>
+        <div class="hero-btns">
+            <button class="btn-hero-primary" onclick="document.getElementById('seccionCatalogo').scrollIntoView({behavior:'smooth'})">
+                Ver catálogo
+            </button>
+            <a href="#seguimiento" class="btn-hero-secondary" onclick="abrirSeguimiento()">
+                Rastrear pedido
+            </a>
         </div>
     </div>
-    
+    <div class="hero-visual">
+        <div class="hero-circle"></div>
+        <div class="hero-emoji">🎒</div>
+    </div>
 </section>
- 
-<section class="filtros-section">
+
+<!-- FILTROS -->
+<section class="filtros-section" id="seccionCatalogo">
     <div class="filtros-inner">
-        <div class="filtro-grupo">
-            <label>🏫 Colegio</label>
-            <select id="filtroColegio">
+        <div class="filtros-chips" id="filtrosChips">
+            <button class="chip active" data-genero="">Todo</button>
+            <button class="chip" data-genero="masculino">Niños</button>
+            <button class="chip" data-genero="femenino">Niñas</button>
+            <button class="chip" data-genero="unisex">Unisex</button>
+        </div>
+        <div class="filtros-right">
+            <select id="filtroColegio" class="select-filtro">
                 <option value="">Todos los colegios</option>
             </select>
-        </div>
-        <div class="filtro-grupo">
-            <label>📂 Categoría</label>
-            <select id="filtroCategoria">
+            <select id="filtroCategoria" class="select-filtro">
                 <option value="">Todas las categorías</option>
             </select>
+            <span class="resultado-count" id="resultadoCount">Cargando...</span>
         </div>
-        <div class="filtro-grupo">
-            <label>👤 Género</label>
-            <select id="filtroGenero">
-                <option value="">Todos</option>
-                <option value="masculino">Masculino</option>
-                <option value="femenino">Femenino</option>
-                <option value="unisex">Unisex</option>
-            </select>
-        </div>
-        <div class="filtro-grupo">
-            <label>🔍 Buscar</label>
-            <input type="text" id="filtroBusqueda" placeholder="Nombre del producto...">
-        </div>
-        <button class="btn-limpiar" onclick="limpiarFiltros()">✕ Limpiar</button>
     </div>
 </section>
- 
+
+<!-- GRID PRODUCTOS -->
 <main class="catalogo-main">
-    <div class="catalogo-header">
-        <span id="resultadoCount" class="resultado-count">Cargando...</span>
-    </div>
     <div class="productos-grid" id="productosGrid">
+        <!-- Skeletons -->
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
         <div class="skeleton-card"></div>
         <div class="skeleton-card"></div>
         <div class="skeleton-card"></div>
@@ -127,199 +112,296 @@
     </div>
     <div class="empty-state" id="emptyState" style="display:none;">
         <div class="empty-icon">🔍</div>
-        <p>No se encontraron productos con ese filtro.</p>
-        <button onclick="limpiarFiltros()">Ver todos los productos</button>
+        <h3>Sin resultados</h3>
+        <p>Prueba con otros filtros</p>
+        <button onclick="limpiarFiltros()">Limpiar filtros</button>
     </div>
 </main>
- 
-<div class="modal-overlay" id="modalProducto" onclick="cerrarModalProducto(event)">
-    <div class="modal-producto">
-        <button class="modal-close" onclick="cerrarModalProductoBtn()">✕</button>
-        <div class="modal-producto-body" id="modalProductoBody"></div>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <div class="footer-logo">🧵 Confecciones <strong>Lix</strong></div>
+            <p>Uniformes escolares personalizados para los mejores colegios de Chiclayo, Lambayeque.</p>
+            <div class="footer-contacto">
+                <a href="https://wa.me/51945952450" target="_blank" class="footer-wa">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.098.544 4.066 1.494 5.782L.057 23.25l5.619-1.474A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 01-4.998-1.368l-.358-.214-3.332.874.889-3.246-.234-.374A9.79 9.79 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+                    945 952 450
+                </a>
+            </div>
+        </div>
+        <div class="footer-links">
+            <h4>Colegios</h4>
+            <a href="#" onclick="filtrarPorColegio('San José')">San José</a>
+            <a href="#" onclick="filtrarPorColegio('Fe y Alegría N28')">Fe y Alegría N28</a>
+            <a href="#" onclick="filtrarPorColegio('Santa María Reina')">Santa María Reina</a>
+        </div>
+        <div class="footer-links">
+            <h4>Información</h4>
+            <a href="#" onclick="abrirSeguimiento()">Rastrear pedido</a>
+            <a href="https://wa.me/51945952450" target="_blank">Contacto</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <span>© 2026 Confecciones Lix · Chiclayo, Perú</span>
+    </div>
+</footer>
+
+<!-- BOTÓN WHATSAPP FLOTANTE -->
+<a href="https://wa.me/51945952450" target="_blank" class="wa-flotante" title="WhatsApp">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.098.544 4.066 1.494 5.782L.057 23.25l5.619-1.474A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 01-4.998-1.368l-.358-.214-3.332.874.889-3.246-.234-.374A9.79 9.79 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+</a>
+
+<!-- ══ MODAL DETALLE PRODUCTO ══ -->
+<div class="modal-overlay" id="modalDetalle">
+    <div class="modal-detalle">
+        <button class="modal-cerrar" id="btnCerrarDetalle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="detalle-grid">
+            <div class="detalle-galeria">
+                <div class="galeria-principal" id="galeriaPrincipal">
+                    <div class="galeria-emoji" id="galeriaEmoji">🎽</div>
+                </div>
+            </div>
+            <div class="detalle-info">
+                <div class="detalle-badges" id="detalleBadges"></div>
+                <h2 class="detalle-nombre" id="detalleNombre">—</h2>
+                <p class="detalle-colegio" id="detalleColegio"></p>
+                <div class="detalle-precio" id="detallePrecio">S/ —</div>
+                <p class="detalle-desc" id="detalleDesc"></p>
+
+                <div class="detalle-variantes" id="detalleVariantesWrap">
+                    <label class="var-label">Talla / Presentación</label>
+                    <div class="variantes-chips" id="variantesChips"></div>
+                </div>
+
+                <div class="detalle-cantidad">
+                    <label class="var-label">Cantidad</label>
+                    <div class="cantidad-ctrl">
+                        <button id="btnMenos">−</button>
+                        <input type="number" id="inputCantidad" value="1" min="1" max="99">
+                        <button id="btnMas">+</button>
+                    </div>
+                </div>
+
+                <div class="detalle-stock" id="detalleStock"></div>
+
+                <button class="btn-agregar-detalle" id="btnAgregarDetalle">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                    Agregar al carrito
+                </button>
+            </div>
+        </div>
+
+        <!-- Recomendaciones -->
+        <div class="detalle-recomendaciones">
+            <h3 class="recom-titulo">También te puede interesar</h3>
+            <div class="recom-grid" id="recomGrid"></div>
+        </div>
     </div>
 </div>
- 
-<div class="carrito-overlay" id="carritoOverlay" onclick="cerrarCarrito()"></div>
-<aside class="carrito-drawer" id="carritoDrawer">
+
+<!-- ══ DRAWER CARRITO ══ -->
+<div class="carrito-overlay" id="carritoOverlay"></div>
+<div class="carrito-drawer" id="carritoDrawer">
     <div class="carrito-header">
-        <h3>🛒 Tu carrito</h3>
-        <button onclick="cerrarCarrito()">✕</button>
+        <h3>Tu carrito</h3>
+        <button id="btnCerrarCarrito">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
     </div>
     <div class="carrito-items" id="carritoItems">
-        <div class="carrito-empty" id="carritoEmpty">
+        <div class="carrito-vacio" id="carritoVacio">
+            <div style="font-size:3rem;margin-bottom:1rem;">🛍️</div>
             <p>Tu carrito está vacío</p>
-            <small>Agrega productos del catálogo</small>
+            <small>Agrega uniformes para continuar</small>
         </div>
     </div>
     <div class="carrito-footer" id="carritoFooter" style="display:none;">
-        <div class="carrito-total">
-            <span>Total:</span>
+        <div class="carrito-total-row">
+            <span>Subtotal</span>
             <strong id="carritoTotal">S/ 0.00</strong>
         </div>
-        <button class="btn-checkout" onclick="irCheckout()">Proceder al pago →</button>
+        <button class="btn-checkout" id="btnCheckout">Proceder al pago →</button>
     </div>
-</aside>
- 
-<div class="modal-overlay" id="modalCheckout" onclick="cerrarCheckout(event)">
+</div>
+
+<!-- ══ MODAL CHECKOUT ══ -->
+<div class="modal-overlay" id="modalCheckout">
     <div class="modal-checkout">
-        <button class="modal-close" onclick="document.getElementById('modalCheckout').classList.remove('active')">✕</button>
-        <h2>💳 Finalizar pedido</h2>
- 
-        <div class="checkout-pasos">
-            <div class="paso active" id="paso1Tab">1 · Datos</div>
-            <div class="paso" id="paso2Tab">2 · Entrega</div>
-            <div class="paso" id="paso3Tab">3 · Pago</div>
+        <button class="modal-cerrar" id="btnCerrarCheckout">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+
+        <div class="checkout-pasos" id="checkoutPasos">
+            <div class="paso active" data-paso="1">① Datos</div>
+            <div class="paso" data-paso="2">② Entrega</div>
+            <div class="paso" data-paso="3">③ Pago</div>
         </div>
- 
+
+        <!-- Paso 1: Datos del cliente -->
         <div class="paso-content" id="paso1">
+            <h2>Datos de contacto</h2>
             <div class="form-grid">
-                <div class="fg"><label>Nombres *</label><input id="chkNombres" placeholder="Tus nombres"></div>
-                <div class="fg"><label>Apellidos</label><input id="chkApellidos" placeholder="Tus apellidos"></div>
-                <div class="fg"><label>Teléfono *</label><input id="chkTelefono" placeholder="9XXXXXXXX" maxlength="9"></div>
-                <div class="fg"><label>Correo (para confirmación)</label><input id="chkCorreo" type="email" placeholder="correo@email.com"></div>
-            </div>
-            <div class="paso-actions">
-                <button class="btn-primary" onclick="irPaso(2)">Siguiente →</button>
-            </div>
-        </div>
- 
-        <div class="paso-content" id="paso2" style="display:none;">
-            <div class="opcion-grupo">
-                <label class="opcion-label">🚚 Tipo de entrega</label>
-                <div class="opciones-radio">
-                    <label class="radio-card">
-                        <input type="radio" name="tipoEntrega" value="delivery" checked>
-                        <span><strong>Delivery</strong><br><small>Chiclayo y distritos</small></span>
-                    </label>
-                    <label class="radio-card">
-                        <input type="radio" name="tipoEntrega" value="recojo_tienda">
-                        <span><strong>Recojo en tienda</strong><br><small>Coordinar por WhatsApp</small></span>
-                    </label>
+                <div class="fg full">
+                    <label>Nombres *</label>
+                    <input type="text" id="chkNombres" placeholder="Tus nombres completos">
                 </div>
-            </div>
-            <div id="camposDelivery">
-                <div class="form-grid">
-                    <div class="fg full"><label>Dirección *</label><input id="chkDireccion" placeholder="Av. / Jr. / Calle..."></div>
-                    <div class="fg"><label>Distrito</label><input id="chkDistrito" placeholder="Ej: Chiclayo"></div>
-                    <div class="fg"><label>Referencia</label><input id="chkReferencia" placeholder="Ej: Frente al parque"></div>
-                </div>
-            </div>
-            <div class="opcion-grupo" style="margin-top:1rem;">
-                <label class="opcion-label">📄 Documento</label>
-                <div class="opciones-radio">
-                    <label class="radio-card">
-                        <input type="radio" name="tipoDoc" value="nota_venta" checked>
-                        <span><strong>Nota de Venta</strong><br><small>NV-2026-XXXXXX</small></span>
-                    </label>
-                    <label class="radio-card">
-                        <input type="radio" name="tipoDoc" value="boleta">
-                        <span><strong>Boleta</strong><br><small>B001-XXXXXX</small></span>
-                    </label>
-                </div>
-            </div>
-            <div class="paso-actions">
-                <button class="btn-secondary" onclick="irPaso(1)">← Volver</button>
-                <button class="btn-primary" onclick="irPaso(3)">Siguiente →</button>
-            </div>
-        </div>
- 
-        <div class="paso-content" id="paso3" style="display:none;">
-            <div class="resumen-total">
-                <span>Total a pagar:</span>
-                <strong id="checkoutTotal">S/ 0.00</strong>
-            </div>
- 
-            <label class="opcion-label">💳 Método de pago</label>
-            <div class="metodos-pago-grid" id="metodosPagoGrid">
-            </div>
- 
-            <div class="panel-pago" id="panelYapePlin" style="display:none;">
-                <div class="qr-box">
-                    <div class="qr-placeholder">📱</div>
-                    <div class="qr-info">
-                        <p><strong>Confecciones Lix</strong></p>
-                        <p class="qr-numero" id="numeroYapePlin">945 952 450</p>
-                        <p class="qr-monto">Monto: <strong id="montoYapePlin">S/ 0.00</strong></p>
-                    </div>
+                <div class="fg full">
+                    <label>Apellidos</label>
+                    <input type="text" id="chkApellidos" placeholder="Apellidos">
                 </div>
                 <div class="fg">
-                    <label>N° de operación (opcional)</label>
-                    <input id="nroOperacionYP" placeholder="Ej: 123456789">
+                    <label>Teléfono *</label>
+                    <input type="tel" id="chkTelefono" placeholder="9XXXXXXXX" maxlength="9">
                 </div>
-                <p class="aviso-pago">📸 Envía el screenshot del pago por WhatsApp al <strong>945 952 450</strong> después de confirmar.</p>
-            </div>
- 
-            <div class="panel-pago" id="panelTransferencia" style="display:none;">
-                <div class="banco-info">
-                    <div class="banco-logo">🏦</div>
-                    <div>
-                        <p><strong>BCP</strong></p>
-                        <p>Titular: Confecciones Lix</p>
-                        <p class="cuenta-numero" id="numeroCuenta">30598113774008</p>
-                        <p class="qr-monto">Monto: <strong id="montoTransferencia">S/ 0.00</strong></p>
-                    </div>
+                <div class="fg">
+                    <label>DNI</label>
+                    <input type="text" id="chkDni" placeholder="00000000" maxlength="8">
                 </div>
-                <div class="form-grid">
-                    <div class="fg"><label>N° de operación *</label><input id="nroOperacionBCP" placeholder="Ej: 987654321012"></div>
-                    <div class="fg"><label>Fecha de operación</label><input type="date" id="fechaOperacion"></div>
-                </div>
-                <p class="aviso-pago">📸 Envía el voucher de transferencia por WhatsApp al <strong>945 952 450</strong>.</p>
-            </div>
- 
-            <div class="panel-pago" id="panelVisa" style="display:none;">
-                <div class="visa-form">
-                    <div class="fg full"><label>Número de tarjeta</label>
-                        <input id="visaNumero" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatearTarjeta(this)">
-                    </div>
-                    <div class="fg"><label>Fecha de vencimiento</label><input id="visaFecha" placeholder="MM/AA" maxlength="5" oninput="formatearFechaVisa(this)"></div>
-                    <div class="fg"><label>CVV</label><input id="visaCvv" placeholder="123" maxlength="3" type="password"></div>
-                    <div class="fg full"><label>Nombre en tarjeta</label><input id="visaNombre" placeholder="NOMBRE APELLIDO"></div>
-                </div>
-                <div class="visa-simulado-aviso">
-                    <span>⚠️</span> Pago simulado — No se realiza ningún cargo real
+                <div class="fg full">
+                    <label>Correo electrónico</label>
+                    <input type="email" id="chkCorreo" placeholder="correo@email.com">
                 </div>
             </div>
- 
             <div class="paso-actions">
-                <button class="btn-secondary" onclick="irPaso(2)">← Volver</button>
-                <button class="btn-confirmar" id="btnConfirmar" onclick="confirmarPedido()">
-                    ✅ Confirmar pedido
+                <button class="btn-paso-next" onclick="irPaso(2)">Continuar →</button>
+            </div>
+        </div>
+
+        <!-- Paso 2: Entrega -->
+        <div class="paso-content" id="paso2" style="display:none;">
+            <h2>Tipo de entrega</h2>
+            <div class="opciones-entrega">
+                <label class="opcion-card" id="opcionDelivery">
+                    <input type="radio" name="tipoEntrega" value="delivery" id="radioDelivery">
+                    <div class="opcion-icono">🚗</div>
+                    <div>
+                        <strong>Delivery a domicilio</strong>
+                        <small>Chiclayo y alrededores</small>
+                    </div>
+                </label>
+                <label class="opcion-card" id="opcionRecojo">
+                    <input type="radio" name="tipoEntrega" value="recojo_tienda" id="radioRecojo" checked>
+                    <div class="opcion-icono">🏪</div>
+                    <div>
+                        <strong>Recojo en tienda</strong>
+                        <small>Sin costo adicional</small>
+                    </div>
+                </label>
+            </div>
+
+            <div class="delivery-campos" id="deliveryCampos" style="display:none;">
+                <div class="form-grid">
+                    <div class="fg full">
+                        <label>Dirección *</label>
+                        <input type="text" id="chkDireccion" placeholder="Av. / Jr. / Calle...">
+                    </div>
+                    <div class="fg">
+                        <label>Distrito</label>
+                        <input type="text" id="chkDistrito" placeholder="Distrito" value="Chiclayo">
+                    </div>
+                    <div class="fg full">
+                        <label>Referencia</label>
+                        <input type="text" id="chkReferencia" placeholder="Cerca de...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="paso-actions">
+                <button class="btn-paso-back" onclick="irPaso(1)">← Atrás</button>
+                <button class="btn-paso-next" onclick="irPaso(3)">Continuar →</button>
+            </div>
+        </div>
+
+        <!-- Paso 3: Pago -->
+        <div class="paso-content" id="paso3" style="display:none;">
+            <h2>Método de pago</h2>
+
+            <div class="resumen-mini" id="resumenMini"></div>
+
+            <div class="metodos-grid">
+                <button class="metodo-btn active" data-metodo="yape" id="mYape">
+                    <span class="metodo-icon">💜</span>
+                    Yape
+                </button>
+                <button class="metodo-btn" data-metodo="plin" id="mPlin">
+                    <span class="metodo-icon">💙</span>
+                    Plin
+                </button>
+                <button class="metodo-btn" data-metodo="transferencia" id="mTransferencia">
+                    <span class="metodo-icon">🏦</span>
+                    BCP
+                </button>
+                <button class="metodo-btn" data-metodo="efectivo" id="mEfectivo">
+                    <span class="metodo-icon">💵</span>
+                    Efectivo
+                </button>
+            </div>
+
+            <div class="panel-pago" id="panelPago"></div>
+
+            <div class="comprobante-wrap" id="comprobanteWrap" style="display:none;">
+                <label class="var-label">N° de operación</label>
+                <input type="text" id="chkNumOp" placeholder="Ej: 123456789">
+            </div>
+
+            <div class="tipo-doc-wrap">
+                <label class="var-label">Tipo de documento</label>
+                <div class="opciones-doc">
+                    <label class="radio-small"><input type="radio" name="tipoDoc" value="nota_venta" checked> Nota de venta</label>
+                    <label class="radio-small"><input type="radio" name="tipoDoc" value="boleta"> Boleta</label>
+                </div>
+            </div>
+
+            <div class="alert-checkout" id="alertCheckout" style="display:none;"></div>
+
+            <div class="paso-actions">
+                <button class="btn-paso-back" onclick="irPaso(2)">← Atrás</button>
+                <button class="btn-confirmar" id="btnConfirmarPedido">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Confirmar pedido
                 </button>
             </div>
         </div>
     </div>
 </div>
- 
+
+<!-- ══ MODAL CONFIRMACIÓN ══ -->
 <div class="modal-overlay" id="modalConfirmacion">
     <div class="modal-confirmacion">
-        <div class="confirmacion-icon">🎉</div>
+        <div class="confirmacion-icono">✅</div>
         <h2>¡Pedido registrado!</h2>
+        <p class="confirmacion-sub">Gracias por tu compra. Nos comunicaremos contigo pronto.</p>
         <div class="confirmacion-datos" id="confirmacionDatos"></div>
-        <p class="confirmacion-aviso">Guarda tu número de pedido para rastrear el estado. Te contactaremos al teléfono registrado.</p>
-        <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
-            <a id="btnWhatsapp" class="btn-whatsapp" href="#" target="_blank">💬 WhatsApp</a>
-            <button class="btn-primary" onclick="cerrarConfirmacion()">Seguir comprando</button>
+        <div class="confirmacion-btns">
+            <a id="btnWaConfirm" href="#" target="_blank" class="btn-wa-confirm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.098.544 4.066 1.494 5.782L.057 23.25l5.619-1.474A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 01-4.998-1.368l-.358-.214-3.332.874.889-3.246-.234-.374A9.79 9.79 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
+                Confirmar por WhatsApp
+            </a>
+            <button onclick="cerrarConfirmacion()" class="btn-seguir">Seguir comprando</button>
         </div>
     </div>
 </div>
- 
-<div class="modal-overlay" id="modalSeguimiento" onclick="cerrarModalSeg(event)">
+
+<!-- ══ MODAL SEGUIMIENTO ══ -->
+<div class="modal-overlay" id="modalSeguimiento">
     <div class="modal-seguimiento">
-        <button class="modal-close" onclick="document.getElementById('modalSeguimiento').classList.remove('active')">✕</button>
-        <h2>📦 Rastrear pedido</h2>
-        <div class="fg">
-            <label>Código de seguimiento</label>
-            <input id="inputSeguimiento" placeholder="LIX-1234567890" style="width:100%;padding:0.75rem;border:2px solid #ddd;border-radius:8px;">
+        <button class="modal-cerrar" onclick="cerrarModal('modalSeguimiento')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <h2>Rastrear pedido</h2>
+        <p style="color:var(--gris);font-size:.9rem;margin-bottom:1rem;">Ingresa tu código de seguimiento</p>
+        <div style="display:flex;gap:.6rem;">
+            <input type="text" id="inputSeguimiento" placeholder="LIX-XXXXXXXXXXXXXX" style="flex:1;">
+            <button class="btn-paso-next" onclick="buscarSeguimiento()" style="padding:.65rem 1rem;white-space:nowrap;">Buscar</button>
         </div>
-        <button class="btn-primary" style="width:100%;margin-top:0.8rem;" onclick="rastrearPedido()">Rastrear</button>
-        <div id="resultadoSeguimiento" style="margin-top:1rem;"></div>
+        <div id="resultadoSeguimiento" style="margin-top:1.2rem;"></div>
     </div>
 </div>
- 
-<a class="btn-whatsapp-flotante" href="https://wa.me/51945952450?text=Hola,%20quiero%20información%20sobre%20uniformes" target="_blank">
-    💬
-</a>
- 
+
 <script src="/js/modulos/catalogo.js"></script>
 </body>
 </html>
