@@ -78,6 +78,7 @@ function abrirNuevaCategoria() {
 }
 
 async function abrirEditarCategoria(id) {
+    if (!document.getElementById('modal-categoria')) return;
     _limpiarModalCategoria();
     document.getElementById('modal-categoria-titulo').textContent     = 'Editar categoría';
     document.getElementById('btn-guardar-categoria-text').textContent = 'Guardar cambios';
@@ -224,6 +225,7 @@ document.addEventListener('click', function (e) {
 });
 
 function _limpiarModalCategoria() {
+    if (!document.getElementById('categoria-id')) return;
     document.getElementById('categoria-id').value          = '';
     document.getElementById('categoria-nombre').value      = '';
     document.getElementById('categoria-descripcion').value = '';
