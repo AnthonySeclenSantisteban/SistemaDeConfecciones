@@ -20,17 +20,18 @@ router.get('/admin/pagos/verificacion', verificarSesion, async (req, res) => {
                 c.correo AS cliente_email,
                 p.monto,
                 ped.total AS total_orden,
-                cp.numero_operacion AS codigo_operacion,
+                p.numero_operacion AS codigo_operacion,
+                p.evidencia,
                 p.metodo_pago,
                 p.estado,
                 p.fecha_pago,
-                ABS(p.monto - ped.total) < 0.01 AS monto_coincide,
+                (SELECT ABS(SUM(pa2.monto) - ped.total) < 0.01 
+                FROM pagos pa2 WHERE pa2.id_pedido = p.id_pedido) AS monto_coincide,   
                 v.numero_venta AS nota_venta_numero
             FROM pagos p
             JOIN pedidos ped ON ped.id_pedido = p.id_pedido
             JOIN clientes c ON c.id_cliente = ped.id_cliente
             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
-            LEFT JOIN comprobantes_pago cp ON cp.id_pago = p.id_pago
             ORDER BY
                 CASE p.estado WHEN 'pendiente' THEN 0 ELSE 1 END,
                 p.fecha_pago DESC
@@ -64,16 +65,17 @@ router.get('/admin/pagos/:id', verificarSesion, async (req, res) => {
                 c.dni AS cliente_dni,
                 c.telefono AS cliente_telefono,
                 c.correo AS cliente_email,
-                ABS(p.monto - ped.total) < 0.01 AS monto_coincide,
-                cp.numero_operacion AS codigo_operacion,   
+                (SELECT ABS(SUM(pa2.monto) - ped.total) < 0.01 
+                 FROM pagos pa2 WHERE pa2.id_pedido = p.id_pedido) AS monto_coincide,
+                p.numero_operacion AS codigo_operacion,
+                p.evidencia,
                 v.numero_venta AS nota_venta_numero
-            FROM pagos p
-            JOIN pedidos ped ON ped.id_pedido = p.id_pedido
-            JOIN clientes c ON c.id_cliente = ped.id_cliente
-            LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
-            LEFT JOIN comprobantes_pago cp ON cp.id_pago = p.id_pago 
-            WHERE p.id_pago = $1
-        `, [id]);
+                FROM pagos p
+                JOIN pedidos ped ON ped.id_pedido = p.id_pedido
+                JOIN clientes c ON c.id_cliente = ped.id_cliente
+                LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
+                WHERE p.id_pago = $1
+            `, [id]);
  
         if (!result.rows.length) return res.status(404).json({ error: 'Pago no encontrado' });
  
@@ -111,7 +113,7 @@ router.post('/admin/pagos/:id/verificar', verificarSesion, async (req, res) => {
         if (!pago.rows.length) throw new Error('Pago no encontrado o ya procesado');
  
         await client.query(
-            `UPDATE pedidos SET estado = 'pagado' WHERE id_pedido = $1`,
+            `UPDATE pedidos SET estado = 'procesando' WHERE id_pedido = $1`,
             [pago.rows[0].id_pedido]
         );
  

@@ -816,14 +816,12 @@ function initEventListeners() {
     });
 }
 async function cargarLogoYSliders() {
-    // ── LOGO ──
     try {
         const res = await fetch('/api/gestion-tienda/logos');
         const json = await res.json();
         if (json.ok && json.data.length) {
             const logoActivo = json.data.find(l => l.activo);
             if (logoActivo) {
-                // Reemplazar el emoji del brand por la imagen del logo
                 const brandIcon = document.querySelector('.brand-icon');
                 if (brandIcon) {
                     brandIcon.innerHTML = `<img src="${logoActivo.url}" alt="Logo" style="height:40px;width:auto;object-fit:contain;">`;
@@ -833,26 +831,24 @@ async function cargarLogoYSliders() {
         }
     } catch (e) { console.error('Error cargando logo:', e); }
 
-    // ── SLIDERS ──
     try {
         const res = await fetch('/api/catalogo/slider');
         const json = await res.json();
         if (json.ok && json.data.length) {
-            // Reemplazar el hero estático con un slider
             const hero = document.querySelector('.hero');
             if (!hero) return;
 
             const imgs = json.data;
             hero.style.padding = '0';
-            hero.style.minHeight = '420px';
+            hero.style.minHeight = '500px';
             hero.style.position = 'relative';
 
             hero.innerHTML = `
-                <div class="slider-wrap" style="position:relative;width:100%;min-height:420px;overflow:hidden;">
+                <div class="slider-wrap" style="position:relative;width:100%;min-height:500px;overflow:hidden;">
                     ${imgs.map((img, i) => `
                         <div class="slide" style="position:absolute;inset:0;opacity:${i === 0 ? 1 : 0};transition:opacity .7s ease;background:#1a3c5e;">
                             <img src="${img.url_imagen}" alt="${img.titulo || 'Slider'}"
-                                style="width:100%;height:100%;object-fit:cover;min-height:420px;"
+                               style="width:100%;height:500px;object-fit:cover;"
                                 onerror="this.parentElement.style.background='linear-gradient(135deg,#1a3c5e,#2563a8)'">
                             ${img.titulo ? `<div style="position:absolute;bottom:2rem;left:2rem;color:#fff;font-family:var(--font-display);font-size:1.8rem;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.5);">${img.titulo}</div>` : ''}
                         </div>`).join('')}
@@ -863,8 +859,6 @@ async function cargarLogoYSliders() {
                         ${imgs.map((_, i) => `<button onclick="_sliderIr(${i})" id="sdot-${i}" style="width:8px;height:8px;border-radius:50%;border:none;background:${i === 0 ? '#fff' : 'rgba(255,255,255,.4)'};cursor:pointer;padding:0;transition:background .3s;"></button>`).join('')}
                     </div>` : ''}
                 </div>`;
-
-            // Autoplay slider
             if (imgs.length > 1) {
                 window._sliderIdx = 0;
                 window._sliderTotal = imgs.length;
@@ -885,7 +879,6 @@ async function cargarLogoYSliders() {
     } catch (e) { console.error('Error cargando sliders:', e); }
 }
 
-// CSS animation para spinner
 const style = document.createElement('style');
 style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
 document.head.appendChild(style);

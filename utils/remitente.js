@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
 });
  
 
-async function enviarConfirmacionPedido({ correo, nombre, numeroVenta, tipoDoc, total, items, metodoPago }) {
+async function enviarConfirmacionPedido({ correo, nombre, numeroVenta, tipoDoc, total, items, metodoPago,esEfectivo = false }) {
     const tipoLabel = tipoDoc === 'boleta' ? 'Boleta' : 'Nota de Venta';
     const itemsHtml = items.map(i =>
         `<tr>
@@ -58,9 +58,13 @@ async function enviarConfirmacionPedido({ correo, nombre, numeroVenta, tipoDoc, 
                 </tfoot>
             </table>
  
+            ${esEfectivo ? `
+            <div style="background:#d1fae5;border-left:4px solid #059669;padding:12px 16px;margin-top:20px;border-radius:4px;">
+                <p style="margin:0;font-size:14px;">✅ <strong>Pago registrado en efectivo.</strong> Su comprobante está listo.</p>
+            </div>` : `
             <div style="background:#fff8e1;border-left:4px solid #f59e0b;padding:12px 16px;margin-top:20px;border-radius:4px;">
                 <p style="margin:0;font-size:14px;">⚠️ <strong>Siguiente paso:</strong> Envíanos el comprobante de pago por WhatsApp al <strong>945 952 450</strong> o responde este correo con la captura.</p>
-            </div>
+            </div>`}
  
             <p style="margin-top:24px;color:#666;font-size:13px;">Gracias por confiar en Confecciones Lix. Nos contactaremos contigo para coordinar la entrega.</p>
         </div>

@@ -276,3 +276,59 @@
   transition: opacity .15s;
 }
 .btn-whatsapp-cliente:hover { opacity: .88; }
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+.pag-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+}
+.pag-btn:hover { background: var(--azul-light, #e8f0fa); color: var(--azul); border-color: var(--azul); }
+.pag-btn.active { background: var(--azul); color: #fff; border-color: var(--azul); }
+.pag-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pag-dots { color: var(--muted); font-size: 12px; padding: 0 4px; }
+
+input[type="file"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: var(--font);
+    background: #fff;
+    color: var(--muted);
+    cursor: pointer;
+    width: 100%;
+}
+input[type="file"]::file-selector-button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    background: var(--azul);
+    color: #fff;
+    font-size: 12px;
+    font-family: var(--font);
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background .15s;
+}
+input[type="file"]::file-selector-button:hover {
+    background: var(--azul-med);
+}

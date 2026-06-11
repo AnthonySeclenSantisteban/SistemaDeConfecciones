@@ -38,7 +38,7 @@ function vpAplicarFiltros() {
     const matchTexto = !texto || (p.orden_codigo || '').toLowerCase().includes(texto) ||
       (p.cliente_nombre || '').toLowerCase().includes(texto) ||
       (p.codigo_operacion || '').toLowerCase().includes(texto);
-    const matchEstado = !estado || p.estado === estado;
+    const matchEstado = !estado || p.estado === estado || (estado === 'verificado' && p.estado === 'pagado');
     const matchMetodo = !metodo || p.metodo_pago === metodo;
     const matchFecha = !fecha || (p.fecha_pago || '').startsWith(fecha);
     return matchTexto && matchEstado && matchMetodo && matchFecha;
@@ -89,8 +89,8 @@ function vpFila(p) {
     ? '<div style="font-size:11px;color:var(--success);margin-top:2px;">✓ Coincide</div>'
     : '<div style="font-size:11px;color:var(--danger);margin-top:2px;">✗ No coincide</div>';
 
-  const comprobante = p.comprobante_url
-    ? `<button class="btn-icon" onclick="vpVerImagen('${p.comprobante_url}')" title="Ver comprobante">
+  const comprobante = p.evidencia
+    ? `<button class="btn-icon" onclick="vpVerImagen('${p.evidencia}')" title="Ver comprobante">
          <i data-lucide="image" style="width:14px;height:14px;"></i> Ver
        </button>`
     : '<span style="font-size:11px;color:var(--muted);">Sin imagen</span>';
@@ -115,7 +115,7 @@ function vpFila(p) {
       </button>`;
   }
 
-  if (p.estado === 'verificado' && !p.nota_venta_numero) {
+   if (p.estado === 'pagado' && !p.nota_venta_numero) {
     acciones += `
       <button class="btn-secondary btn-sm" onclick="vpAbrirGenerarVenta(${JSON.stringify(p).replace(/"/g, '&quot;')})" title="Crear nota de venta">
         <i data-lucide="file-text" style="width:13px;height:13px;"></i> Nota
@@ -186,37 +186,38 @@ async function vpVerDetalle(idPago) {
     ).join('');
 
     document.getElementById('vpModalBody').innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 24px;">
-        <div>
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Datos del pago</div>
-          <div class="detail-row"><span>Cliente</span><strong>${p.cliente_nombre}</strong></div>
-          <div class="detail-row"><span>DNI/RUC</span><span>${p.cliente_dni || '—'}</span></div>
-          <div class="detail-row"><span>Teléfono</span><span>${p.cliente_telefono || '—'}</span></div>
-          <div class="detail-row"><span>Email</span><span>${p.cliente_email || '—'}</span></div>
-          <div class="detail-row"><span>Método</span>${vpMetodoBadge(p.metodo_pago)}</div>
-          <div class="detail-row"><span>Código Op.</span><code style="font-size:12px;background:var(--bg-alt);padding:2px 8px;border-radius:5px;">${p.codigo_operacion || '—'}</code></div>
-          <div class="detail-row"><span>Monto pagado</span><strong style="color:var(--accent);">S/ ${parseFloat(p.monto).toFixed(2)}</strong></div>
-          <div class="detail-row"><span>Total orden</span><span>S/ ${parseFloat(p.total_orden).toFixed(2)}</span></div>
-          <div class="detail-row"><span>Coincide</span>${p.monto_coincide ? '<span style="color:var(--success);">✓ Sí</span>' : '<span style="color:var(--danger);">✗ No</span>'}</div>
-          <div class="detail-row"><span>Fecha pago</span><span>${p.fecha_pago ? new Date(p.fecha_pago).toLocaleString('es-PE') : '—'}</span></div>
-          ${p.nota_operador ? `<div class="detail-row"><span>Nota operador</span><span>${p.nota_operador}</span></div>` : ''}
-          ${p.motivo_rechazo ? `<div class="detail-row"><span>Motivo rechazo</span><span style="color:var(--danger);">${p.motivo_rechazo}</span></div>` : ''}
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Comprobante</div>
-          ${p.comprobante_url
-            ? `<img src="${p.comprobante_url}" alt="Comprobante" style="width:100%;border-radius:8px;border:1px solid var(--border);cursor:pointer;" onclick="vpVerImagen('${p.comprobante_url}')">`
-            : '<div style="width:100%;height:160px;background:var(--bg-alt);border-radius:8px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;">Sin comprobante</div>'}
-          ${p.nota_venta_numero ? `<div style="margin-top:12px;padding:10px 14px;background:var(--success-bg,#16a34a11);border:1px solid var(--success-border,#16a34a44);border-radius:8px;font-size:13px;"><strong>Nota de Venta:</strong> ${p.nota_venta_numero}</div>` : ''}
-        </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 24px;">
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Datos del pago</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;white-space:nowrap;">Cliente</span><strong style="font-size:13px;text-align:right;">${p.cliente_nombre}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">DNI/RUC</span><span style="font-size:13px;">${p.cliente_dni || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Teléfono</span><span style="font-size:13px;">${p.cliente_telefono || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Email</span><span style="font-size:13px;">${p.cliente_email || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Método</span>${vpMetodoBadge(p.metodo_pago)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Código Op.</span><code style="font-size:12px;background:var(--bg-alt);padding:2px 8px;border-radius:5px;">${p.codigo_operacion || '—'}</code></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Monto pagado</span><strong style="color:var(--accent);font-size:15px;">S/ ${parseFloat(p.monto).toFixed(2)}</strong></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Total orden</span><span style="font-size:13px;">S/ ${parseFloat(p.total_orden).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Coincide</span>${p.monto_coincide ? '<span style="color:var(--success);font-weight:600;">✓ Sí</span>' : '<span style="color:var(--danger);font-weight:600;">✗ No</span>'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;"><span style="color:var(--muted);font-size:12px;">Fecha pago</span><span style="font-size:13px;">${p.fecha_pago ? new Date(p.fecha_pago).toLocaleString('es-PE') : '—'}</span></div>
+        ${p.motivo_rechazo ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--border);"><span style="color:var(--muted);font-size:12px;">Motivo rechazo</span><span style="color:var(--danger);font-size:13px;">${p.motivo_rechazo}</span></div>` : ''}
       </div>
-      ${items ? `<div style="padding:0 24px 20px;">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Productos del pedido</div>
-        <table class="tabla" style="font-size:12.5px;">
-          <thead><tr><th>Producto</th><th style="text-align:center;">Cant.</th><th style="text-align:right;">Precio</th><th style="text-align:right;">Subtotal</th></tr></thead>
-          <tbody>${items}</tbody>
-        </table>
-      </div>` : ''}`;
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Comprobante</div>
+      ${p.evidencia
+        ? `<img src="${p.evidencia}" alt="Comprobante" style="width:100%;border-radius:8px;border:1px solid var(--border);cursor:pointer;" onclick="vpVerImagen('${p.evidencia}')">`
+        : '<div style="width:100%;height:160px;background:var(--bg-alt);border-radius:8px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;">Sin comprobante</div>'}
+      ${p.nota_venta_numero ? `<div style="margin-top:12px;padding:10px 14px;background:#16a34a11;border:1px solid #16a34a44;border-radius:8px;font-size:13px;"><strong>Nota de Venta:</strong> ${p.nota_venta_numero}</div>` : ''}
+    </div>
+  </div>
+  ${items ? `<div style="padding:0 24px 20px;">
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Productos del pedido</div>
+    <table class="tabla" style="font-size:12.5px;">
+      <thead><tr><th>Producto</th><th style="text-align:center;">Cant.</th><th style="text-align:right;">Precio</th><th style="text-align:right;">Subtotal</th></tr></thead>
+      <tbody>${items}</tbody>
+    </table>
+  </div>` : ''}`;
 
     let botones = `<button class="btn-secondary" onclick="vpCerrarModal('vpModalDetalle')">Cerrar</button>`;
     if (p.estado === 'pendiente') {
@@ -246,9 +247,10 @@ async function vpVerificar(idPago) {
     if (!res.ok) throw new Error(d.error || 'Error');
     mostrarToast('Pago verificado correctamente', 'success');
     await vpCargarDatos();
-    if (d.id_pedido && !d.nota_venta_numero) {
-      const pago = vpPagos.find(p => p.id_pago === idPago);
-      if (pago) vpAbrirGenerarVenta(pago);
+    
+    const pagoActualizado = vpPagos.find(p => p.id_pago == idPago); 
+    if (pagoActualizado && !pagoActualizado.nota_venta_numero) {
+      vpAbrirGenerarVenta(pagoActualizado);
     }
   } catch (e) {
     mostrarToast(e.message, 'error');

@@ -6,6 +6,8 @@ let _vBusqTimer    = null;
 let _vGuardando    = false;
 let _vReniecFiltro = null;
 let _vHistorialId  = null;
+let _nvPagos = []; 
+let _nvConfirmData = null;
 
 function cargar_ventas() {
     _vPagActual    = 1;
@@ -88,7 +90,7 @@ function _filaVenta(v) {
     const nombre  = `${_esc(v.nombres || '')} ${_esc(v.apellidos || '')}`.trim() || '—';
     const fecha   = _fmtFecha(v.fecha_venta);
     const total   = parseFloat(v.total || 0);
-    const deuda   = v.estado_pago === 'pagado' ? 0 : total;
+    const deuda = v.estado_pago === 'pagado' ? 0 : parseFloat(v.monto_pendiente ?? total);
 
     return `
     <tr>
@@ -191,7 +193,8 @@ async function abrirDetalleVenta(id) {
         if (!json.ok) throw new Error(json.mensaje);
 
         const { venta: v, items } = json.data;
-        const deuda = v.estado_pago === 'pagado' ? 0 : parseFloat(v.total);
+        const deuda = v.estado_pago === 'pagado' ? 0 : parseFloat(v.monto_pendiente ?? v.total);
+
 
         _setText(
             'modalDetalleTitulo',
@@ -212,8 +215,8 @@ async function abrirDetalleVenta(id) {
             </div>
 
             <div>
-                <p style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Pago</p>
-                <p style="font-size:13px;">${_capitalizarMetodo(v.metodo_pago)}</p>
+                <p style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Pagos</p>
+                <p style="font-size:13px;">${_esc(v.metodo_pago || '—')}</p>
                 <p style="font-size:12px;margin-top:4px;">${_badgeEstadoVenta(v.estado)}</p>
             </div>
 
@@ -311,18 +314,9 @@ async function abrirHistorialPagos(id, numeroVenta, total, estadoVenta, estadoPa
     _show('modalHistorialPagos');
     _setText('historialSubtitulo', `Venta N° ${numeroVenta}`);
 
-    const pagado = estadoPago === 'pagado';
-    const deuda  = pagado ? 0 : total;
-
     _setText('historialTotal',  `S/ ${parseFloat(total).toFixed(2)}`);
-    _setText('historialPagado', `S/ ${pagado ? parseFloat(total).toFixed(2) : '0.00'}`);
-    _setText('historialDeuda',  `S/ ${parseFloat(deuda).toFixed(2)}`);
-
-    const btnMarcar = document.getElementById('historialBtnMarcar');
-    if (btnMarcar) btnMarcar.style.display = (estadoVenta === 'pendiente' && !pagado) ? '' : 'none';
 
     const tbody = document.getElementById('historialBody');
-    const vacio = document.getElementById('historialVacio');
     tbody.innerHTML = '';
     _hide('historialVacio');
 
@@ -333,8 +327,18 @@ async function abrirHistorialPagos(id, numeroVenta, total, estadoVenta, estadoPa
         if (!json.ok || !json.data.length) {
             _show('historialVacio');
             _setText('historialFooterInfo', 'Sin pagos registrados');
+            _setText('historialPagado', 'S/ 0.00');
+            _setText('historialDeuda',  `S/ ${parseFloat(total).toFixed(2)}`);
             return;
         }
+        const pagado = json.data.reduce((s, p) => p.estado === 'pagado' ? s + parseFloat(p.monto) : s, 0);
+        const deuda  = parseFloat(total) - pagado;
+
+        _setText('historialPagado', `S/ ${pagado.toFixed(2)}`);
+        _setText('historialDeuda',  `S/ ${Math.max(0, deuda).toFixed(2)}`);
+
+        const btnMarcar = document.getElementById('historialBtnMarcar');
+        if (btnMarcar) btnMarcar.style.display = (estadoVenta === 'pendiente' && deuda > 0.01) ? '' : 'none';
 
         tbody.innerHTML = json.data.map(p => `
             <tr>
@@ -363,20 +367,126 @@ async function _marcarPagadoDesdeHistorial() {
     cerrarModalVentas('modalHistorialPagos');
 }
 
-/* ── NUEVA VENTA ── */
 
 function abrirModalNuevaVenta() {
-    _vItems = [];
+    _vItems  = [];
+    _nvPagos = [];
     _hide('nvTablaItems'); _show('nvSinItems'); _hide('nvTotalesWrap');
     _hide('alertaNuevaVenta'); _hide('reniecNVResult');
     ['nvDni','nvNombres','nvApellidos','nvTelefono','nvCorreo','nvBuscarProducto']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const desc = document.getElementById('nvDescuento'); if (desc) desc.value = '0';
     const tipo = document.getElementById('nvTipoDoc');   if (tipo) tipo.selectedIndex = 0;
-    const met  = document.getElementById('nvMetodoPago');if (met)  met.selectedIndex = 0;
+    _renderPagosNV();
+    agregarMetodoPago(); 
     _show('modalNuevaVenta');
     if (window.lucide) lucide.createIcons();
 }
+
+function agregarMetodoPago() {
+    _nvPagos.push({ metodo_pago: 'efectivo', monto: 0, numero_operacion: '', archivo: null });
+    _renderPagosNV();
+    calcularTotalNV();
+}
+function _renderPagosNV() {
+    const lista = document.getElementById('nvPagosLista');
+    if (!lista) return;
+
+    lista.innerHTML = _nvPagos.map((pago, idx) => {
+        const necesitaCaptura = ['yape','plin','transferencia','visa'].includes(pago.metodo_pago);
+        const necesitaNumOp   = ['yape','plin','transferencia','visa'].includes(pago.metodo_pago);
+
+        return `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <strong style="font-size:13px;">Método ${idx+1}</strong>
+                ${_nvPagos.length > 1 ? `<button class="btn-icon btn-icon-danger" onclick="_quitarPagoNV(${idx})" style="width:24px;height:24px;">
+                    <i data-lucide="x" style="width:12px;height:12px;"></i>
+                </button>` : ''}
+            </div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="field" style="margin:0;">
+                    <label style="font-size:11px;">Método</label>
+                    <select onchange="_actualizarPagoNV(${idx},'metodo_pago',this.value);_renderPagosNV()">
+                        <option value="efectivo"      ${pago.metodo_pago==='efectivo'      ?'selected':''}> Efectivo</option>
+                        <option value="yape"          ${pago.metodo_pago==='yape'          ?'selected':''}> Yape</option>
+                        <option value="plin"          ${pago.metodo_pago==='plin'          ?'selected':''}> Plin</option>
+                        <option value="transferencia" ${pago.metodo_pago==='transferencia' ?'selected':''}> Transferencia BCP</option>
+                        <option value="visa"          ${pago.metodo_pago==='visa'          ?'selected':''}> Tarjeta Visa</option>
+                    </select>
+                </div>
+                <div class="field" style="margin:0;">
+                    <label style="font-size:11px;">Monto (S/)</label>
+                    <input type="number" min="0" step="0.01" value="${pago.monto||''}"
+                           placeholder="0.00" style="font-size:13px;"
+                           oninput="_actualizarPagoNV(${idx},'monto',parseFloat(this.value)||0);calcularTotalNV()">
+                </div>
+                ${necesitaNumOp ? `
+                <div class="field" style="margin:0;grid-column:1/-1;">
+                    <label style="font-size:11px;">N° Operación</label>
+                   <input type="text" placeholder="Ej: 123456789" value="${pago.numero_operacion||''}"
+                    style="font-size:13px;"
+                    oninput="this.value=this.value.replace(/\D/g,'');_actualizarPagoNV(${idx},'numero_operacion',this.value)">
+                </div>` : ''}
+                ${necesitaCaptura ? `
+                <div class="field" style="margin:0;grid-column:1/-1;">
+                    <label style="font-size:11px;">Captura de pago</label>
+                    <input type="file" accept="image/*" id="captura_${idx}"
+                        style="font-size:12px;width:100%;"
+                        onchange="_actualizarArchivoNV(${idx},this)">
+                    ${pago.archivo ? `
+                    <img id="preview_${idx}" src="${URL.createObjectURL(pago.archivo)}" 
+                        style="margin-top:8px;width:100%;max-height:180px;object-fit:contain;border-radius:8px;border:1px solid var(--border);">
+                    ` : `<img id="preview_${idx}" style="display:none;margin-top:8px;width:100%;max-height:180px;object-fit:contain;border-radius:8px;border:1px solid var(--border);">`}
+                </div>` : ''}
+            </div>
+            ${_datosMetodoPago(pago.metodo_pago)}
+        </div>`;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+}
+function _datosMetodoPago(metodo) {
+    const datos = {
+        yape:          ' Yape: <strong>945 952 450</strong> — Confecciones Lix',
+        plin:          ' Plin: <strong>945 952 450</strong> — Confecciones Lix',
+        transferencia: ' BCP: <strong>305-98113774-0-08</strong> — Confecciones Lix',
+        visa:          ' Cobro con POS en tienda'
+    };
+    if (!datos[metodo]) return '';
+    return `<div style="background:#fff;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:12px;color:var(--muted);">${datos[metodo]}</div>`;
+}
+
+function _actualizarPagoNV(idx, campo, valor) {
+    if (_nvPagos[idx]) _nvPagos[idx][campo] = valor;
+}
+
+function _actualizarArchivoNV(idx, input) {
+    if (input.files[0]) {
+        _nvPagos[idx].archivo = input.files[0];
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById(`preview_${idx}`);
+            if (preview) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+
+        const span = input.nextElementSibling;
+        if (span) { span.textContent = `✓ ${input.files[0].name}`; span.style.color = 'var(--verde)'; }
+    }
+}
+
+function _quitarPagoNV(idx) {
+    _nvPagos.splice(idx, 1);
+    _renderPagosNV();
+    calcularTotalNV();
+}
+
+
 
 async function buscarReniecNV() {
     const dni = _val('nvDni').trim();
@@ -545,48 +655,117 @@ function calcularTotalNV() {
     const subtotal  = _vItems.reduce((s, i) => s + (i.cantidad * i.precio_unitario), 0);
     const descuento = parseFloat(_val('nvDescuento') || 0) || 0;
     const total     = Math.max(0, subtotal - descuento);
+    const sumaPagos = _nvPagos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0);
+    const pendiente = total - sumaPagos;
+
     _setText('nvLabelSubtotal',  `S/ ${subtotal.toFixed(2)}`);
     _setText('nvLabelDescuento', `- S/ ${descuento.toFixed(2)}`);
     _setText('nvLabelTotal',     `S/ ${total.toFixed(2)}`);
+    const elPend = document.getElementById('nvLabelPendiente');
+    if (elPend) {
+        elPend.textContent = `S/ ${Math.max(0, pendiente).toFixed(2)}`;
+        elPend.style.color = pendiente > 0.01 ? 'var(--error)' : 'var(--verde)';
+        elPend.previousElementSibling.style.color = pendiente > 0.01 ? 'var(--error)' : 'var(--verde)';
+    }
 }
 
 async function guardarNuevaVenta() {
-    if (_vGuardando) return;
+    
+     if (_vGuardando) return;
+
     const nombres   = _val('nvNombres').trim();
     const apellidos = _val('nvApellidos').trim();
     const dni       = _val('nvDni').trim();
     const telefono  = _val('nvTelefono').trim();
     const correo    = _val('nvCorreo').trim();
     const tipoDoc   = _val('nvTipoDoc');
-    const metodo    = _val('nvMetodoPago');
     const descuento = parseFloat(_val('nvDescuento') || 0) || 0;
 
-    if (!nombres)        { mostrarAlertaNV('danger', 'El nombre del cliente es requerido'); return; }
-    if (!telefono)       { mostrarAlertaNV('danger', 'El teléfono del cliente es requerido'); return; }
-    if (!_vItems.length) { mostrarAlertaNV('danger', 'Agrega al menos un producto'); return; }
+    if (!nombres)    { mostrarAlertaNV('danger', 'El nombre es requerido'); return; }
+    if (!apellidos)  { mostrarAlertaNV('danger', 'Los apellidos son requeridos'); return; }
+    if (!dni)        { mostrarAlertaNV('danger', 'El DNI es requerido'); return; }
+    if (!/^\d{8}$/.test(dni))      { mostrarAlertaNV('danger', 'El DNI debe tener exactamente 8 dígitos numéricos'); return; }
+    if (!telefono)                 { mostrarAlertaNV('danger', 'El teléfono es requerido'); return; }
+    if (!/^\d{9}$/.test(telefono)) { mostrarAlertaNV('danger', 'El teléfono debe tener exactamente 9 dígitos numéricos'); return; }
+    if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+        mostrarAlertaNV('danger', 'El correo ingresado no es válido'); return;
+    }
+    // Validar métodos de pago
+const numerosOp = [];
+for (const pago of _nvPagos) {
+    if (parseFloat(pago.monto) <= 0) {
+        mostrarAlertaNV('danger', 'El monto de cada pago debe ser mayor a 0'); return;
+    }
+    if (['yape','plin','transferencia','visa'].includes(pago.metodo_pago)) {
+        if (pago.numero_operacion && pago.numero_operacion.trim()) {
+            if (!/^\d+$/.test(pago.numero_operacion.trim())) {
+                mostrarAlertaNV('danger', `N° Operación de ${pago.metodo_pago} solo debe contener números`); return;
+            }
+            if (numerosOp.includes(pago.numero_operacion.trim())) {
+                mostrarAlertaNV('danger', 'No puedes usar el mismo N° de operación dos veces'); return;
+            }
+            numerosOp.push(pago.numero_operacion.trim());
+        }
+        if (!pago.archivo) {
+            mostrarAlertaNV('danger', `Debes adjuntar captura de comprobante para el pago con ${pago.metodo_pago}`);
+            return;
+        }
+    }
+}
+    if (!_vItems.length)  { mostrarAlertaNV('danger', 'Agrega al menos un producto'); return; }
+    if (!_nvPagos.length) { mostrarAlertaNV('danger', 'Agrega al menos un método de pago'); return; }
+    if (descuento < 0) { mostrarAlertaNV('danger', 'El descuento no puede ser negativo bro'); return; }
 
-    const items = _vItems.map(i => ({
-        id_producto: i.id_producto,
-        id_variante: i.id_variante || null,
-        cantidad: i.cantidad,
-        precio_unitario: i.precio_unitario
-    }));
+    const subtotal  = _vItems.reduce((s, i) => s + i.cantidad * i.precio_unitario, 0);
+    const total     = Math.max(0, subtotal - descuento);
+    const sumaPagos = _nvPagos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0);
+
+    if (Math.abs(sumaPagos - total) > 0.01) {
+        mostrarAlertaNV('danger', `La suma de pagos (S/ ${sumaPagos.toFixed(2)}) debe ser igual al total (S/ ${total.toFixed(2)})`);
+        return;
+    }
 
     _vGuardando = true;
     const btn = document.getElementById('btnGuardarNV');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2"></i> Registrando...'; if (window.lucide) lucide.createIcons(); }
 
     try {
-        const res  = await fetch('/api/ventas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dni, nombres, apellidos, telefono, correo,
-                tipo_documento: tipoDoc, metodo_pago: metodo, descuento, items })
+        const fd = new FormData();
+        fd.append('dni',       dni);
+        fd.append('nombres',   nombres);
+        fd.append('apellidos', apellidos);
+        fd.append('telefono',  telefono);
+        fd.append('correo',    correo);
+        fd.append('tipo_documento', tipoDoc);
+        fd.append('descuento', descuento);
+
+        // Items como JSON
+        fd.append('items', JSON.stringify(_vItems.map(i => ({
+            id_producto:    i.id_producto,
+            id_variante:    i.id_variante || null,
+            nombre:         i.nombre,
+            cantidad:       i.cantidad,
+            precio_unitario: i.precio_unitario
+        }))));
+
+        // Pagos como JSON (sin archivos)
+        fd.append('pagos', JSON.stringify(_nvPagos.map(p => ({
+            metodo_pago:       p.metodo_pago,
+            monto:             parseFloat(p.monto),
+            numero_operacion:  p.numero_operacion || ''
+        }))));
+
+        // Archivos en orden
+        _nvPagos.forEach(p => {
+            fd.append('capturas', p.archivo || new Blob([], {type:'image/png'}));
         });
+
+        const res  = await fetch('/api/ventas', { method: 'POST', body: fd });
         const json = await res.json();
+
         if (json.ok) {
             cerrarModalVentas('modalNuevaVenta');
-            _mostrarToast(`✓ ${json.mensaje} — ${json.data.numero_venta}`, 'success');
+            _mostrarConfirmacionVenta(json.data, nombres, apellidos, tipoDoc, total, correo);
             cargarStatsVentas();
             cargarTablaVentas(1);
         } else {
@@ -596,6 +775,67 @@ async function guardarNuevaVenta() {
     finally {
         _vGuardando = false;
         if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="save"></i> Registrar venta'; if (window.lucide) lucide.createIcons(); }
+    }
+}
+function _mostrarConfirmacionVenta(data, nombres, apellidos, tipoDoc, total, correo) {
+    _nvConfirmData = { ...data, nombres, apellidos, tipoDoc, total };
+    const tipoLabel = tipoDoc === 'boleta' ? 'Boleta' : 'Nota de Venta';
+
+    document.getElementById('confirmVentaResumen').innerHTML = `
+        <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-size:3rem;">✅</div>
+            <h3 style="color:var(--azul);margin:8px 0 4px;">${tipoLabel} registrada</h3>
+            <div style="font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--accent);">${data.numero_venta}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+                <span style="color:var(--muted);font-size:13px;">Cliente</span>
+                <strong style="font-size:13px;">${nombres} ${apellidos||''}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
+                <span style="color:var(--muted);font-size:13px;">Documento</span>
+                <strong style="font-size:13px;">${tipoLabel}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;">
+                <span style="color:var(--muted);font-size:13px;">Total</span>
+                <strong style="font-size:15px;color:var(--accent);">S/ ${parseFloat(total).toFixed(2)}</strong>
+            </div>
+        </div>`;
+
+    const correoInput = document.getElementById('confirmCorreoEnvio');
+    if (correoInput) correoInput.value = correo || '';
+    _setText('confirmCorreoStatus', '');
+
+    _show('modalConfirmVenta');
+    if (window.lucide) lucide.createIcons();
+}
+
+async function _imprimirDesdeConfirm() {
+    if (!_nvConfirmData?.id_venta) return;
+    await abrirImprimirVenta(_nvConfirmData.id_venta);
+}
+
+async function _enviarCorreoConfirm() {
+    const correo = document.getElementById('confirmCorreoEnvio')?.value.trim();
+    if (!correo || !_nvConfirmData?.id_venta) return;
+
+    const btn = document.getElementById('btnEnviarCorreoConfirm');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2"></i>'; if(window.lucide) lucide.createIcons(); }
+    _setText('confirmCorreoStatus', 'Enviando...');
+
+    try {
+        const res  = await fetch(`/api/ventas/${_nvConfirmData.id_venta}/enviar-correo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ correo })
+        });
+        const json = await res.json();
+        _setText('confirmCorreoStatus', json.ok ? '✓ Correo enviado correctamente' : `Error: ${json.mensaje}`);
+        document.getElementById('confirmCorreoStatus').style.color = json.ok ? 'var(--verde)' : 'var(--error)';
+    } catch (e) {
+        _setText('confirmCorreoStatus', 'Error de conexión');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="mail"></i> Enviar'; if(window.lucide) lucide.createIcons(); }
     }
 }
 
