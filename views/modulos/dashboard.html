@@ -1,31 +1,784 @@
-<link rel="stylesheet" href="/css/modulos/dashboard2.css">
-<div class="modulo-header">
-    <div>
-        <h2 class="modulo-titulo">Resumen general</h2>
-        <p class="modulo-subtitulo">Bienvenido al sistema de Confecciones Lix</p>
-    </div>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --azul:     #1a3c5e;
+  --azul-med: #2563a8;
+  --accent:   #c8622a;
+  --accent2:  #e8845a;
+  --verde:    #059669;
+  --rojo:     #dc2626;
+  --amber:    #f59e0b;
+  --bg:       #f0f4f8;
+  --card:     #ffffff;
+  --border:   #e2e8f0;
+  --text:     #1e293b;
+  --muted:    #64748b;
+  --mono:     'JetBrains Mono', monospace;
+  --font:     'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── HEADER ── */
+.db-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: .8rem;
+}
+.db-titulo {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--azul);
+  letter-spacing: -.02em;
+}
+.db-subtitulo {
+  font-size: .82rem;
+  color: var(--muted);
+  margin-top: .15rem;
+}
+.db-fecha {
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: .4rem .9rem;
+  border-radius: 20px;
+}
+
+/* ── KPI CARDS ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+@media(max-width:900px){ .kpi-grid{ grid-template-columns: repeat(2,1fr); } }
+@media(max-width:500px){ .kpi-grid{ grid-template-columns: 1fr; } }
+
+.kpi-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s, box-shadow .2s;
+}
+.kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(26,60,94,.1);
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 14px 14px 0 0;
+}
+.kpi-card.verde::before { background: var(--verde); }
+.kpi-card.azul::before  { background: var(--azul-med); }
+.kpi-card.amber::before { background: var(--amber); }
+.kpi-card.rojo::before  { background: var(--rojo); }
+
+.kpi-label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  margin-bottom: .5rem;
+}
+.kpi-valor {
+  font-family: var(--mono);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--azul);
+  line-height: 1;
+  margin-bottom: .4rem;
+}
+.kpi-delta {
+  font-size: .75rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.kpi-delta.pos { color: var(--verde); }
+.kpi-delta.neg { color: var(--rojo); }
+.kpi-icon {
+  position: absolute;
+  right: 1.2rem;
+  top: 1.2rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.kpi-card .kpi-icon { background: #fff5f0; }
+.kpi-card.verde .kpi-icon { background: #f0fdf4; }
+.kpi-card.azul .kpi-icon  { background: #eff6ff; }
+.kpi-card.amber .kpi-icon { background: #fffbeb; }
+.kpi-card.rojo .kpi-icon  { background: #fef2f2; }
+
+/* ── SEGUNDA FILA ── */
+.db-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+@media(max-width:768px){ .db-row{ grid-template-columns: 1fr; } }
+
+/* ── PANEL GENÉRICO ── */
+.panel {
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 1rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.panel-titulo {
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--azul);
+}
+.panel-body { padding: 1.2rem 1.4rem; }
+
+/* ── VERIFICACIÓN DE PAGOS ── */
+.pagos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .8rem;
+}
+.pago-stat {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: .9rem 1rem;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+.pago-stat-val {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: .2rem;
+}
+.pago-stat-label { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+/* ── STOCK CRÍTICO ── */
+.stock-lista { display: flex; flex-direction: column; gap: .5rem; }
+.stock-item {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: .6rem .8rem;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.stock-nombre { flex: 1; font-size: .82rem; font-weight: 600; color: var(--text); }
+.stock-bar-wrap { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.stock-bar { height: 100%; border-radius: 3px; }
+.stock-num { font-family: var(--mono); font-size: .78rem; font-weight: 700; min-width: 30px; text-align: right; }
+
+/* ── GRÁFICO BARRAS ── */
+.grafico-wrap {
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  margin-bottom: 1.2rem;
+  overflow: hidden;
+}
+.grafico-header {
+  padding: 1rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.grafico-titulo { font-size: .9rem; font-weight: 700; color: var(--azul); }
+.grafico-periodo {
+  display: flex;
+  gap: .3rem;
+}
+.periodo-btn {
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  font-size: .75rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: var(--font);
+  transition: all .15s;
+}
+.periodo-btn.active {
+  background: var(--azul);
+  color: #fff;
+  border-color: var(--azul);
+}
+.grafico-leyenda {
+  display: flex;
+  gap: 1rem;
+  padding: 0 1.4rem .5rem;
+  flex-wrap: wrap;
+}
+.leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .75rem;
+  color: var(--muted);
+}
+.leyenda-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+canvas#chartVentas {
+  width: 100% !important;
+  max-height: 260px;
+  padding: 0 1.2rem 1rem;
+}
+
+/* ── TERCERA FILA ── */
+.db-row3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+@media(max-width:768px){ .db-row3{ grid-template-columns: 1fr; } }
+
+/* ── TABLA PEDIDOS ── */
+.pedidos-tabla { width: 100%; border-collapse: collapse; }
+.pedidos-tabla th {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  padding: .5rem .8rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.pedidos-tabla td {
+  padding: .65rem .8rem;
+  font-size: .82rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.pedidos-tabla tr:last-child td { border-bottom: none; }
+.pedidos-tabla tr:hover td { background: var(--bg); }
+
+/* ── BADGES ── */
+.badge-db {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.badge-pend  { background: #fef3c7; color: #92400e; }
+.badge-proc  { background: #dbeafe; color: #1e40af; }
+.badge-env   { background: #ede9fe; color: #5b21b6; }
+.badge-entre { background: #d1fae5; color: #065f46; }
+.badge-can   { background: #fee2e2; color: #991b1b; }
+
+/* ── ACTIVIDAD RECIENTE ── */
+.actividad-lista { display: flex; flex-direction: column; gap: 0; }
+.actividad-item {
+  display: flex;
+  gap: .8rem;
+  align-items: flex-start;
+  padding: .7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.actividad-item:last-child { border-bottom: none; }
+.act-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.act-texto { font-size: .8rem; color: var(--text); line-height: 1.4; }
+.act-hora  { font-family: var(--mono); font-size: .7rem; color: var(--muted); margin-top: .15rem; }
+
+/* ── TOP PRODUCTOS ── */
+.top-lista { display: flex; flex-direction: column; gap: .6rem; }
+.top-item {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+}
+.top-rank {
+  font-family: var(--mono);
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--muted);
+  width: 20px;
+  text-align: center;
+}
+.top-info { flex: 1; min-width: 0; }
+.top-nombre {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-colegio { font-size: .7rem; color: var(--muted); }
+.top-val {
+  font-family: var(--mono);
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+
+.db-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--muted);
+  font-size: .85rem;
+  gap: .5rem;
+}
+.db-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--azul-med);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.db-select {
+  padding: .3rem .7rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: .78rem;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--card);
+  cursor: pointer;
+  outline: none;
+}
+
+
+.mono { font-family: var(--mono); }
+</style>
+
+
+<!-- HEADER -->
+<div class="db-header">
+  <div>
+    <div class="db-titulo">Dashboard</div>
+    <div class="db-subtitulo">Resumen de flujos de venta</div>
+  </div>
+  <div class="db-fecha" id="db-fecha-hoy">—</div>
 </div>
 
-<div class="cards">
-    <div class="card accent-card">
-        <div class="label">Pedidos hoy</div>
-        <div class="value" id="stat-pedidos">—</div>
-        <div class="delta">del día</div>
-    </div>
-    <div class="card">
-        <div class="label">Clientes</div>
-        <div class="value" id="stat-clientes">—</div>
-        <div class="delta">registrados</div>
-    </div>
-    <div class="card">
-        <div class="label">Productos</div>
-        <div class="value" id="stat-productos">—</div>
-        <div class="delta">en catálogo</div>
-    </div>
-    <div class="card">
-        <div class="label">Stock bajo</div>
-        <div class="value" id="stat-stock">—</div>
-        <div class="delta neg">requieren atención</div>
-    </div>
-
+<!-- KPIs FILA 1 -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-icon">
+    <i data-lucide="trending-up" style="width:18px;height:18px;color:#c8622a;"></i>
 </div>
+    <div class="kpi-label">Venta Diaria</div>
+    <div class="kpi-valor" id="kpi-venta-dia">—</div>
+    <div class="kpi-delta" id="kpi-venta-dia-delta">Hoy</div>
+  </div>
+  <div class="kpi-card verde">
+    <div class="kpi-icon">
+    <i data-lucide="calendar" style="width:18px;height:18px;color:#059669;"></i>
+    </div>
+    <div class="kpi-label">Venta Mensual</div>
+    <div class="kpi-valor" id="kpi-venta-mes">—</div>
+    <div class="kpi-delta">Este mes</div>
+  </div>
+  <div class="kpi-card azul">
+    <div class="kpi-icon">
+    <i data-lucide="file-text" style="width:18px;height:18px;color:#2563a8;"></i>
+    </div>
+    <div class="kpi-label">Cuentas por Cobrar</div>
+    <div class="kpi-valor" id="kpi-por-cobrar">—</div>
+    <div class="kpi-delta">Pendientes</div>
+  </div>
+  <div class="kpi-card amber">
+    <div class="kpi-icon">
+    <i data-lucide="shopping-bag" style="width:18px;height:18px;color:#f59e0b;"></i>
+    </div>
+    <div class="kpi-label">Pedidos Activos</div>
+    <div class="kpi-valor" id="kpi-pedidos-activos">—</div>
+    <div class="kpi-delta">Por procesar</div>
+  </div>
+</div>
+
+<div class="grafico-wrap">
+  <div class="grafico-header">
+    <div class="grafico-titulo">Evolución de Ventas</div>
+    <div style="display:flex;gap:.6rem;align-items:center;">
+      <select class="db-select" id="selectAnio"></select>
+      <div class="grafico-periodo">
+        <button class="periodo-btn active" data-periodo="mensual">Mensual</button>
+        <button class="periodo-btn" data-periodo="semanal">Semanal</button>
+      </div>
+    </div>
+  </div>
+  <div class="grafico-leyenda">
+    <div class="leyenda-item"><div class="leyenda-dot" style="background:#2563a8;"></div>Total Vendido</div>
+    <div class="leyenda-item"><div class="leyenda-dot" style="background:#c8622a;"></div>Ventas a Crédito</div>
+    <div class="leyenda-item"><div class="leyenda-dot" style="background:#059669;"></div>Pagos Cobrados</div>
+  </div>
+  <div style="padding:0 1.2rem 1rem;">
+    <canvas id="chartVentas" height="240"></canvas>
+  </div>
+</div>
+
+<div class="db-row">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-titulo">Verificación de Pagos Sitio Web</div>
+      <span style="font-size:.72rem;color:var(--muted);">Estado de pagos pendientes por verificar</span>
+    </div>
+    <div class="panel-body">
+      <div class="pagos-grid">
+        <div class="pago-stat">
+          <div class="pago-stat-val" id="pago-pendientes" style="color:#7c3aed;">—</div>
+          <div class="pago-stat-label">Pendientes</div>
+        </div>
+        <div class="pago-stat">
+          <div class="pago-stat-val" id="pago-verificados" style="color:var(--verde);">—</div>
+          <div class="pago-stat-label">Verificados</div>
+        </div>
+        <div class="pago-stat">
+          <div class="pago-stat-val" id="pago-rechazados" style="color:var(--rojo);">—</div>
+          <div class="pago-stat-label">Rechazados</div>
+        </div>
+        <div class="pago-stat">
+          <div class="pago-stat-val" id="pago-monto" style="color:var(--accent);">—</div>
+          <div class="pago-stat-label">Total Pendiente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-titulo">Stock Crítico</div>
+      <span style="font-size:.72rem;color:var(--rojo);font-weight:600;" id="stock-count-label">— productos</span>
+    </div>
+    <div class="panel-body">
+      <div class="stock-lista" id="stock-lista">
+        <div class="db-loading"><div class="db-spinner"></div> Cargando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="db-row3">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-titulo">Pedidos Recientes</div>
+      <span style="font-size:.72rem;color:var(--muted);">Últimos 10</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="pedidos-tabla">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Cliente</th>
+            <th>Total</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="pedidos-tbody">
+          <tr><td colspan="5" class="db-loading"><div class="db-spinner"></div> Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-titulo">Top Productos</div>
+      <span style="font-size:.72rem;color:var(--muted);">Por ventas</span>
+    </div>
+    <div class="panel-body">
+      <div class="top-lista" id="top-productos">
+        <div class="db-loading"><div class="db-spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const hoy = new Date();
+document.getElementById('db-fecha-hoy').textContent = hoy.toLocaleDateString('es-PE', {
+  weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+});
+
+const anioActual = hoy.getFullYear();
+const selectAnio = document.getElementById('selectAnio');
+for (let y = anioActual; y >= anioActual - 3; y--) {
+  const opt = document.createElement('option');
+  opt.value = y;
+  opt.textContent = y;
+  selectAnio.appendChild(opt);
+}
+
+let chartInstance = null;
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function iniciarChart(labels, vendido, credito, cobrado) {
+  const ctx = document.getElementById('chartVentas').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Total Vendido',
+          data: vendido,
+          backgroundColor: 'rgba(37,99,168,.8)',
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+        {
+          label: 'Ventas a Crédito',
+          data: credito,
+          backgroundColor: 'rgba(200,98,42,.75)',
+          borderRadius: 6,
+          borderSkipped: false,
+        },
+        {
+          label: 'Pagos Cobrados',
+          data: cobrado,
+          backgroundColor: 'rgba(5,150,105,.75)',
+          borderRadius: 6,
+          borderSkipped: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e293b',
+          titleFont: { family: 'Plus Jakarta Sans', size: 12 },
+          bodyFont: { family: 'JetBrains Mono', size: 12 },
+          callbacks: {
+            label: ctx => ` S/ ${parseFloat(ctx.raw).toLocaleString('es-PE', {minimumFractionDigits:2})}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Plus Jakarta Sans', size: 11 }, color: '#64748b' }
+        },
+        y: {
+          grid: { color: '#f1f5f9' },
+          ticks: {
+            font: { family: 'JetBrains Mono', size: 10 },
+            color: '#64748b',
+            callback: v => 'S/ ' + (v >= 1000 ? (v/1000).toFixed(1)+'k' : v)
+          }
+        }
+      }
+    }
+  });
+}
+
+async function cargarGrafico() {
+  if (!document.getElementById('chartVentas')) return;
+  const anio = parseInt(selectAnio.value);
+  const periodo = document.querySelector('.periodo-btn.active').dataset.periodo;
+
+  try {
+    const res = await fetch(`/api/dashboard/grafico?anio=${anio}&periodo=${periodo}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+
+    iniciarChart(json.labels, json.vendido, json.credito, json.cobrado);
+  } catch {
+    // Datos de ejemplo si falla
+    const labels = periodo === 'mensual' ? MESES : ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    const mock = () => labels.map(() => Math.random() * 800 + 50);
+    iniciarChart(labels, mock(), mock(), mock());
+  }
+}
+
+async function cargarKPIs() {
+  if (!document.getElementById('kpi-venta-dia')) return;
+  try {
+    const res = await fetch('/api/dashboard/stats');
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    const fmt = n => 'S/ ' + parseFloat(n||0).toLocaleString('es-PE', {minimumFractionDigits:2});
+    document.getElementById('kpi-venta-dia').textContent = fmt(json.venta_dia);
+    document.getElementById('kpi-venta-mes').textContent = fmt(json.venta_mes);
+    document.getElementById('kpi-por-cobrar').textContent = fmt(json.por_cobrar);
+    document.getElementById('kpi-pedidos-activos').textContent = json.pedidos_activos || '0';
+    document.getElementById('pago-pendientes').textContent = json.pagos_pendientes || '0';
+    document.getElementById('pago-verificados').textContent = json.pagos_verificados || '0';
+    document.getElementById('pago-rechazados').textContent = json.pagos_rechazados || '0';
+    document.getElementById('pago-monto').textContent = fmt(json.monto_pendiente);
+  } catch (e) {
+    console.error('Error KPIs:', e);
+  }
+}
+
+async function cargarStockCritico() {
+  if (!document.getElementById('stock-lista')) return;
+  try {
+    const res = await fetch('/api/dashboard/stock-critico');
+    const json = await res.json();
+    const lista = document.getElementById('stock-lista');
+
+    if (!json.ok || !json.data.length) {
+      lista.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:.82rem;">✓ Sin stock crítico</div>';
+      document.getElementById('stock-count-label').textContent = '0 productos';
+      return;
+    }
+
+    document.getElementById('stock-count-label').textContent = `${json.data.length} productos`;
+    lista.innerHTML = json.data.slice(0, 6).map(p => {
+      const pct = Math.min(100, Math.round((p.stock / p.stock_minimo) * 100));
+      const color = p.stock === 0 ? '#dc2626' : p.stock < p.stock_minimo ? '#f59e0b' : '#059669';
+      return `
+        <div class="stock-item">
+          <div class="stock-nombre">${p.nombre_producto}</div>
+          <div class="stock-bar-wrap">
+            <div class="stock-bar" style="width:${pct}%;background:${color};"></div>
+          </div>
+          <div class="stock-num" style="color:${color};">${p.stock}</div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('stock-lista').innerHTML = '<div style="color:var(--muted);font-size:.8rem;">Error al cargar</div>';
+  }
+}
+
+async function cargarPedidosRecientes() {
+  if (!document.getElementById('pedidos-tbody')) return;
+  try {
+    const res = await fetch('/api/dashboard/pedidos-recientes');
+    const json = await res.json();
+    const tbody = document.getElementById('pedidos-tbody');
+
+    if (!json.ok || !json.data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--muted);">Sin pedidos</td></tr>';
+      return;
+    }
+
+    const badges = {
+      pendiente:  'badge-pend',
+      procesando: 'badge-proc',
+      enviado:    'badge-env',
+      entregado:  'badge-entre',
+      cancelado:  'badge-can'
+    };
+
+    tbody.innerHTML = json.data.map(p => `
+      <tr>
+        <td><span class="mono" style="font-size:.75rem;color:var(--muted);">${p.codigo_seguimiento || '—'}</span></td>
+        <td style="font-weight:600;">${p.cliente || '—'}</td>
+        <td><span class="mono" style="color:var(--accent);font-weight:700;">S/ ${parseFloat(p.total).toFixed(2)}</span></td>
+        <td><span class="badge-db ${badges[p.estado] || 'badge-pend'}">${p.estado}</span></td>
+        <td style="color:var(--muted);font-size:.75rem;">${new Date(p.fecha_pedido).toLocaleDateString('es-PE',{day:'2-digit',month:'short'})}</td>
+      </tr>`).join('');
+  } catch (e) {
+    document.getElementById('pedidos-tbody').innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:1rem;">Error al cargar</td></tr>';
+  }
+}
+
+async function cargarTopProductos() {
+  if (!document.getElementById('top-productos')) return;
+  try {
+    const res = await fetch('/api/dashboard/top-productos');
+    const json = await res.json();
+    const lista = document.getElementById('top-productos');
+
+    if (!json.ok || !json.data.length) {
+      lista.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Sin datos</div>';
+      return;
+    }
+
+    const colores = ['#c8622a','#2563a8','#059669','#7c3aed','#f59e0b'];
+    lista.innerHTML = json.data.slice(0,5).map((p, i) => `
+      <div class="top-item">
+        <div class="top-rank" style="color:${colores[i]};">${i+1}</div>
+        <div class="top-info">
+          <div class="top-nombre">${p.nombre_producto}</div>
+          <div class="top-colegio">${p.nombre_colegio || 'General'}</div>
+        </div>
+        <div class="top-val">S/ ${parseFloat(p.total_vendido).toFixed(0)}</div>
+      </div>`).join('');
+  } catch (e) {
+    document.getElementById('top-productos').innerHTML = '<div style="color:var(--muted);font-size:.8rem;">Error al cargar</div>';
+  }
+}
+
+document.querySelectorAll('.periodo-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    cargarGrafico();
+  });
+});
+selectAnio.addEventListener('change', cargarGrafico);
+cargarKPIs();
+cargarGrafico();
+cargarStockCritico();
+cargarPedidosRecientes();
+cargarTopProductos();
+
+const _dbInterval = setInterval(() => {
+    if (!document.getElementById('kpi-venta-dia')) {
+        clearInterval(_dbInterval);
+        return;
+    }
+    cargarKPIs();
+    cargarPedidosRecientes();
+}, 120000);
+
+if (window.lucide) lucide.createIcons();
+</script>

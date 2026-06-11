@@ -106,7 +106,7 @@
         <tbody id="tablaVentasBody"></tbody>
       </table>
     </div>
-    <div class="pagination" id="ventasPaginacion"></div>
+    <div id="ventasPaginacion" style="display:flex;justify-content:flex-end;align-items:center;gap:4px;padding:12px 16px;border-top:1px solid var(--border);"></div>
   </div>
   <div class="empty-state" id="emptyVentas" style="display:none;">
     <i data-lucide="receipt" style="width:44px;height:44px;opacity:.3;margin-bottom:14px;"></i>
@@ -184,13 +184,15 @@
 <div class="modal-overlay" id="modalNuevaVenta" style="display:none;">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <div class="modal-title">Nueva venta manual</div>
+      <div class="modal-title">Nueva venta</div>
       <button class="modal-close" onclick="cerrarModalVentas('modalNuevaVenta')">
         <i data-lucide="x" style="width:14px;height:14px;"></i>
       </button>
     </div>
     <div id="alertaNuevaVenta"></div>
-    <p class="paso-label">1 — Datos del cliente</p>
+
+    <!-- PASO 1: CLIENTE -->
+    <p class="paso-label">① Datos del cliente</p>
     <div class="form-grid">
       <div class="field">
         <label>DNI</label>
@@ -216,22 +218,26 @@
       </div>
       <div class="field">
         <label>Teléfono *</label>
-        <input type="text" id="nvTelefono" placeholder="9XXXXXXXX" maxlength="9">
+        <input type="text" id="nvTelefono" placeholder="9XXXXXXXX" maxlength="9"
+       oninput="this.value=this.value.replace(/\D/g,'')">
       </div>
       <div class="field">
         <label>Correo</label>
         <input type="email" id="nvCorreo" placeholder="correo@email.com">
       </div>
       <div class="field">
-        <label>Tipo documento</label>
+        <label>Tipo comprobante</label>
         <select id="nvTipoDoc">
           <option value="nota_venta">Nota de venta</option>
           <option value="boleta">Boleta</option>
         </select>
       </div>
     </div>
+
     <div class="divider"></div>
-    <p class="paso-label">2 — Productos</p>
+
+    <!-- PASO 2: PRODUCTOS -->
+    <p class="paso-label">② Productos</p>
     <div class="input-wrap" style="margin-bottom:10px;">
       <span class="input-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
       <input type="text" id="nvBuscarProducto" placeholder="Escribe el nombre del producto..." oninput="buscarProductoNV()">
@@ -244,13 +250,12 @@
       </div>
       <table class="tabla" id="nvTablaItems" style="display:none;">
         <thead>
-          <tr>
-            <th>Producto</th><th>Talla / Color</th><th>Precio unit.</th><th>Cant.</th><th>Subtotal</th><th></th>
-          </tr>
+          <tr><th>Producto</th><th>Talla/Color</th><th>Precio</th><th>Cant.</th><th>Subtotal</th><th></th></tr>
         </thead>
         <tbody id="nvItemsBody"></tbody>
       </table>
     </div>
+
     <div id="nvTotalesWrap" style="display:none;">
       <div class="divider" style="margin:12px 0;"></div>
       <div class="totales-grid">
@@ -258,27 +263,63 @@
           <label>Descuento (S/)</label>
           <input type="number" id="nvDescuento" value="0" min="0" step="0.50" oninput="calcularTotalNV()">
         </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Método de pago</label>
-          <select id="nvMetodoPago">
-            <option value="yape">Yape</option>
-            <option value="plin">Plin</option>
-            <option value="transferencia">Transferencia BCP</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="visa">Tarjeta Visa</option>
-          </select>
-        </div>
         <div class="totales-resumen">
           <div class="total-fila"><span>Subtotal</span><strong id="nvLabelSubtotal">S/ 0.00</strong></div>
           <div class="total-fila"><span>Descuento</span><strong id="nvLabelDescuento" style="color:var(--error);">- S/ 0.00</strong></div>
           <div class="total-fila total-final"><span>TOTAL</span><strong id="nvLabelTotal">S/ 0.00</strong></div>
+          <div class="total-fila" style="color:var(--error);font-size:12px;"><span>Pendiente por asignar</span><strong id="nvLabelPendiente">S/ 0.00</strong></div>
         </div>
       </div>
     </div>
+
+    <div class="divider" style="margin:12px 0;"></div>
+
+    <!-- PASO 3: PAGOS -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <p class="paso-label" style="margin:0;">③ Forma de pago</p>
+      <button class="btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="agregarMetodoPago()">
+        <i data-lucide="plus" style="width:12px;height:12px;"></i> Agregar método
+      </button>
+    </div>
+    <div id="nvPagosLista"></div>
+
     <div class="modal-footer">
       <button class="btn-secondary" onclick="cerrarModalVentas('modalNuevaVenta')">Cancelar</button>
       <button class="btn-primary" onclick="guardarNuevaVenta()" id="btnGuardarNV">
         <i data-lucide="save"></i> Registrar venta
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMACIÓN VENTA -->
+<div class="modal-overlay" id="modalConfirmVenta" style="display:none;">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header" style="background:var(--accent);color:#fff;border-radius:8px 8px 0 0;">
+      <div class="modal-title" style="color:#fff;">✅ Venta registrada</div>
+      <button class="modal-close" style="color:#fff;" onclick="cerrarModalVentas('modalConfirmVenta')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div style="padding:20px 24px;">
+      <div id="confirmVentaResumen"></div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
+        <button class="btn-primary" onclick="_imprimirDesdeConfirm()" style="width:100%;">
+          <i data-lucide="printer"></i> Imprimir comprobante
+        </button>
+        <div style="display:flex;gap:8px;">
+          <input type="email" id="confirmCorreoEnvio" placeholder="correo@email.com"
+                 style="flex:1;" id="confirmCorreoEnvio">
+          <button class="btn-secondary" onclick="_enviarCorreoConfirm()" id="btnEnviarCorreoConfirm">
+            <i data-lucide="mail"></i> Enviar
+          </button>
+        </div>
+        <div id="confirmCorreoStatus" style="font-size:12px;text-align:center;color:var(--muted);"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="cerrarModalVentas('modalConfirmVenta');cargarTablaVentas(1);">
+        Cerrar
       </button>
     </div>
   </div>

@@ -1,0 +1,86 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Colegios</h2>
+    <p class="modulo-subtitulo">Administra los colegios del catálogo</p>
+  </div>
+  <button class="btn-primary" id="btn-nuevo-colegio">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Nuevo colegio
+  </button>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Lista de colegios</span>
+    <span class="total-label" id="total-colegios"></span>
+  </div>
+  <div id="colegios-loading" class="spinner-wrap"><div class="spinner"></div></div>
+  <div id="colegios-empty" class="empty-state" style="display:none;">
+    <p>No hay colegios registrados</p>
+  </div>
+  <div id="colegios-tabla" style="display:none;overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Distrito</th>
+          <th>Provincia</th>
+          <th style="text-align:right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="colegios-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-colegio" style="display:none;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-colegio-titulo">Nuevo colegio</span>
+      <button class="modal-close" id="btn-cerrar-modal-colegio">×</button>
+    </div>
+    <div class="alert alert-error" id="modal-colegio-alert" style="display:none;">
+      <span id="modal-colegio-alert-msg"></span>
+    </div>
+    <input type="hidden" id="colegio-id">
+    <div class="field">
+      <label>Nombre del colegio *</label>
+      <div class="input-wrap">
+        <input type="text" id="colegio-nombre" placeholder="Ej. San José">
+      </div>
+    </div>
+    <div class="field">
+      <label>Distrito</label>
+      <div class="input-wrap">
+        <input type="text" id="colegio-distrito" placeholder="Chiclayo" value="Chiclayo">
+      </div>
+    </div>
+    <div class="field">
+      <label>Provincia</label>
+      <div class="input-wrap">
+        <input type="text" id="colegio-provincia" placeholder="Chiclayo" value="Chiclayo">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-modal-colegio">Cancelar</button>
+      <button class="btn-primary" id="btn-guardar-colegio">
+        <span id="btn-guardar-colegio-text">Crear colegio</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-eliminar-colegio" style="display:none;">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">¿Eliminar colegio?</span>
+      <button class="modal-close" id="btn-cerrar-eliminar-colegio">×</button>
+    </div>
+    <p class="modal-desc">El colegio <strong id="eliminar-colegio-nombre"></strong> será eliminado permanentemente.</p>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-eliminar-colegio">Cancelar</button>
+      <button class="btn-danger" id="btn-confirmar-eliminar-colegio">Sí, eliminar</button>
+    </div>
+  </div>
+</div>

@@ -116,6 +116,8 @@ async function abrirNuevoProducto() {
     document.getElementById('modal-producto-titulo').textContent     = 'Nuevo producto';
     document.getElementById('btn-guardar-producto-text').textContent = 'Crear producto';
     await Promise.all([_cargarCategoriasSelect(), _cargarColegiosSelect()]);
+    document.getElementById('seccion-imagenes').style.display = 'none';
+
     document.getElementById('modal-producto').style.display = 'flex';
 }
 
@@ -145,7 +147,8 @@ async function abrirEditarProducto(id) {
     } catch (err) {
         _mostrarAlertaProducto('No se pudo cargar el producto');
     }
-
+    document.getElementById('seccion-imagenes').style.display = 'block';
+    await _cargarImagenesProducto(id);
     document.getElementById('modal-producto').style.display = 'flex';
 }
 
@@ -303,6 +306,11 @@ function _limpiarModalProducto() {
     document.getElementById('producto-estado').value      = '1';
     document.getElementById('producto-stock-minimo').value = '';
     document.getElementById('modal-producto-alert').style.display = 'none';
+
+    _imagenesProducto = [];
+    _renderImagenes();
+    const urlInput = document.getElementById('imagen-url-input');
+    if (urlInput) urlInput.value = '';
 }
 
 function _mostrarAlertaProducto(msg) {
@@ -352,6 +360,96 @@ function mostrarToast(msg, tipo = 'success') {
     setTimeout(() => { t.classList.add('saliendo'); setTimeout(() => t.remove(), 300); }, 3500);
 }
 
+let _imagenesProducto = [];
+async function _cargarImagenesProducto(id) {
+    _imagenesProducto = [];
+    _renderImagenes();
+    if (!id) return;
+    try {
+        const res = await fetch(`/api/productos/${id}/imagenes`);
+        const json = await res.json();
+        if (json.ok) { _imagenesProducto = json.data; _renderImagenes(); }
+    } catch (e) { console.error('Error cargando imágenes:', e); }
+}
+
+function _renderImagenes() {
+    const lista = document.getElementById('imagenes-lista');
+    if (!lista) return;
+    if (!_imagenesProducto.length) {
+        lista.innerHTML = '<span style="font-size:12px;color:var(--muted);">Sin imágenes aún</span>';
+        return;
+    }
+    lista.innerHTML = _imagenesProducto.map(img => `
+        <div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+            <img src="${_esc(img.url_imagen)}" style="width:100%;height:100%;object-fit:cover;" 
+                 onerror="this.style.display='none'">
+            <button type="button" onclick="_eliminarImagenProducto(${img.id_imagen})"
+                style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;
+                       background:rgba(220,38,38,.85);border:none;color:#fff;cursor:pointer;
+                       font-size:12px;display:flex;align-items:center;justify-content:center;padding:0;">
+                ×
+            </button>
+        </div>`).join('');
+}
+
+async function _agregarImagenUrl() {
+    const id = document.getElementById('producto-id').value;
+    if (!id) { _mostrarAlertaProducto('Guarda el producto primero antes de agregar imágenes'); return; }
+    const url = document.getElementById('imagen-url-input').value.trim();
+    if (!url) { _mostrarAlertaProducto('Ingresa una URL de imagen'); return; }
+    try {
+        const res = await fetch(`/api/productos/${id}/imagenes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url_imagen: url })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            document.getElementById('imagen-url-input').value = '';
+            await _cargarImagenesProducto(id);
+            mostrarToast('Imagen agregada', 'success');
+        } else { _mostrarAlertaProducto(json.mensaje); }
+    } catch (e) { _mostrarAlertaProducto('Error al agregar imagen'); }
+}
+
+async function _subirImagenLocal(file) {
+    const id = document.getElementById('producto-id').value;
+    if (!id) { _mostrarAlertaProducto('Guarda el producto primero antes de agregar imágenes'); return; }
+    const progress = document.getElementById('imagen-upload-progress');
+    progress.style.display = 'block';
+    try {
+        const fd = new FormData();
+        fd.append('imagen', file);
+        const up = await fetch('/api/upload/slider', { method: 'POST', body: fd });
+        const upJson = await up.json();
+        if (!upJson.ok) { _mostrarAlertaProducto(upJson.mensaje); return; }
+        const res = await fetch(`/api/productos/${id}/imagenes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url_imagen: upJson.data.url })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            await _cargarImagenesProducto(id);
+            mostrarToast('Imagen subida correctamente', 'success');
+        } else { _mostrarAlertaProducto(json.mensaje); }
+    } catch (e) { _mostrarAlertaProducto('Error al subir imagen'); }
+    finally { progress.style.display = 'none'; }
+}
+
+async function _eliminarImagenProducto(idImagen) {
+    if (!confirm('¿Eliminar esta imagen?')) return;
+    try {
+        const res = await fetch(`/api/imagenes/${idImagen}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.ok) {
+            const id = document.getElementById('producto-id').value;
+            await _cargarImagenesProducto(id);
+            mostrarToast('Imagen eliminada', 'success');
+        }
+    } catch (e) { mostrarToast('Error al eliminar imagen', 'error'); }
+}
+
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('button');
     if (btn && btn.dataset.procesando) return;
@@ -370,6 +468,16 @@ document.addEventListener('click', function(e) {
     if (id === 'btn-confirmar-eliminar-producto')  confirmarEliminarProducto();
     if (e.target.id === 'modal-producto')          cerrarModalProducto();
     if (e.target.id === 'modal-eliminar-producto') cerrarModalEliminarProducto();
+
+    if (id === 'btn-agregar-url-imagen') _agregarImagenUrl();
+    if (id === 'btn-subir-imagen-local') document.getElementById('imagen-file-input').click();
+});
+
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'imagen-file-input' && e.target.files[0]) {
+        _subirImagenLocal(e.target.files[0]);
+        e.target.value = '';
+    }
 });
 
 document.addEventListener('input', function(e) {

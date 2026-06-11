@@ -180,7 +180,6 @@ body {
     align-items: center;
 }
 
-/* ── HERO ── */
 .hero {
     background: linear-gradient(135deg, var(--azul) 0%, #2563a8 60%, #1d4ed8 100%);
     color: #fff;
@@ -191,7 +190,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 3rem;
-    min-height: 420px;
+    min-height: 500px;
 }
 
 .hero::before {

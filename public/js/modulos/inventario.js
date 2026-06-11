@@ -433,39 +433,78 @@ async function abrirActualizarStock(id) {
 }
 
 function _pintarPresentacionesDeActualizacion(variantes) {
-    
     const lista = document.getElementById('act-presentaciones-lista');
     window._invVariantesTemp = variantes;
-    
-    lista.innerHTML = variantes.map((v, idx) => {
-        const stock = parseInt(v.stock);
-        const seleccionado = _invVarianteSeleccionada && _invVarianteSeleccionada.id_variante === v.id_variante;
-        
-        let claseStock = 'optimo';
-        let claseCard = seleccionado ? 'pres-card pres-activa' : 'pres-card';
 
-        if (stock === 0) {
-            claseStock = 'agotado';
-            if (!seleccionado) claseCard += ' pres-agotada';
-        } else if (stock < 3) {
-            claseStock = 'critico';
-        }
+    // Agrupar por color
+    const colores = [...new Set(variantes.map(v => v.color))];
 
-        const label = `Color: ${v.color} - Talla: ${v.nombre_talla}${v.nombre_tipo ? ` (${v.nombre_tipo})` : ''}`;
-
-        return `
-            <div class="${claseCard}" style="cursor:pointer;" onclick="_seleccionarVarianteParaStock(window._invVariantesTemp[${idx}])">
-                <div style="flex:1;">
-                    <div class="pres-card-nombre">${label}</div>
-                    <div class="pres-card-precio" style="color:var(--muted);font-size:12px;">ID Variante: #${v.id_variante}</div>
-                </div>
-                <div class="pres-card-stock ${claseStock}" style="margin-left:auto;margin-right:12px;">${stock}</div>
-                <button class="btn-primary" style="font-size:11.5px;padding:5px 12px;border-radius:6px;height:auto;" onclick="event.stopPropagation();_seleccionarVarianteParaStock(window._invVariantesTemp[${idx}])">
-                    Seleccionar
-                </button>
+    lista.innerHTML = `
+        <div style="margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:8px;">Color</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="color-chips">
+                ${colores.map(c => `
+                    <button class="color-chip" data-color="${c}"
+                        style="padding:5px 14px;border:2px solid var(--border);border-radius:20px;
+                               font-size:12px;font-weight:600;cursor:pointer;background:#fff;
+                               font-family:var(--font);transition:all .15s;">
+                        ${c}
+                    </button>`).join('')}
             </div>
-        `;
-    }).join('');
+        </div>
+        <div id="tallas-wrap" style="display:none;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);margin-bottom:8px;">Talla</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="talla-chips"></div>
+        </div>`;
+
+    // Click en color
+    lista.querySelectorAll('.color-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            lista.querySelectorAll('.color-chip').forEach(b => {
+                b.style.borderColor = 'var(--border)';
+                b.style.background = '#fff';
+                b.style.color = 'var(--text)';
+            });
+            btn.style.borderColor = 'var(--accent)';
+            btn.style.background = '#fff5f0';
+            btn.style.color = 'var(--accent)';
+
+            const colorSeleccionado = btn.dataset.color;
+            const variantesColor = variantes.filter(v => v.color === colorSeleccionado);
+
+            const tallasWrap = document.getElementById('tallas-wrap');
+            const tallaChips = document.getElementById('talla-chips');
+            tallasWrap.style.display = 'block';
+
+            tallaChips.innerHTML = variantesColor.map((v, idx) => {
+                const stock = parseInt(v.stock);
+                const claseStock = stock === 0 ? '#aaa' : stock < 3 ? 'var(--rojo)' : 'var(--verde)';
+                return `
+                    <button class="talla-chip" data-idx="${window._invVariantesTemp.indexOf(v)}"
+                        style="padding:6px 14px;border:2px solid var(--border);border-radius:8px;
+                               font-size:12px;font-weight:600;cursor:pointer;background:#fff;
+                               font-family:var(--font);transition:all .15s;position:relative;">
+                        ${v.nombre_talla}
+                        <span style="display:block;font-size:10px;color:${claseStock};font-weight:700;">${stock}</span>
+                    </button>`;
+            }).join('');
+
+            // Click en talla
+            tallaChips.querySelectorAll('.talla-chip').forEach(t => {
+                t.addEventListener('click', () => {
+                    tallaChips.querySelectorAll('.talla-chip').forEach(b => {
+                        b.style.borderColor = 'var(--border)';
+                        b.style.background = '#fff';
+                    });
+                    t.style.borderColor = 'var(--accent)';
+                    t.style.background = '#fff5f0';
+
+                    const idx = parseInt(t.dataset.idx);
+                    _seleccionarVarianteParaStock(window._invVariantesTemp[idx]);
+                });
+            });
+        });
+    });
 }
 
 function _seleccionarVarianteParaStock(variante) {

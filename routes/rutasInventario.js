@@ -10,29 +10,24 @@ function verificarSesion(req, res, next) {
 
 router.get('/api/inventario', verificarSesion, async (req, res) => {
     try {
-       const result = await pool.query(`
+        const result = await pool.query(`
             SELECT
-                vp.id_variante,
                 p.id_producto,
                 p.nombre_producto,
                 p.precio_venta,
                 p.stock_minimo,
                 c.nombre AS categoria_nombre,
                 co.nombre_colegio,
-                t.nombre_talla,
-                vp.color,
-                vp.stock,
-                vp.stock AS stock_general,
-                (vp.stock * p.precio_venta) AS valor,
-                tu.nombre_tipo
-            FROM variantes_producto vp
-            JOIN productos p ON p.id_producto = vp.id_producto
+                COALESCE(SUM(vp.stock), 0)::int AS stock_general,
+                COALESCE(SUM(vp.stock * p.precio_venta), 0) AS valor
+            FROM productos p
             LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
             LEFT JOIN colegios co ON co.id_colegio = p.id_colegio
-            LEFT JOIN tallas t ON t.id_talla = vp.id_talla
-            LEFT JOIN tipos_uniforme tu ON tu.id_tipo = vp.id_tipo
+            LEFT JOIN variantes_producto vp ON vp.id_producto = p.id_producto
             WHERE p.estado != 2
-            ORDER BY p.nombre_producto, t.nombre_talla, vp.color
+            GROUP BY p.id_producto, p.nombre_producto, p.precio_venta,
+                     p.stock_minimo, c.nombre, co.nombre_colegio
+            ORDER BY p.nombre_producto
         `);
         res.json({ ok: true, data: result.rows });
     } catch (e) {

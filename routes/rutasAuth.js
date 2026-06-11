@@ -457,23 +457,7 @@ router.get('/api/productos', verificarSesion, async (req, res) => {
     }
 });
 
-router.get('/api/productos/:id', verificarSesion, async (req, res) => {
-    const { id } = req.params;
-    try {
-        const resultado = await pool.query(
-            `SELECT p.*, c.nombre AS categoria_nombre
-             FROM productos p
-             LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
-             WHERE p.id_producto = $1 AND p.estado != 2`,
-            [id]
-        );
-        if (!resultado.rows.length)
-            return res.json({ ok: false, mensaje: 'Producto no encontrado' });
-        res.json({ ok: true, data: resultado.rows[0] });
-    } catch (error) {
-        res.json({ ok: false, mensaje: error.message });
-    }
-});
+
 
 router.delete('/api/productos/:id', verificarSesion, async (req, res) => {
     const { id } = req.params;
@@ -575,32 +559,63 @@ router.get('/catalogo', (req, res) => {
 
 router.get('/api/catalogo/productos', async (req, res) => {
     try {
+        const result = await pool.query(`
+            SELECT
+                p.id_producto,
+                p.nombre_producto,
+                p.descripcion,
+                p.precio_venta,
+                p.precio_costo,
+                p.genero,
+                p.stock_minimo,
+                p.estado,
+                c.nombre AS categoria_nombre,
+                co.nombre_colegio,
+                -- Imágenes como array
+                COALESCE(
+                    (SELECT json_agg(ip.url_imagen ORDER BY ip.id_imagen)
+                     FROM imagenes_producto ip
+                     WHERE ip.id_producto = p.id_producto),
+                    '[]'
+                ) AS imagenes,
+                COALESCE(
+                    (SELECT json_agg(json_build_object(
+                        'id_variante', vp.id_variante,
+                        'color', vp.color,
+                        'stock', vp.stock,
+                        'precio_extra', vp.precio_extra,
+                        'talla', t.nombre_talla
+                    ) ORDER BY vp.id_variante)
+                     FROM variantes_producto vp
+                     LEFT JOIN tallas t ON t.id_talla = vp.id_talla
+                     WHERE vp.id_producto = p.id_producto),
+                    '[]'
+                ) AS variantes
+            FROM productos p
+            LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
+            LEFT JOIN colegios co ON co.id_colegio = p.id_colegio
+            WHERE p.estado = 1
+            ORDER BY co.nombre_colegio, p.nombre_producto
+        `);
+        res.json({ ok: true, data: result.rows });
+    } catch (e) {
+        res.json({ ok: false, mensaje: e.message });
+    }
+});
+
+router.get('/api/productos/:id', verificarSesion, async (req, res) => {
+    const { id } = req.params;
+    try {
         const resultado = await pool.query(
-            `SELECT p.id_producto, p.nombre_producto, p.descripcion,
-                    p.precio_venta, p.genero,
-                    c.nombre AS categoria_nombre,
-                    co.nombre_colegio,
-                    COALESCE(
-                        json_agg(
-                            json_build_object(
-                                'id_variante', v.id_variante,
-                                'talla', t.nombre_talla,
-                                'color', v.color,
-                                'stock', v.stock,
-                                'id_tipo', v.id_tipo
-                            )
-                        ) FILTER (WHERE v.id_variante IS NOT NULL), '[]'
-                    ) AS variantes
+            `SELECT p.*, c.nombre AS categoria_nombre
              FROM productos p
              LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
-             LEFT JOIN colegios co ON co.id_colegio = p.id_colegio
-             LEFT JOIN variantes_producto v ON v.id_producto = p.id_producto AND v.stock > 0
-             LEFT JOIN tallas t ON t.id_talla = v.id_talla
-             WHERE p.estado = 1
-             GROUP BY p.id_producto, c.nombre, co.nombre_colegio
-             ORDER BY p.id_producto`
+             WHERE p.id_producto = $1 AND p.estado != 2`,
+            [id]
         );
-        res.json({ ok: true, data: resultado.rows });
+        if (!resultado.rows.length)
+            return res.json({ ok: false, mensaje: 'Producto no encontrado' });
+        res.json({ ok: true, data: resultado.rows[0] });
     } catch (error) {
         res.json({ ok: false, mensaje: error.message });
     }
@@ -728,12 +743,6 @@ router.delete('/api/clientes/:id', verificarSesion, async (req, res) => {
     }
 });
 
-
-
-// =====================================================
-// GESTIÓN TIENDA - LOGOS
-// =====================================================
-
 router.get('/api/gestion-tienda/logos', verificarSesion, async (req, res) => {
     try {
         const resultado = await pool.query(`
@@ -810,10 +819,6 @@ router.delete('/api/gestion-tienda/logo/:id', verificarSesion, async (req, res) 
     }
 });
 
-
-// =====================================================
-// GESTIÓN TIENDA - SLIDERS
-// =====================================================
 
 router.get('/api/gestion-tienda/sliders', verificarSesion, async (req, res) => {
     try {
@@ -923,11 +928,6 @@ router.delete('/api/gestion-tienda/sliders/:id', verificarSesion, async (req, re
         res.json({ ok: false, mensaje: error.message });
     }
 });
-
-
-// =====================================================
-// GESTIÓN TIENDA - REDES
-// =====================================================
 
 router.get('/api/gestion-tienda/redes', verificarSesion, async (req, res) => {
     try {
@@ -1119,4 +1119,189 @@ router.put('/api/gestion-tienda/logos/:id/estado', async (req, res) => {
         client.release();
     }
 });
+
+router.get('/api/productos/:id/imagenes', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM imagenes_producto WHERE id_producto = $1 ORDER BY id_imagen',
+            [req.params.id]
+        );
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.post('/api/productos/:id/imagenes', verificarSesion, async (req, res) => {
+    const { url_imagen } = req.body;
+    if (!url_imagen) return res.json({ ok: false, mensaje: 'URL requerida' });
+    try {
+        await pool.query(
+            'INSERT INTO imagenes_producto (id_producto, url_imagen) VALUES ($1, $2)',
+            [req.params.id, url_imagen]
+        );
+        res.json({ ok: true, mensaje: 'Imagen agregada' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.delete('/api/imagenes/:id', verificarSesion, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM imagenes_producto WHERE id_imagen = $1', [req.params.id]);
+        res.json({ ok: true, mensaje: 'Imagen eliminada' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/dashboard/stats', verificarSesion, async (req, res) => {
+    try {
+        const hoy = new Date();
+        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+
+        const [diaRes, mesRes, cobrarRes, pedidosRes, pagosRes] = await Promise.all([
+            pool.query(`SELECT COALESCE(SUM(total),0) AS total FROM ventas WHERE DATE(fecha_venta) = CURRENT_DATE`),
+            pool.query(`SELECT COALESCE(SUM(total),0) AS total FROM ventas WHERE fecha_venta >= $1`, [inicioMes]),
+            pool.query(`SELECT COALESCE(SUM(p.total),0) AS total FROM pedidos p LEFT JOIN pagos pa ON pa.id_pedido = p.id_pedido WHERE pa.estado = 'pendiente' OR pa.id_pago IS NULL`),
+            pool.query(`SELECT COUNT(*) AS total FROM pedidos WHERE estado IN ('pendiente','procesando')`),
+            pool.query(`SELECT
+                COUNT(*) FILTER (WHERE pa.estado='pendiente') AS pendientes,
+                COUNT(*) FILTER (WHERE pa.estado='pagado') AS verificados,
+                COUNT(*) FILTER (WHERE pa.estado='rechazado') AS rechazados,
+                COALESCE(SUM(pa.monto) FILTER (WHERE pa.estado='pendiente'),0) AS monto_pend
+                FROM pagos pa`)
+        ]);
+
+        const pag = pagosRes.rows[0];
+        res.json({
+            ok: true,
+            venta_dia: diaRes.rows[0].total,
+            venta_mes: mesRes.rows[0].total,
+            por_cobrar: cobrarRes.rows[0].total,
+            pedidos_activos: pedidosRes.rows[0].total,
+            pagos_pendientes: pag.pendientes,
+            pagos_verificados: pag.verificados,
+            pagos_rechazados: pag.rechazados,
+            monto_pendiente: pag.monto_pend
+        });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/dashboard/grafico', verificarSesion, async (req, res) => {
+    const { anio = new Date().getFullYear(), periodo = 'mensual' } = req.query;
+    try {
+        const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+        if (periodo === 'mensual') {
+            const result = await pool.query(`
+                SELECT
+                    EXTRACT(MONTH FROM fecha_venta)::int AS mes,
+                    COALESCE(SUM(total),0) AS vendido,
+                    COALESCE(SUM(CASE WHEN tipo_documento='credito' THEN total ELSE 0 END),0) AS credito
+                FROM ventas
+                WHERE EXTRACT(YEAR FROM fecha_venta) = $1
+                GROUP BY mes ORDER BY mes`, [anio]);
+
+            const cobradoRes = await pool.query(`
+                SELECT EXTRACT(MONTH FROM pa.fecha_pago)::int AS mes, COALESCE(SUM(pa.monto),0) AS cobrado
+                FROM pagos pa WHERE pa.estado='pagado' AND EXTRACT(YEAR FROM pa.fecha_pago) = $1
+                GROUP BY mes ORDER BY mes`, [anio]);
+
+            const vendido = Array(12).fill(0);
+            const credito = Array(12).fill(0);
+            const cobrado = Array(12).fill(0);
+            result.rows.forEach(r => { vendido[r.mes-1] = parseFloat(r.vendido); credito[r.mes-1] = parseFloat(r.credito); });
+            cobradoRes.rows.forEach(r => { cobrado[r.mes-1] = parseFloat(r.cobrado); });
+
+            res.json({ ok: true, labels: MESES, vendido, credito, cobrado });
+        } else {
+            const result = await pool.query(`
+                SELECT
+                    EXTRACT(DOW FROM fecha_venta)::int AS dia,
+                    COALESCE(SUM(total),0) AS vendido
+                FROM ventas
+                WHERE fecha_venta >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY dia ORDER BY dia`);
+
+            const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+            const vendido = Array(7).fill(0);
+            result.rows.forEach(r => { vendido[r.dia] = parseFloat(r.vendido); });
+            res.json({ ok: true, labels: dias, vendido, credito: Array(7).fill(0), cobrado: Array(7).fill(0) });
+        }
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/dashboard/stock-critico', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT p.nombre_producto, p.stock_minimo,
+                   COALESCE(SUM(vp.stock),0)::int AS stock
+            FROM productos p
+            LEFT JOIN variantes_producto vp ON vp.id_producto = p.id_producto
+            WHERE p.estado = 1
+            GROUP BY p.id_producto, p.nombre_producto, p.stock_minimo
+            HAVING COALESCE(SUM(vp.stock),0) < p.stock_minimo
+            ORDER BY stock ASC LIMIT 8`);
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/dashboard/pedidos-recientes', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT p.id_pedido, p.codigo_seguimiento, p.estado, p.total, p.fecha_pedido,
+                   CONCAT(c.nombres,' ',c.apellidos) AS cliente
+            FROM pedidos p
+            JOIN clientes c ON c.id_cliente = p.id_cliente
+            ORDER BY p.fecha_pedido DESC LIMIT 10`);
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/dashboard/top-productos', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT p.nombre_producto, co.nombre_colegio,
+                   COALESCE(SUM(dp.subtotal),0) AS total_vendido
+            FROM detalle_pedido dp
+            JOIN productos p ON p.id_producto = dp.id_producto
+            LEFT JOIN colegios co ON co.id_colegio = p.id_colegio
+            GROUP BY p.id_producto, p.nombre_producto, co.nombre_colegio
+            ORDER BY total_vendido DESC LIMIT 5`);
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/colegios', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM colegios ORDER BY id_colegio');
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.post('/api/colegios', verificarSesion, async (req, res) => {
+    const { nombre_colegio, distrito, provincia } = req.body;
+    if (!nombre_colegio) return res.json({ ok: false, mensaje: 'Nombre requerido' });
+    try {
+        await pool.query(
+            'INSERT INTO colegios (nombre_colegio, distrito, provincia) VALUES ($1, $2, $3)',
+            [nombre_colegio, distrito || 'Chiclayo', provincia || 'Chiclayo']
+        );
+        res.json({ ok: true, mensaje: 'Colegio creado correctamente' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.put('/api/colegios/:id', verificarSesion, async (req, res) => {
+    const { nombre_colegio, distrito, provincia } = req.body;
+    try {
+        await pool.query(
+            'UPDATE colegios SET nombre_colegio=$1, distrito=$2, provincia=$3, fecha_actualizacion=NOW() WHERE id_colegio=$4',
+            [nombre_colegio, distrito, provincia, req.params.id]
+        );
+        res.json({ ok: true, mensaje: 'Colegio actualizado correctamente' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.delete('/api/colegios/:id', verificarSesion, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM colegios WHERE id_colegio=$1', [req.params.id]);
+        res.json({ ok: true, mensaje: 'Colegio eliminado correctamente' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
 module.exports = router;

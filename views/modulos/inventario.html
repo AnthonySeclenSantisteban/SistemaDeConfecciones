@@ -364,12 +364,7 @@
     </div>
 </div>
 
-
-<!-- ════════════════════════════════════════════════════════
-     ESTILOS ESPECÍFICOS DEL MÓDULO INVENTARIO
-     ════════════════════════════════════════════════════════ -->
 <style>
-    /* ─── Fila crítica resaltada ─── */
     .inv-fila-critica {
         background: #fdf5f5 !important;
     }
@@ -378,7 +373,6 @@
         background: #faeaea !important;
     }
 
-    /* ─── Badges estado inventario ─── */
     .badge-inv-critico {
         background: #fdf0ef;
         color: var(--error);
@@ -397,7 +391,6 @@
         border: 1px solid #ddd;
     }
 
-    /* ─── Tarjeta de presentación en modales ─── */
     .pres-card {
         border: 1px solid var(--border);
         border-radius: 10px;
@@ -466,7 +459,6 @@
         margin-top: 2px;
     }
 
-    /* ─── Número de stock en tabla ─── */
     .stock-critico-txt {
         color: var(--error);
         font-weight: 700;
@@ -484,4 +476,22 @@
         font-weight: 700;
         font-family: var(--mono);
     }
+    .btn-pag {
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+}
+.btn-pag:hover { background: var(--azul-light, #e8f0fa); color: var(--azul); border-color: var(--azul); }
+.btn-pag.active { background: var(--azul); color: #fff; border-color: var(--azul); }
+.btn-pag:disabled { opacity: .4; cursor: not-allowed; }
 </style>
