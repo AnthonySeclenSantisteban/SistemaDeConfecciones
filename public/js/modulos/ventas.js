@@ -714,7 +714,9 @@ for (const pago of _nvPagos) {
 }
     if (!_vItems.length)  { mostrarAlertaNV('danger', 'Agrega al menos un producto'); return; }
     if (!_nvPagos.length) { mostrarAlertaNV('danger', 'Agrega al menos un método de pago'); return; }
-    if (descuento < 0) { mostrarAlertaNV('danger', 'El descuento no puede ser negativo bro'); return; }
+    if (descuento < 0) { mostrarAlertaNV('danger', 'El descuento no puede ser negativo'); return; }
+const subtotalCheck = _vItems.reduce((s, i) => s + i.cantidad * i.precio_unitario, 0);
+if (descuento >= subtotalCheck) { mostrarAlertaNV('danger', `El descuento (S/ ${descuento.toFixed(2)}) no puede ser igual o mayor al subtotal (S/ ${subtotalCheck.toFixed(2)})`); return; }
 
     const subtotal  = _vItems.reduce((s, i) => s + i.cantidad * i.precio_unitario, 0);
     const total     = Math.max(0, subtotal - descuento);

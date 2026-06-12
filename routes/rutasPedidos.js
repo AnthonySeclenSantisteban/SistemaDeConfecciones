@@ -99,6 +99,7 @@ router.get('/api/pedidos/:id', requireAuth, async (req, res) => {
 router.patch('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { estado } = req.body;
+
     const estados = ['pendiente','procesando','enviado','entregado','cancelado'];
     if (!estados.includes(estado))
         return res.json({ ok: false, mensaje: 'Estado no válido' });
@@ -106,6 +107,21 @@ router.patch('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+
+        const pedidoActual = await client.query(
+            'SELECT estado FROM pedidos WHERE id_pedido=$1', [id]
+        );
+        if (!pedidoActual.rows.length) {
+            await client.query('ROLLBACK');
+            return res.json({ ok: false, mensaje: 'Pedido no encontrado' });
+        }
+
+        const estadoActual = pedidoActual.rows[0].estado;
+        if (estadoActual === 'cancelado' || estadoActual === 'entregado') {
+            await client.query('ROLLBACK');
+            return res.json({ ok: false, mensaje: `El pedido ya está ${estadoActual} y no puede modificarse` });
+        }
+
         await client.query('UPDATE pedidos SET estado=$1 WHERE id_pedido=$2', [estado, id]);
 
         if (estado === 'entregado') {
@@ -113,14 +129,36 @@ router.patch('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
             await client.query(`UPDATE pagos SET estado='pagado' WHERE id_pedido=$1`, [id]);
         }
 
-        const estadoEnvio = estado === 'enviado' ? 'en_camino'
-            : estado === 'entregado' ? 'entregado' : 'pendiente';
+        if (estado === 'cancelado') {
+            const items = await client.query(
+                `SELECT id_variante, cantidad FROM detalle_pedido WHERE id_pedido=$1 AND id_variante IS NOT NULL`,
+                [id]
+            );
+            for (const item of items.rows) {
+                await client.query(
+                    `UPDATE variantes_producto SET stock = stock + $1 WHERE id_variante = $2`,
+                    [item.cantidad, item.id_variante]
+                );
+                await client.query(
+                    `INSERT INTO movimiento_stock (id_producto, id_variante, tipo_movimiento, cantidad, motivo)
+                     SELECT id_producto, id_variante, 'entrada', $1, 'Cancelación pedido #' || $2
+                     FROM variantes_producto WHERE id_variante = $3`,
+                    [item.cantidad, id, item.id_variante]
+                );
+            }
+            await client.query(`UPDATE ventas SET estado='anulada' WHERE id_pedido=$1`, [id]);
+            await client.query(`UPDATE envios SET estado_entrega='fallido' WHERE id_pedido=$1`, [id]);
+        }
+
         if (estado !== 'cancelado') {
+            const estadoEnvio = estado === 'enviado' ? 'en_camino'
+                : estado === 'entregado' ? 'entregado' : 'pendiente';
             await client.query(
                 `UPDATE envios SET estado_entrega=$1 WHERE id_pedido=$2`,
                 [estadoEnvio, id]
             );
         }
+
         await client.query('COMMIT');
         res.json({ ok: true, mensaje: `Pedido actualizado a "${estado}"` });
     } catch (e) {
@@ -130,5 +168,4 @@ router.patch('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
         client.release();
     }
 });
-
 module.exports = router;

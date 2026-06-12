@@ -1,5 +1,6 @@
 let _clienteGuardando = false;
 let _clienteEliminarId = null;
+let _clienteDireccionesId = null;
 
 function cargar_clientes() {
     cargarClientes();
@@ -82,6 +83,8 @@ function abrirNuevoCliente() {
     document.getElementById('cliente-correo').value = '';
     document.getElementById('cliente-estado').value = '1';
     document.getElementById('modal-cliente-alert').style.display = 'none';
+    document.getElementById('seccion-direcciones').style.display = 'none';
+    _clienteDireccionesId = null;
     document.getElementById('modal-cliente').style.display = 'flex';
 }
 
@@ -89,6 +92,7 @@ async function abrirEditarCliente(id) {
     document.getElementById('modal-cliente-titulo').textContent = 'Editar cliente';
     document.getElementById('cliente-id').value = id;
     document.getElementById('modal-cliente-alert').style.display = 'none';
+    _clienteDireccionesId = id;
 
     try {
         const res = await fetch(`/api/clientes/${id}`);
@@ -106,6 +110,8 @@ async function abrirEditarCliente(id) {
         document.getElementById('modal-cliente-alert').style.display = 'flex';
     }
 
+    document.getElementById('seccion-direcciones').style.display = 'block';
+    await _cargarDirecciones(id);
     document.getElementById('modal-cliente').style.display = 'flex';
 }
 
@@ -120,15 +126,18 @@ async function guardarCliente() {
     const correo = document.getElementById('cliente-correo').value.trim();
     const estado = document.getElementById('cliente-estado').value;
 
-    if (!nombres) {
-        document.getElementById('modal-cliente-alert-msg').textContent = 'El nombre es requerido';
-        document.getElementById('modal-cliente-alert').style.display = 'flex';
-        return;
-    }
+    if (!nombres) { document.getElementById('modal-cliente-alert-msg').textContent = 'El nombre es requerido'; document.getElementById('modal-cliente-alert').style.display = 'flex'; return; }
+    if (!apellidos) { document.getElementById('modal-cliente-alert-msg').textContent = 'Los apellidos son requeridos'; document.getElementById('modal-cliente-alert').style.display = 'flex'; return; }
+    if (!dni) { document.getElementById('modal-cliente-alert-msg').textContent = 'El DNI es requerido'; document.getElementById('modal-cliente-alert').style.display = 'flex'; return; }
+    if (!/^\d{8}$/.test(dni)) { document.getElementById('modal-cliente-alert-msg').textContent = 'El DNI debe tener exactamente 8 dígitos numéricos'; document.getElementById('modal-cliente-alert').style.display = 'flex'; return; }
+    if (!telefono) { document.getElementById('modal-cliente-alert-msg').textContent = 'El teléfono es requerido'; document.getElementById('modal-cliente-alert').style.display = 'flex'; return; }
+    if (!/^\d{9}$/.test(telefono)) { document.getElementById('modal-cliente-alert-msg').textContent = 'El teléfono debe tener exactamente 9 dígitos numéricos'; document.getElementById('modal-cliente-alert').style.display = 'flex'; return; }
+    if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) { document.getElementById('modal-cliente-alert-msg').textContent = 'El correo no tiene un formato válido'; document.getElementById('modal-cliente-alert').style.display = 'flex'; return; }
 
     _clienteGuardando = true;
     const btn = document.getElementById('btn-guardar-cliente');
     btn.disabled = true;
+    btn.dataset.procesando = '1';
     document.getElementById('btn-guardar-cliente-text').textContent = 'Guardando...';
 
     const url = id ? `/api/clientes/${id}` : '/api/clientes';
@@ -156,6 +165,7 @@ async function guardarCliente() {
     } finally {
         _clienteGuardando = false;
         btn.disabled = false;
+        delete btn.dataset.procesando;
         document.getElementById('btn-guardar-cliente-text').textContent = 'Guardar cliente';
     }
 }
@@ -239,6 +249,7 @@ async function abrirHistorial(id, nombre) {
 function cerrarModalCliente() {
     document.getElementById('modal-cliente').style.display = 'none';
     document.getElementById('modal-cliente-alert').style.display = 'none';
+    _clienteDireccionesId = null;
 }
 
 function cerrarModalEliminarCliente() {
@@ -294,11 +305,130 @@ function _esc(str) {
 }
 
 document.addEventListener('click', function(e) {
-    const id = e.target.id;
+    const btn = e.target.closest('button');
+    if (btn && btn.dataset.procesando) return;
+    const id = e.target.closest('button')?.id || e.target.id;
+
     if (id === 'btn-nuevo-cliente') abrirNuevoCliente();
     if (id === 'btn-guardar-cliente') guardarCliente();
     if (id === 'btn-cerrar-modal-cliente' || id === 'btn-cancelar-modal-cliente') cerrarModalCliente();
     if (id === 'btn-cerrar-eliminar-cliente' || id === 'btn-cancelar-eliminar-cliente') cerrarModalEliminarCliente();
     if (id === 'btn-confirmar-eliminar-cliente') confirmarEliminarCliente();
-    if (id === 'btn-cerrar-historial-cliente') cerrarHistorialCliente();
+     if (id === 'btn-cerrar-historial-cliente') cerrarHistorialCliente();
+    if (id === 'btn-buscar-reniec') buscarReniec();
+    if (id === 'btn-agregar-direccion') _agregarDireccion();
+    if (e.target.closest('[data-accion="eliminar-dir"]')) {
+        const el = e.target.closest('[data-accion="eliminar-dir"]');
+        _eliminarDireccion(el.dataset.id);
+    }
 });
+
+async function buscarReniec() {
+    const dni = document.getElementById('cliente-dni').value.trim();
+    if (!/^\d{8}$/.test(dni)) {
+        document.getElementById('modal-cliente-alert-msg').textContent = 'Ingresa un DNI de 8 dígitos primero';
+        document.getElementById('modal-cliente-alert').style.display = 'flex';
+        return;
+    }
+    const btn = document.getElementById('btn-buscar-reniec');
+    btn.disabled = true;
+    btn.textContent = 'Buscando...';
+    try {
+        const res = await fetch(`/api/reniec/${dni}`);
+        const json = await res.json();
+        if (json.ok) {
+            document.getElementById('cliente-nombres').value = json.nombres;
+            document.getElementById('cliente-apellidos').value = json.apellidos;
+            document.getElementById('modal-cliente-alert').style.display = 'none';
+            mostrarToastCliente('Datos cargados desde RENIEC', 'success');
+        } else {
+            document.getElementById('modal-cliente-alert-msg').textContent = json.mensaje;
+            document.getElementById('modal-cliente-alert').style.display = 'flex';
+        }
+    } catch (e) {
+        document.getElementById('modal-cliente-alert-msg').textContent = 'Error conectando con RENIEC';
+        document.getElementById('modal-cliente-alert').style.display = 'flex';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Buscar';
+    }
+}
+
+async function _cargarDirecciones(id) {
+    const lista = document.getElementById('direcciones-lista');
+    lista.innerHTML = '<span style="font-size:12px;color:var(--muted);">Cargando...</span>';
+    try {
+        const res = await fetch(`/api/clientes/${id}/direcciones`);
+        const json = await res.json();
+        if (!json.ok || !json.data.length) {
+            lista.innerHTML = '<span style="font-size:12px;color:var(--muted);">Sin direcciones registradas</span>';
+            return;
+        }
+        lista.innerHTML = json.data.map(d => `
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;
+                        padding:10px 12px;border:1px solid var(--border);border-radius:8px;gap:8px;">
+                <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:600;">${_esc(d.direccion)}${d.distrito ? `, ${_esc(d.distrito)}` : ''}</div>
+                    ${d.referencia ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">Ref: ${_esc(d.referencia)}</div>` : ''}
+                    ${d.direcc_principal ? '<span class="badge badge-green" style="font-size:10px;margin-top:4px;">Principal</span>' : ''}
+                </div>
+                <button class="btn-icon btn-icon-danger" data-accion="eliminar-dir" data-id="${d.id_direccion}" title="Eliminar">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                </button>
+            </div>`).join('');
+    } catch (e) {
+        lista.innerHTML = '<span style="font-size:12px;color:var(--muted);">Error cargando direcciones</span>';
+    }
+}
+
+async function _agregarDireccion() {
+    if (!_clienteDireccionesId) return;
+    const direccion = document.getElementById('nueva-direccion').value.trim();
+    const distrito  = document.getElementById('nueva-distrito').value.trim();
+    const referencia = document.getElementById('nueva-referencia').value.trim();
+    if (!direccion) {
+        document.getElementById('modal-cliente-alert-msg').textContent = 'La dirección es requerida';
+        document.getElementById('modal-cliente-alert').style.display = 'flex';
+        return;
+    }
+    const btn = document.getElementById('btn-agregar-direccion');
+    btn.disabled = true;
+    try {
+        const res = await fetch(`/api/clientes/${_clienteDireccionesId}/direcciones`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ direccion, distrito, referencia })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            document.getElementById('nueva-direccion').value = '';
+            document.getElementById('nueva-distrito').value = '';
+            document.getElementById('nueva-referencia').value = '';
+            await _cargarDirecciones(_clienteDireccionesId);
+            mostrarToastCliente('Dirección agregada', 'success');
+        } else {
+            document.getElementById('modal-cliente-alert-msg').textContent = json.mensaje;
+            document.getElementById('modal-cliente-alert').style.display = 'flex';
+        }
+    } catch (e) {
+        document.getElementById('modal-cliente-alert-msg').textContent = 'Error de conexión';
+        document.getElementById('modal-cliente-alert').style.display = 'flex';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function _eliminarDireccion(idDir) {
+    if (!_clienteDireccionesId) return;
+    if (!confirm('¿Eliminar esta dirección?')) return;
+    try {
+        const res = await fetch(`/api/clientes/${_clienteDireccionesId}/direcciones/${idDir}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.ok) {
+            await _cargarDirecciones(_clienteDireccionesId);
+            mostrarToastCliente('Dirección eliminada', 'success');
+        }
+    } catch (e) {
+        mostrarToastCliente('Error al eliminar', 'error');
+    }
+}

@@ -83,7 +83,13 @@ function abrirEditarCompra(id) {
     document.getElementById('compra-nombre').value = c.nombre_insumo || '';
     document.getElementById('compra-cantidad').value = c.cantidad || 1;
     document.getElementById('compra-costo').value = c.costo || '';
-    document.getElementById('compra-unidad').value = c.unidad_medida || 'metros';
+    const catEditar = c.categoria_insumo || '';
+    const selectUnidad = document.getElementById('compra-unidad');
+    const permitidasEditar = _unidadesPorCat[catEditar] || Object.keys(_todasUnidades);
+    selectUnidad.innerHTML = permitidasEditar.map(u =>
+        `<option value="${u}">${_todasUnidades[u]}</option>`
+    ).join('');
+    selectUnidad.value = c.unidad_medida || permitidasEditar[0];
     document.getElementById('compra-lugar').value = c.lugar_compra || '';
     document.getElementById('compra-observacion').value = c.observacion || '';
     document.getElementById('modal-compra').style.display = 'flex';
@@ -114,9 +120,29 @@ async function guardarCompra() {
     const lugar = document.getElementById('compra-lugar').value.trim();
     const observacion = document.getElementById('compra-observacion').value.trim();
 
+    if (!categoria) return mostrarMensaje('Selecciona una categoría de insumo', 'warn');
     if (!nombre) return mostrarMensaje('Ingresa el nombre del insumo', 'warn');
+    if (!lugar) return mostrarMensaje('Ingresa el lugar de compra', 'warn');
     if (!cantidad || cantidad < 1) return mostrarMensaje('La cantidad debe ser mayor a 0', 'warn');
+    if (cantidad > 10000) return mostrarMensaje('La cantidad parece demasiado alta, verifica', 'warn');
     if (!costo || costo <= 0) return mostrarMensaje('Ingresa un costo válido', 'warn');
+    if (costo > 99999) return mostrarMensaje('El costo parece demasiado alto, verifica', 'warn');
+    const unidadesPorCategoria = {
+        'Tela':       ['metros', 'yardas', 'rollo'],
+        'Hilo':       ['cono', 'rollo', 'kilos', 'unidad'],
+        'Botón':      ['unidad', 'docena', 'paquete'],
+        'Cierre':     ['unidad', 'docena', 'paquete'],
+        'Elástico':   ['metros', 'yardas', 'rollo'],
+        'Etiqueta':   ['unidad', 'docena', 'paquete', 'rollo'],
+        'Entretela':  ['metros', 'yardas', 'rollo'],
+        'Accesorio':  ['unidad', 'docena', 'paquete'],
+        'Empaque':    ['unidad', 'docena', 'paquete', 'rollo'],
+        'Otro':       ['metros', 'yardas', 'kilos', 'unidad', 'docena', 'cono', 'rollo', 'paquete']
+    };
+    const unidadesPermitidas = unidadesPorCategoria[categoria];
+    if (unidadesPermitidas && !unidadesPermitidas.includes(unidad)) {
+        return mostrarMensaje(`Para "${categoria}" las unidades válidas son: ${unidadesPermitidas.join(', ')}`, 'warn');
+    }
 
     const btn = document.getElementById('btn-guardar-compra');
     btn.disabled = true;

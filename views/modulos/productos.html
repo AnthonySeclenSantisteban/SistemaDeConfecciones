@@ -148,16 +148,16 @@
       </div>
 
       <div class="field">
-        <label for="producto-categoria">Categoría</label>
+        <label for="producto-categoria">Categoría <span style="color:#ef4444;">*</span></label>
         <div class="input-wrap">
           <select id="producto-categoria">
-            <option value="">Sin categoría</option>
+            <option value="">-- Selecciona una categoría --</option>
           </select>
         </div>
       </div>
 
       <div class="field">
-        <label for="producto-stock-minimo">Stock Mínimo</label>
+        <label for="producto-stock-minimo">Stock Mínimo <span style="color:var(--muted);font-size:11px;">(por defecto: 10)</span></label>
         <div class="input-wrap">
           <input type="number" id="producto-stock-minimo" placeholder="10" min="0" step="1">
         </div>
@@ -173,10 +173,10 @@
       </div>
 
       <div class="field" style="grid-column:1/-1;">
-        <label for="producto-genero">Género</label>
+        <label for="producto-genero">Género <span style="color:#ef4444;">*</span></label>
         <div class="input-wrap">
           <select id="producto-genero">
-            <option value="">Sin especificar</option>
+            <option value="">-- Selecciona un género --</option>
             <option value="masculino">Masculino</option>
             <option value="femenino">Femenino</option>
             <option value="unisex">Unisex</option>

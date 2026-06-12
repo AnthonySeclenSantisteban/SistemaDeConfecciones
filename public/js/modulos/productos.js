@@ -167,8 +167,13 @@ async function guardarProducto() {
     const stock_minimo   = document.getElementById('producto-stock-minimo').value;
 
     if (!nombre_producto) { _mostrarAlertaProducto('El nombre es requerido'); return; }
+    if (!id_categoria) { _mostrarAlertaProducto('Debes seleccionar una categoría'); return; }
+    if (!genero) { _mostrarAlertaProducto('Debes seleccionar un género'); return; }
     if (!precio_costo || parseFloat(precio_costo) <= 0) { _mostrarAlertaProducto('El precio costo debe ser mayor a 0'); return; }
     if (!precio_venta || parseFloat(precio_venta) <= 0) { _mostrarAlertaProducto('El precio venta debe ser mayor a 0'); return; }
+    if (parseFloat(precio_venta) <= parseFloat(precio_costo)) {
+        _mostrarAlertaProducto(`El precio de venta (S/ ${parseFloat(precio_venta).toFixed(2)}) debe ser mayor al precio de costo (S/ ${parseFloat(precio_costo).toFixed(2)}) para obtener ganancias`); return;
+    }
 
     const btn = document.getElementById('btn-guardar-producto');
     if (btn.dataset.procesando) return;
@@ -265,7 +270,7 @@ function cerrarModalEliminarProducto() {
 
 async function _cargarCategoriasSelect() {
     const select = document.getElementById('producto-categoria');
-    select.innerHTML = '<option value="">Sin categoría</option>';
+    select.innerHTML = '<option value="">-- Selecciona una categoría --</option>';
     try {
         const res  = await fetch('/api/categorias');
         const json = await res.json();

@@ -261,7 +261,8 @@
       <div class="totales-grid">
         <div class="field" style="margin-bottom:0;">
           <label>Descuento (S/)</label>
-          <input type="number" id="nvDescuento" value="0" min="0" step="0.50" oninput="calcularTotalNV()">
+          <input type="number" id="nvDescuento" value="0" min="0" step="0.50"
+       oninput="if(parseFloat(this.value)<0)this.value=0;calcularTotalNV()">
         </div>
         <div class="totales-resumen">
           <div class="total-fila"><span>Subtotal</span><strong id="nvLabelSubtotal">S/ 0.00</strong></div>

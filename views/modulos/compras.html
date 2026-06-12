@@ -147,6 +147,35 @@
   </div>
 </div>
 
+<script>
+const _unidadesPorCat = {
+    'Tela':      ['metros','yardas','rollo'],
+    'Hilo':      ['cono','rollo','kilos','unidad'],
+    'Botón':     ['unidad','docena','paquete'],
+    'Cierre':    ['unidad','docena','paquete'],
+    'Elástico':  ['metros','yardas','rollo'],
+    'Etiqueta':  ['unidad','docena','paquete','rollo'],
+    'Entretela': ['metros','yardas','rollo'],
+    'Accesorio': ['unidad','docena','paquete'],
+    'Empaque':   ['unidad','docena','paquete','rollo'],
+    'Otro':      ['metros','yardas','kilos','unidad','docena','cono','rollo','paquete']
+};
+const _todasUnidades = {
+    metros:'Metros', yardas:'Yardas', kilos:'Kilos', unidad:'Unidad',
+    docena:'Docena', cono:'Cono', rollo:'Rollo', paquete:'Paquete'
+};
+
+document.addEventListener('change', function(e) {
+    if (e.target.id !== 'compra-categoria-insumo') return;
+    const cat = e.target.value;
+    const select = document.getElementById('compra-unidad');
+    const permitidas = _unidadesPorCat[cat] || Object.keys(_todasUnidades);
+    select.innerHTML = permitidas.map(u =>
+        `<option value="${u}">${_todasUnidades[u]}</option>`
+    ).join('');
+});
+</script>
+
 <div id="toast-wrap" class="toast-wrap"></div>
 
 <style>

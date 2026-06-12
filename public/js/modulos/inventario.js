@@ -478,14 +478,17 @@ function _pintarPresentacionesDeActualizacion(variantes) {
 
             tallaChips.innerHTML = variantesColor.map((v, idx) => {
                 const stock = parseInt(v.stock);
-                const claseStock = stock === 0 ? '#aaa' : stock < 3 ? 'var(--rojo)' : 'var(--verde)';
+                const colorStock = stock === 0 ? '#aaa' : stock < 3 ? 'var(--error)' : '#276936';
+                const borderColor = stock === 0 ? '#ddd' : stock < 3 ? '#f5c6c2' : '#b6ddbf';
+                const bgColor = stock === 0 ? '#f5f5f5' : stock < 3 ? '#fdf5f5' : '#eaf4ec';
                 return `
                     <button class="talla-chip" data-idx="${window._invVariantesTemp.indexOf(v)}"
-                        style="padding:6px 14px;border:2px solid var(--border);border-radius:8px;
-                               font-size:12px;font-weight:600;cursor:pointer;background:#fff;
-                               font-family:var(--font);transition:all .15s;position:relative;">
-                        ${v.nombre_talla}
-                        <span style="display:block;font-size:10px;color:${claseStock};font-weight:700;">${stock}</span>
+                        style="padding:8px 16px;border:2px solid ${borderColor};border-radius:8px;
+                               font-size:13px;font-weight:700;cursor:pointer;background:${bgColor};
+                               font-family:var(--font);transition:all .15s;min-width:52px;text-align:center;">
+                        <span style="display:block;font-size:13px;font-weight:700;color:var(--text);line-height:1.2;">${v.nombre_talla}</span>
+                        <span style="display:block;width:100%;height:1px;background:${borderColor};margin:4px 0;"></span>
+                        <span style="display:block;font-size:11px;font-weight:700;color:${colorStock};font-family:var(--mono);line-height:1.2;">${stock}</span>
                     </button>`;
             }).join('');
 
