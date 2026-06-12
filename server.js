@@ -28,6 +28,7 @@ app.use('/', require('./routes/rutasVentas'));
 app.use('/', require('./routes/rutasPedidos'));
 app.use('/', require('./routes/rutasInventario'));
 app.use('/', require('./routes/rutasEnvios'));
+app.use('/', require('./routes/rutasCheckout'))
  
 app.get('/vistas/modulos/:vista', (req, res) => {
     const filePath = path.join(__dirname, 'views', 'modulos', req.params.vista);

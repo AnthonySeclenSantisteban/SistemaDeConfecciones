@@ -36,8 +36,28 @@ router.post('/api/compras', async (req, res) => {
         lugar_compra
     } = req.body;
 
-    if (!nombre_insumo || !cantidad || cantidad < 1 || !costo || costo <= 0) {
-        return res.json({ ok: false, mensaje: 'Datos inválidos' });
+    if (!nombre_insumo) return res.json({ ok: false, mensaje: 'El nombre es requerido' });
+    if (!cantidad || cantidad < 1) return res.json({ ok: false, mensaje: 'La cantidad debe ser mayor a 0' });
+    if (cantidad > 10000) return res.json({ ok: false, mensaje: 'La cantidad parece demasiado alta' });
+    if (!costo || costo <= 0) return res.json({ ok: false, mensaje: 'El costo debe ser mayor a 0' });
+    if (costo > 99999) return res.json({ ok: false, mensaje: 'El costo parece demasiado alto' });
+    if (!lugar_compra || !lugar_compra.trim()) return res.json({ ok: false, mensaje: 'El lugar de compra es requerido' });
+
+    const unidadesPorCategoria = {
+        'Tela':      ['metros','yardas','rollo'],
+        'Hilo':      ['cono','rollo','kilos','unidad'],
+        'Botón':     ['unidad','docena','paquete'],
+        'Cierre':    ['unidad','docena','paquete'],
+        'Elástico':  ['metros','yardas','rollo'],
+        'Etiqueta':  ['unidad','docena','paquete','rollo'],
+        'Entretela': ['metros','yardas','rollo'],
+        'Accesorio': ['unidad','docena','paquete'],
+        'Empaque':   ['unidad','docena','paquete','rollo'],
+    };
+    if (categoria_insumo && unidadesPorCategoria[categoria_insumo]) {
+        if (!unidadesPorCategoria[categoria_insumo].includes(unidad_medida)) {
+            return res.json({ ok: false, mensaje: `Para "${categoria_insumo}" las unidades válidas son: ${unidadesPorCategoria[categoria_insumo].join(', ')}` });
+        }
     }
 
     try {
@@ -73,8 +93,28 @@ router.put('/api/compras/:id', async (req, res) => {
         lugar_compra
     } = req.body;
 
-    if (!nombre_insumo || !cantidad || cantidad < 1 || !costo || costo <= 0) {
-        return res.json({ ok: false, mensaje: 'Datos inválidos' });
+    if (!nombre_insumo) return res.json({ ok: false, mensaje: 'El nombre es requerido' });
+    if (!cantidad || cantidad < 1) return res.json({ ok: false, mensaje: 'La cantidad debe ser mayor a 0' });
+    if (cantidad > 10000) return res.json({ ok: false, mensaje: 'La cantidad parece demasiado alta' });
+    if (!costo || costo <= 0) return res.json({ ok: false, mensaje: 'El costo debe ser mayor a 0' });
+    if (costo > 99999) return res.json({ ok: false, mensaje: 'El costo parece demasiado alto' });
+    if (!lugar_compra || !lugar_compra.trim()) return res.json({ ok: false, mensaje: 'El lugar de compra es requerido' });
+
+    const unidadesPorCategoria = {
+        'Tela':      ['metros','yardas','rollo'],
+        'Hilo':      ['cono','rollo','kilos','unidad'],
+        'Botón':     ['unidad','docena','paquete'],
+        'Cierre':    ['unidad','docena','paquete'],
+        'Elástico':  ['metros','yardas','rollo'],
+        'Etiqueta':  ['unidad','docena','paquete','rollo'],
+        'Entretela': ['metros','yardas','rollo'],
+        'Accesorio': ['unidad','docena','paquete'],
+        'Empaque':   ['unidad','docena','paquete','rollo'],
+    };
+    if (categoria_insumo && unidadesPorCategoria[categoria_insumo]) {
+        if (!unidadesPorCategoria[categoria_insumo].includes(unidad_medida)) {
+            return res.json({ ok: false, mensaje: `Para "${categoria_insumo}" las unidades válidas son: ${unidadesPorCategoria[categoria_insumo].join(', ')}` });
+        }
     }
 
     try {

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identificación — Confecciones Lix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --azul: #1a3c5e; --azul-med: #2563a8; --azul-light: #e8f0fa;
+            --accent: #c8622a; --verde: #059669; --rojo: #dc2626;
+            --gris: #64748b; --gris-light: #f1f5f9; --border: #e2e8f0;
+            --text: #1e293b; --radius: 14px;
+            --font-display: 'Playfair Display', serif;
+            --font-body: 'DM Sans', system-ui, sans-serif;
+        }
+        body {
+            font-family: var(--font-body);
+            background: var(--gris-light);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: var(--azul);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-brand {
+            font-family: var(--font-display);
+            color: #fff;
+            font-size: 1.2rem;
+            text-decoration: none;
+        }
+        .header-brand span { color: #93c5fd; }
+        .header-back {
+            color: rgba(255,255,255,.7);
+            text-decoration: none;
+            font-size: .85rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .header-back:hover { color: #fff; }
+        .pasos-bar {
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: .8rem 1.5rem;
+        }
+        .pasos-inner {
+            max-width: 480px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+        .paso-item {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--gris);
+            flex: 1;
+            justify-content: center;
+        }
+        .paso-item.active { color: var(--azul); }
+        .paso-item.done { color: var(--verde); }
+        .paso-num {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .72rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .paso-item.active .paso-num {
+            background: var(--azul);
+            color: #fff;
+            border-color: var(--azul);
+        }
+        .paso-item.done .paso-num {
+            background: var(--verde);
+            color: #fff;
+            border-color: var(--verde);
+        }
+        .paso-sep {
+            height: 1px;
+            background: var(--border);
+            flex: 0 0 24px;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+        .card {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 24px rgba(0,0,0,.08);
+            padding: 2rem;
+            width: 100%;
+            max-width: 420px;
+        }
+        .card-titulo {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--azul);
+            margin-bottom: .4rem;
+        }
+        .card-sub {
+            font-size: .88rem;
+            color: var(--gris);
+            margin-bottom: 1.8rem;
+            line-height: 1.5;
+        }
+        .field { margin-bottom: 1.2rem; }
+        .field label {
+            display: block;
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--gris);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-bottom: .4rem;
+        }
+        .field input {
+            width: 100%;
+            padding: .75rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: .95rem;
+            font-family: var(--font-body);
+            outline: none;
+            transition: border-color .2s;
+            color: var(--text);
+        }
+        .field input:focus { border-color: var(--azul-med); }
+        .separador {
+            display: flex;
+            align-items: center;
+            gap: .8rem;
+            margin: 1.2rem 0;
+            color: var(--gris);
+            font-size: .8rem;
+        }
+        .separador::before, .separador::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .btn-primary {
+            width: 100%;
+            padding: .85rem;
+            background: var(--azul);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: .95rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: background .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+        }
+        .btn-primary:hover { background: var(--azul-med); }
+        .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+        .alert {
+            padding: .8rem 1rem;
+            border-radius: 10px;
+            font-size: .85rem;
+            margin-bottom: 1.2rem;
+            display: none;
+        }
+        .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .carrito-resumen {
+            background: var(--azul-light);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: .85rem;
+        }
+        .carrito-resumen-titulo {
+            font-weight: 700;
+            color: var(--azul);
+            margin-bottom: .5rem;
+            font-size: .82rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .carrito-resumen-fila {
+            display: flex;
+            justify-content: space-between;
+            padding: .25rem 0;
+            color: var(--gris);
+            border-bottom: 1px solid rgba(0,0,0,.06);
+        }
+        .carrito-resumen-fila:last-child { border-bottom: none; }
+        .carrito-resumen-total {
+            display: flex;
+            justify-content: space-between;
+            padding-top: .6rem;
+            margin-top: .3rem;
+            font-weight: 700;
+            color: var(--azul);
+            font-size: 1rem;
+        }
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer-min {
+            text-align: center;
+            padding: 1.5rem;
+            font-size: .78rem;
+            color: var(--gris);
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <a href="/catalogo" class="header-brand">
+    <span id="headerLogo">🧵</span> Confecciones <span>Lix</span>
+    </a>
+    <a href="/catalogo" class="header-back">← Volver al catálogo</a>
+</header>
+
+<div class="pasos-bar">
+    <div class="pasos-inner">
+        <div class="paso-item active">
+            <div class="paso-num">1</div>
+            <span>Identificación</span>
+        </div>
+        <div class="paso-sep"></div>
+        <div class="paso-item">
+            <div class="paso-num">2</div>
+            <span>Mis datos</span>
+        </div>
+        <div class="paso-sep"></div>
+        <div class="paso-item">
+            <div class="paso-num">3</div>
+            <span>Pago</span>
+        </div>
+    </div>
+</div>
+
+<main class="main">
+    <div class="card">
+        <h1 class="card-titulo">¿Cómo te identificamos?</h1>
+        <p class="card-sub">Ingresa tu teléfono o correo. Si ya compraste antes, autocompletaremos tus datos.</p>
+
+        <div id="carritoResumen" class="carrito-resumen" style="display:none;"></div>
+
+        <div class="alert alert-error" id="alertError"></div>
+
+        <div class="field">
+            <label>Teléfono</label>
+            <input type="tel" id="inputTelefono" placeholder="9XXXXXXXX" maxlength="9"
+                   oninput="this.value=this.value.replace(/\D/g,'')">
+        </div>
+
+        <div class="separador">o</div>
+
+        <div class="field">
+            <label>Correo electrónico</label>
+            <input type="email" id="inputCorreo" placeholder="correo@email.com">
+        </div>
+
+        <button class="btn-primary" id="btnContinuar" onclick="continuar()">
+            <div class="spinner" id="spinner"></div>
+            <span id="btnTexto">Continuar →</span>
+        </button>
+    </div>
+</main>
+
+<footer class="footer-min">© 2026 Confecciones Lix · Chiclayo, Perú</footer>
+
+<script>
+    const carrito = JSON.parse(sessionStorage.getItem('lix_carrito') || '[]');
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetch('/api/gestion-tienda/logo-publico')
+    .then(r => r.json())
+    .then(j => {
+        if (j.ok && j.url) {
+            const el = document.getElementById('headerLogo');
+            if (el) el.innerHTML = `<img src="${j.url}" style="height:36px;width:auto;object-fit:contain;vertical-align:middle;">`;
+        }
+    }).catch(() => {});
+        if (!carrito.length) {
+            window.location.href = '/catalogo';
+            return;
+        }
+        renderResumen();
+    });
+
+    function renderResumen() {
+        const el = document.getElementById('carritoResumen');
+        const total = carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
+        el.style.display = 'block';
+        el.innerHTML = `
+            <div class="carrito-resumen-titulo">Tu pedido (${carrito.length} producto${carrito.length !== 1 ? 's' : ''})</div>
+            ${carrito.map(i => `
+                <div class="carrito-resumen-fila">
+                    <span>${i.nombre}${i.talla ? ` · ${i.talla}` : ''}${i.color ? ` · ${i.color}` : ''} x${i.cantidad}</span>
+                    <span>S/ ${(i.precio * i.cantidad).toFixed(2)}</span>
+                </div>`).join('')}
+            <div class="carrito-resumen-total">
+                <span>Total</span>
+                <span>S/ ${total.toFixed(2)}</span>
+            </div>`;
+    }
+
+    async function continuar() {
+        const telefono = document.getElementById('inputTelefono').value.trim();
+        const correo   = document.getElementById('inputCorreo').value.trim();
+        const alertEl  = document.getElementById('alertError');
+        alertEl.style.display = 'none';
+
+        if (!telefono && !correo) {
+            alertEl.textContent = 'Ingresa tu teléfono o correo para continuar';
+            alertEl.style.display = 'block';
+            return;
+        }
+        if (telefono && !/^9\d{8}$/.test(telefono)) {
+            alertEl.textContent = 'El teléfono debe tener 9 dígitos y empezar con 9';
+            alertEl.style.display = 'block';
+            return;
+        }
+        if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+            alertEl.textContent = 'El correo no tiene un formato válido';
+            alertEl.style.display = 'block';
+            return;
+        }
+
+        const btn = document.getElementById('btnContinuar');
+        const spinner = document.getElementById('spinner');
+        const txtBtn = document.getElementById('btnTexto');
+        btn.disabled = true;
+        spinner.style.display = 'block';
+        txtBtn.textContent = 'Verificando...';
+
+        try {
+            const res  = await fetch('/api/checkout/identificar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telefono: telefono || null, correo: correo || null })
+            });
+            const json = await res.json();
+
+            if (json.ok) {
+                sessionStorage.setItem('lix_checkout_cliente', JSON.stringify(json.datos));
+                window.location.href = '/catalogo/mis-datos';
+            } else {
+                alertEl.textContent = json.mensaje;
+                alertEl.style.display = 'block';
+            }
+        } catch (e) {
+            alertEl.textContent = 'Error de conexión. Intenta nuevamente.';
+            alertEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            txtBtn.textContent = 'Continuar →';
+        }
+    }
+
+    document.getElementById('inputTelefono').addEventListener('keydown', e => {
+        if (e.key === 'Enter') continuar();
+    });
+    document.getElementById('inputCorreo').addEventListener('keydown', e => {
+        if (e.key === 'Enter') continuar();
+    });
+</script>
+</body>
+</html>

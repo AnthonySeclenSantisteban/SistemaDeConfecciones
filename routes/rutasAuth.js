@@ -647,6 +647,27 @@ router.get('/api/catalogo/slider', async (req, res) => {
     }
 });
 
+router.get('/api/reniec/:dni', verificarSesion, async (req, res) => {
+    const { dni } = req.params;
+    if (!/^\d{8}$/.test(dni))
+        return res.json({ ok: false, mensaje: 'DNI debe tener 8 dígitos' });
+    try {
+        const resp = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`, {
+            headers: { Authorization: `Bearer ${process.env.API_RENIEC}` }
+        });
+        const data = await resp.json();
+        if (!data.nombreCompleto)
+            return res.json({ ok: false, mensaje: 'DNI no encontrado en RENIEC' });
+        res.json({
+            ok: true,
+            nombres: data.nombres,
+            apellidos: `${data.apellidoPaterno} ${data.apellidoMaterno}`.trim()
+        });
+    } catch (e) {
+        res.json({ ok: false, mensaje: 'Error consultando RENIEC' });
+    }
+});
+
 router.get('/api/clientes', verificarSesion, async (req, res) => {
     try {
         const resultado = await pool.query(
@@ -701,6 +722,57 @@ router.post('/api/clientes', verificarSesion, async (req, res) => {
     const id_usuario = req.session.usuario.id;
     if (!nombres) return res.json({ ok: false, mensaje: 'El nombre es requerido' });
     try {
+        const eliminadoQuery = dni ? await pool.query(
+            `SELECT id_cliente FROM clientes 
+             WHERE (dni = $1 OR (LOWER(nombres) = LOWER($2) AND LOWER(apellidos) = LOWER($3)))
+             AND estado = 2 LIMIT 1`,
+            [dni, nombres, apellidos || '']
+        ) : await pool.query(
+            `SELECT id_cliente FROM clientes 
+             WHERE LOWER(nombres) = LOWER($1) AND LOWER(apellidos) = LOWER($2)
+             AND estado = 2 LIMIT 1`,
+            [nombres, apellidos || '']
+        );
+        
+        if (eliminadoQuery.rows.length > 0) {
+            await pool.query(
+                `UPDATE clientes SET nombres=$1, apellidos=$2, dni=$3, telefono=$4, correo=$5, estado=1,
+                 updated_at=NOW(), updated_by=$6, deleted_at=NULL, deleted_by=NULL
+                 WHERE id_cliente=$7`,
+                [nombres, apellidos || null, dni || null, telefono || null, correo || null, id_usuario, eliminadoQuery.rows[0].id_cliente]
+            );
+            return res.json({ ok: true, mensaje: 'Cliente reactivado correctamente' });
+        }
+        if (dni) {
+            const dniActivo = await pool.query(
+                `SELECT id_cliente FROM clientes WHERE dni = $1 AND estado != 2`, [dni]
+            );
+            if (dniActivo.rows.length > 0)
+                return res.json({ ok: false, mensaje: 'Ya existe un cliente activo con ese DNI' });
+        }
+        const nombreActivo = await pool.query(
+            `SELECT id_cliente FROM clientes 
+             WHERE LOWER(nombres) = LOWER($1) AND LOWER(apellidos) = LOWER($2) AND estado != 2`,
+            [nombres, apellidos || '']
+        );
+        if (nombreActivo.rows.length > 0)
+            return res.json({ ok: false, mensaje: 'Ya existe un cliente activo con ese nombre y apellidos' });
+
+        if (telefono) {
+            const telActivo = await pool.query(
+                'SELECT id_cliente FROM clientes WHERE telefono = $1 AND estado != 2', [telefono]
+            );
+            if (telActivo.rows.length > 0)
+                return res.json({ ok: false, mensaje: 'Ya existe un cliente activo con ese teléfono' });
+        }
+        if (correo) {
+            const correoActivo = await pool.query(
+                'SELECT id_cliente FROM clientes WHERE LOWER(correo) = LOWER($1) AND estado != 2', [correo]
+            );
+            if (correoActivo.rows.length > 0)
+                return res.json({ ok: false, mensaje: 'Ya existe un cliente activo con ese correo' });
+        }
+
         await pool.query(
             `INSERT INTO clientes (nombres, apellidos, dni, telefono, correo, estado, created_by)
              VALUES ($1, $2, $3, $4, $5, 1, $6)`,
@@ -718,6 +790,27 @@ router.put('/api/clientes/:id', verificarSesion, async (req, res) => {
     const id_usuario = req.session.usuario.id;
     if (!nombres) return res.json({ ok: false, mensaje: 'El nombre es requerido' });
     try {
+        if (dni) {
+            const dniExiste = await pool.query(
+                'SELECT id_cliente FROM clientes WHERE dni = $1 AND estado != 2 AND id_cliente != $2', [dni, id]
+            );
+            if (dniExiste.rows.length > 0)
+                return res.json({ ok: false, mensaje: 'Ya existe otro cliente con ese DNI' });
+        }
+        if (telefono) {
+            const telExiste = await pool.query(
+                'SELECT id_cliente FROM clientes WHERE telefono = $1 AND estado != 2 AND id_cliente != $2', [telefono, id]
+            );
+            if (telExiste.rows.length > 0)
+                return res.json({ ok: false, mensaje: 'Ya existe otro cliente con ese teléfono' });
+        }
+        if (correo) {
+            const correoExiste = await pool.query(
+                'SELECT id_cliente FROM clientes WHERE LOWER(correo) = LOWER($1) AND estado != 2 AND id_cliente != $2', [correo, id]
+            );
+            if (correoExiste.rows.length > 0)
+                return res.json({ ok: false, mensaje: 'Ya existe otro cliente con ese correo' });
+        }
         await pool.query(
             `UPDATE clientes SET nombres=$1, apellidos=$2, dni=$3, telefono=$4, correo=$5,
              estado=$6, updated_at=NOW(), updated_by=$7 WHERE id_cliente=$8`,
@@ -727,6 +820,46 @@ router.put('/api/clientes/:id', verificarSesion, async (req, res) => {
     } catch (error) {
         res.json({ ok: false, mensaje: error.message });
     }
+});
+
+router.get('/api/clientes/:id/direcciones', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT id_direccion, direccion, distrito, referencia, direcc_principal
+             FROM direcciones_cliente WHERE id_cliente = $1 ORDER BY direcc_principal DESC, id_direccion`,
+            [req.params.id]
+        );
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.post('/api/clientes/:id/direcciones', verificarSesion, async (req, res) => {
+    const { direccion, distrito, referencia, direcc_principal } = req.body;
+    if (!direccion) return res.json({ ok: false, mensaje: 'La dirección es requerida' });
+    try {
+        if (direcc_principal) {
+            await pool.query(
+                'UPDATE direcciones_cliente SET direcc_principal=false WHERE id_cliente=$1',
+                [req.params.id]
+            );
+        }
+        await pool.query(
+            `INSERT INTO direcciones_cliente (id_cliente, direccion, distrito, referencia, direcc_principal)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [req.params.id, direccion, distrito || '', referencia || '', direcc_principal || false]
+        );
+        res.json({ ok: true, mensaje: 'Dirección agregada correctamente' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.delete('/api/clientes/:id/direcciones/:idDir', verificarSesion, async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM direcciones_cliente WHERE id_direccion=$1 AND id_cliente=$2',
+            [req.params.idDir, req.params.id]
+        );
+        res.json({ ok: true, mensaje: 'Dirección eliminada' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
 });
 
 router.delete('/api/clientes/:id', verificarSesion, async (req, res) => {
@@ -1302,6 +1435,37 @@ router.delete('/api/colegios/:id', verificarSesion, async (req, res) => {
         await pool.query('DELETE FROM colegios WHERE id_colegio=$1', [req.params.id]);
         res.json({ ok: true, mensaje: 'Colegio eliminado correctamente' });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/gestion-tienda/logo-publico', async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT url FROM recursos_tienda
+            WHERE tipo = 'logo' AND activo = true
+            ORDER BY id_recurso DESC LIMIT 1
+        `);
+        if (resultado.rows.length) {
+            res.json({ ok: true, url: resultado.rows[0].url });
+        } else {
+            res.json({ ok: false });
+        }
+    } catch (error) {
+        res.json({ ok: false });
+    }
+});
+
+router.get('/api/gestion-tienda/redes-publicas', async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT tipo, url, activo FROM recursos_tienda
+            WHERE tipo IN ('facebook','instagram','tiktok','whatsapp','youtube','telegram','otro')
+            AND activo = true
+            ORDER BY id_recurso
+        `);
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
 });
 
 module.exports = router;

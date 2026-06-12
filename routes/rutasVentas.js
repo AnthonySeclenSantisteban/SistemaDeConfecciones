@@ -317,9 +317,9 @@ router.post('/api/ventas', requireAuth, uploadComprobante.array('capturas', 5), 
         const busq = await client.query(
             `SELECT id_cliente FROM clientes 
             WHERE estado != 2 AND (
-                ($1::varchar IS NOT NULL AND dni = $1::varchar)
-                OR (LOWER(telefono) = LOWER($2::varchar))
-                OR ($3::varchar IS NOT NULL AND LOWER(correo) = LOWER($3::varchar))
+                ($1::text IS NOT NULL AND dni = $1::text)
+                OR (LOWER(telefono) = LOWER($2::text))
+                OR ($3::text IS NOT NULL AND LOWER(correo) = LOWER($3::text))
             ) LIMIT 1`,
             [dni || null, telefono, correo || null]
         );
@@ -518,7 +518,7 @@ router.delete('/api/ventas/:id', requireAuth, async (req, res) => {
         await client.query('BEGIN');
 
         const ventaRes = await client.query(
-            'SELECT id_venta, estado, id_pedido FROM ventas WHERE id_venta = $1',
+            'SELECT id_venta, estado, id_pedido FROM ventas WHERE id_venta = $1::int',
             [id]
         );
          if (!ventaRes.rows.length)
@@ -532,19 +532,19 @@ router.delete('/api/ventas/:id', requireAuth, async (req, res) => {
         const itemsRes = await client.query(
             `SELECT id_producto, id_variante, cantidad
              FROM detalle_venta
-             WHERE id_venta = $1 AND id_variante IS NOT NULL`,
+             WHERE id_venta = $1::int AND id_variante IS NOT NULL`,
             [id]
         );
 
         for (const item of itemsRes.rows) {
             await client.query(
-                `UPDATE variantes_producto SET stock = stock + $1 WHERE id_variante = $2`,
+                `UPDATE variantes_producto SET stock = stock + $1::int WHERE id_variante = $2::int`,
                 [item.cantidad, item.id_variante]
             );
             await client.query(
                 `INSERT INTO movimiento_stock
                  (id_producto, id_variante, tipo_movimiento, cantidad, motivo)
-                 VALUES ($1, $2, 'entrada', $3, $4)`,
+                 VALUES ($1::int, $2::int, 'entrada', $3::int, $4::text)`,
                 [item.id_producto, item.id_variante, item.cantidad,
                  `Anulación venta #${id}: ${motivo.trim()}`]
             );
@@ -553,12 +553,13 @@ router.delete('/api/ventas/:id', requireAuth, async (req, res) => {
         await client.query(
             `UPDATE ventas
              SET estado = 'anulada',
-                 observaciones = CONCAT(COALESCE(observaciones,''), ' | ANULADA: ', $1)
-             WHERE id_venta = $2`,
+                 observaciones = CONCAT(COALESCE(observaciones,''), ' | ANULADA: ', $1::text)
+             WHERE id_venta = $2::int`,
             [motivo.trim(), id]
         );
+
         await client.query(
-            `UPDATE pedidos SET estado = 'cancelado' WHERE id_pedido = $1`,
+            `UPDATE pedidos SET estado = 'cancelado' WHERE id_pedido = $1::int`,
             [venta.id_pedido]
         );
 
