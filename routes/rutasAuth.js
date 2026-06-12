@@ -1437,4 +1437,35 @@ router.delete('/api/colegios/:id', verificarSesion, async (req, res) => {
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
 });
 
+router.get('/api/gestion-tienda/logo-publico', async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT url FROM recursos_tienda
+            WHERE tipo = 'logo' AND activo = true
+            ORDER BY id_recurso DESC LIMIT 1
+        `);
+        if (resultado.rows.length) {
+            res.json({ ok: true, url: resultado.rows[0].url });
+        } else {
+            res.json({ ok: false });
+        }
+    } catch (error) {
+        res.json({ ok: false });
+    }
+});
+
+router.get('/api/gestion-tienda/redes-publicas', async (req, res) => {
+    try {
+        const resultado = await pool.query(`
+            SELECT tipo, url, activo FROM recursos_tienda
+            WHERE tipo IN ('facebook','instagram','tiktok','whatsapp','youtube','telegram','otro')
+            AND activo = true
+            ORDER BY id_recurso
+        `);
+        res.json({ ok: true, data: resultado.rows });
+    } catch (error) {
+        res.json({ ok: false, mensaje: error.message });
+    }
+});
+
 module.exports = router;

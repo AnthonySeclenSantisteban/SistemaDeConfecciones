@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis datos — Confecciones Lix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --azul: #1a3c5e; --azul-med: #2563a8; --azul-light: #e8f0fa;
+            --accent: #c8622a; --verde: #059669; --rojo: #dc2626;
+            --gris: #64748b; --gris-light: #f1f5f9; --border: #e2e8f0;
+            --text: #1e293b; --radius: 14px;
+            --font-display: 'Playfair Display', serif;
+            --font-body: 'DM Sans', system-ui, sans-serif;
+        }
+        body {
+            font-family: var(--font-body);
+            background: var(--gris-light);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: var(--azul);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-brand {
+            font-family: var(--font-display);
+            color: #fff;
+            font-size: 1.2rem;
+            text-decoration: none;
+        }
+        .header-brand span { color: #93c5fd; }
+        .header-back {
+            color: rgba(255,255,255,.7);
+            text-decoration: none;
+            font-size: .85rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .header-back:hover { color: #fff; }
+        .pasos-bar {
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: .8rem 1.5rem;
+        }
+        .pasos-inner {
+            max-width: 540px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+        }
+        .paso-item {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--gris);
+            flex: 1;
+            justify-content: center;
+        }
+        .paso-item.active { color: var(--azul); }
+        .paso-item.done   { color: var(--verde); }
+        .paso-num {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .72rem; font-weight: 700; flex-shrink: 0;
+        }
+        .paso-item.active .paso-num { background: var(--azul); color: #fff; border-color: var(--azul); }
+        .paso-item.done   .paso-num { background: var(--verde); color: #fff; border-color: var(--verde); }
+        .paso-sep { height: 1px; background: var(--border); flex: 0 0 24px; }
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+        .card {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 24px rgba(0,0,0,.08);
+            padding: 2rem;
+            width: 100%;
+            max-width: 520px;
+        }
+        .card-titulo {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--azul);
+            margin-bottom: .4rem;
+        }
+        .card-sub {
+            font-size: .88rem;
+            color: var(--gris);
+            margin-bottom: 1.8rem;
+            line-height: 1.5;
+        }
+        .bienvenida {
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+            border-radius: 10px;
+            padding: .8rem 1rem;
+            font-size: .85rem;
+            color: #065f46;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .8rem 1rem;
+        }
+        .field { display: flex; flex-direction: column; gap: .35rem; }
+        .field.full { grid-column: 1 / -1; }
+        .field label {
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--gris);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .field input, .field select {
+            padding: .75rem 1rem;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: .93rem;
+            font-family: var(--font-body);
+            outline: none;
+            transition: border-color .2s;
+            color: var(--text);
+            background: #fff;
+        }
+        .field input:focus, .field select:focus { border-color: var(--azul-med); }
+        .seccion-titulo {
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--azul);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin: 1.6rem 0 1rem;
+            padding-bottom: .5rem;
+            border-bottom: 2px solid var(--azul-light);
+        }
+        .opciones-entrega {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .7rem;
+            margin-bottom: 1rem;
+        }
+        .opcion-card {
+            display: flex;
+            align-items: center;
+            gap: .8rem;
+            padding: .9rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .opcion-card:has(input:checked) {
+            border-color: var(--azul);
+            background: var(--azul-light);
+        }
+        .opcion-card input { accent-color: var(--azul); }
+        .opcion-icono { font-size: 1.4rem; }
+        .opcion-card strong { font-size: .88rem; display: block; color: var(--text); }
+        .opcion-card small { font-size: .75rem; color: var(--gris); }
+        .delivery-campos {
+            display: none;
+            margin-top: .5rem;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+            border-radius: 10px;
+            padding: .8rem 1rem;
+            font-size: .85rem;
+            margin-bottom: 1.2rem;
+            display: none;
+        }
+        .btns-row {
+            display: flex;
+            gap: .8rem;
+            margin-top: 1.8rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid var(--border);
+        }
+        .btn-back {
+            padding: .75rem 1.2rem;
+            background: var(--gris-light);
+            color: var(--gris);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: .9rem;
+            cursor: pointer;
+            font-family: var(--font-body);
+            white-space: nowrap;
+        }
+        .btn-primary {
+            flex: 1;
+            padding: .85rem;
+            background: var(--azul);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: .95rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: var(--font-body);
+            transition: background .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+        }
+        .btn-primary:hover { background: var(--azul-med); }
+        .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer-min {
+            text-align: center;
+            padding: 1.5rem;
+            font-size: .78rem;
+            color: var(--gris);
+        }
+        @media (max-width: 480px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .field.full { grid-column: 1; }
+            .opciones-entrega { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <a href="/catalogo" class="header-brand">
+    <span id="headerLogo">🧵</span> Confecciones <span>Lix</span>
+    </a>
+    <a href="/catalogo/identificacion" class="header-back">← Atrás</a>
+</header>
+
+<div class="pasos-bar">
+    <div class="pasos-inner">
+        <div class="paso-item done">
+            <div class="paso-num">✓</div>
+            <span>Identificación</span>
+        </div>
+        <div class="paso-sep"></div>
+        <div class="paso-item active">
+            <div class="paso-num">2</div>
+            <span>Mis datos</span>
+        </div>
+        <div class="paso-sep"></div>
+        <div class="paso-item">
+            <div class="paso-num">3</div>
+            <span>Pago</span>
+        </div>
+    </div>
+</div>
+
+<main class="main">
+    <div class="card">
+        <h1 class="card-titulo">Tus datos de contacto</h1>
+        <p class="card-sub">Completa o confirma tus datos para continuar con el pedido.</p>
+
+        <div class="bienvenida" id="bienvenida"></div>
+        <div class="alert-error" id="alertError"></div>
+
+        <div class="form-grid">
+            <div class="field">
+                <label>Nombres *</label>
+                <input type="text" id="fNombres" placeholder="Tus nombres">
+            </div>
+            <div class="field">
+                <label>Apellidos</label>
+                <input type="text" id="fApellidos" placeholder="Tus apellidos">
+            </div>
+            <div class="field">
+                <label>Teléfono *</label>
+                <input type="tel" id="fTelefono" placeholder="9XXXXXXXX" maxlength="9"
+                       oninput="this.value=this.value.replace(/\D/g,'')">
+            </div>
+            <div class="field">
+                <label>DNI</label>
+                <input type="text" id="fDni" placeholder="00000000" maxlength="8"
+                       oninput="this.value=this.value.replace(/\D/g,'')">
+            </div>
+            <div class="field full">
+                <label>Correo electrónico</label>
+                <input type="email" id="fCorreo" placeholder="correo@email.com">
+            </div>
+        </div>
+
+        <div class="seccion-titulo">Tipo de entrega</div>
+
+        <div class="opciones-entrega">
+            <label class="opcion-card">
+                <input type="radio" name="tipoEntrega" value="recojo_tienda" id="radioRecojo" checked>
+                <div class="opcion-icono">🏪</div>
+                <div>
+                    <strong>Recojo en tienda</strong>
+                    <small>Sin costo adicional</small>
+                </div>
+            </label>
+            <label class="opcion-card">
+                <input type="radio" name="tipoEntrega" value="delivery" id="radioDelivery">
+                <div class="opcion-icono">🚗</div>
+                <div>
+                    <strong>Delivery</strong>
+                    <small>Chiclayo y alrededores</small>
+                </div>
+            </label>
+        </div>
+
+        <div class="delivery-campos" id="deliveryCampos">
+            <div class="form-grid">
+                <div class="field full">
+                    <label>Dirección *</label>
+                    <input type="text" id="fDireccion" placeholder="Av. / Jr. / Calle...">
+                </div>
+                <div class="field">
+                    <label>Distrito</label>
+                    <input type="text" id="fDistrito" placeholder="Chiclayo" value="Chiclayo">
+                </div>
+                <div class="field">
+                    <label>Referencia</label>
+                    <input type="text" id="fReferencia" placeholder="Cerca de...">
+                </div>
+            </div>
+        </div>
+
+        <div class="btns-row">
+            <button class="btn-back" onclick="window.location.href='/catalogo/identificacion'">← Atrás</button>
+            <button class="btn-primary" id="btnContinuar" onclick="continuar()">
+                <div class="spinner" id="spinner"></div>
+                <span id="btnTexto">Continuar →</span>
+            </button>
+        </div>
+    </div>
+</main>
+
+<footer class="footer-min">© 2026 Confecciones Lix · Chiclayo, Perú</footer>
+
+<script>
+    const carrito = JSON.parse(sessionStorage.getItem('lix_carrito') || '[]');
+    const clienteGuardado = JSON.parse(sessionStorage.getItem('lix_checkout_cliente') || 'null');
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetch('/api/gestion-tienda/logo-publico')
+    .then(r => r.json())
+    .then(j => {
+        if (j.ok && j.url) {
+            const el = document.getElementById('headerLogo');
+            if (el) el.innerHTML = `<img src="${j.url}" style="height:36px;width:auto;object-fit:contain;vertical-align:middle;">`;
+        }
+    }).catch(() => {});
+        if (!carrito.length) { window.location.href = '/catalogo'; return; }
+        if (!clienteGuardado) { window.location.href = '/catalogo/identificacion'; return; }
+        precargarDatos();
+    });
+
+    function precargarDatos() {
+        if (!clienteGuardado) return;
+
+        if (clienteGuardado.nombres) {
+            document.getElementById('fNombres').value   = clienteGuardado.nombres;
+            document.getElementById('fApellidos').value = clienteGuardado.apellidos || '';
+            document.getElementById('fDni').value       = clienteGuardado.dni       || '';
+            document.getElementById('fTelefono').value  = clienteGuardado.telefono  || '';
+            document.getElementById('fCorreo').value    = clienteGuardado.correo    || '';
+
+            if (!clienteGuardado.es_nuevo) {
+                const bienvenida = document.getElementById('bienvenida');
+                bienvenida.style.display = 'block';
+                bienvenida.textContent = `✓ Bienvenido de nuevo, ${clienteGuardado.nombres}. Hemos cargado tus datos.`;
+            }
+        } else {
+            if (clienteGuardado.telefono)
+                document.getElementById('fTelefono').value = clienteGuardado.telefono;
+            if (clienteGuardado.correo)
+                document.getElementById('fCorreo').value = clienteGuardado.correo;
+        }
+    }
+
+    document.querySelectorAll('input[name="tipoEntrega"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const esDelivery = document.getElementById('radioDelivery').checked;
+            document.getElementById('deliveryCampos').style.display = esDelivery ? 'block' : 'none';
+        });
+    });
+
+    async function continuar() {
+        const nombres     = document.getElementById('fNombres').value.trim();
+        const apellidos   = document.getElementById('fApellidos').value.trim();
+        const telefono    = document.getElementById('fTelefono').value.trim();
+        const dni         = document.getElementById('fDni').value.trim();
+        const correo      = document.getElementById('fCorreo').value.trim();
+        const tipoEntrega = document.querySelector('input[name="tipoEntrega"]:checked').value;
+        const direccion   = document.getElementById('fDireccion').value.trim();
+        const distrito    = document.getElementById('fDistrito').value.trim();
+        const referencia  = document.getElementById('fReferencia').value.trim();
+        const alertEl     = document.getElementById('alertError');
+        alertEl.style.display = 'none';
+
+        if (!nombres) { mostrarError('El nombre es requerido'); return; }
+        if (!telefono) { mostrarError('El teléfono es requerido'); return; }
+        if (!/^9\d{8}$/.test(telefono)) { mostrarError('El teléfono debe tener 9 dígitos y empezar con 9'); return; }
+        if (dni && !/^\d{8}$/.test(dni)) { mostrarError('El DNI debe tener exactamente 8 dígitos'); return; }
+        if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) { mostrarError('El correo no es válido'); return; }
+        if (tipoEntrega === 'delivery' && !direccion) { mostrarError('La dirección es requerida para delivery'); return; }
+
+        const btn     = document.getElementById('btnContinuar');
+        const spinner = document.getElementById('spinner');
+        const txtBtn  = document.getElementById('btnTexto');
+        btn.disabled = true;
+        spinner.style.display = 'block';
+        txtBtn.textContent = 'Guardando...';
+
+        try {
+            const res  = await fetch('/api/checkout/guardar-datos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombres, apellidos, dni, telefono, correo,
+                    tipo_entrega: tipoEntrega, direccion, distrito, referencia })
+            });
+            const json = await res.json();
+
+            if (json.ok) {
+                sessionStorage.setItem('lix_checkout_cliente', JSON.stringify({
+                    ...clienteGuardado, nombres, apellidos, dni, telefono, correo
+                }));
+                sessionStorage.setItem('lix_checkout_entrega', JSON.stringify({
+                    tipo_entrega: tipoEntrega, direccion, distrito, referencia
+                }));
+                window.location.href = '/catalogo/pago';
+            } else {
+                mostrarError(json.mensaje);
+            }
+        } catch (e) {
+            mostrarError('Error de conexión. Intenta nuevamente.');
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            txtBtn.textContent = 'Continuar →';
+        }
+    }
+
+    function mostrarError(msg) {
+        const el = document.getElementById('alertError');
+        el.textContent = msg;
+        el.style.display = 'block';
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+</script>
+</body>
+</html>

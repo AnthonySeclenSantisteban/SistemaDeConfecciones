@@ -770,11 +770,10 @@ function initEventListeners() {
     // Checkout
     document.getElementById('btnCheckout').addEventListener('click', () => {
         if (!_carrito.length) return;
-        cerrarCarrito();
-        _pasoActual = 1;
-        irPaso(1);
-        abrirModal('modalCheckout');
+        sessionStorage.setItem('lix_carrito', JSON.stringify(_carrito));
+        window.location.href = '/catalogo/identificacion';
     });
+    
     document.getElementById('btnCerrarCheckout').addEventListener('click', () => cerrarModal('modalCheckout'));
     document.getElementById('modalCheckout').addEventListener('click', e => { if (e.target === document.getElementById('modalCheckout')) cerrarModal('modalCheckout'); });
 
@@ -877,6 +876,33 @@ async function cargarLogoYSliders() {
             }
         }
     } catch (e) { console.error('Error cargando sliders:', e); }
+    
+    try {
+        const res = await fetch('/api/gestion-tienda/redes-publicas');
+        const json = await res.json();
+        const iconos = {
+            facebook: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>',
+            instagram: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
+            tiktok: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/></svg>',
+            youtube: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="white"/></svg>',
+            telegram: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.96 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>'
+        };
+        if (json.ok && json.data.length) {
+            const el = document.getElementById('footerRedes');
+            if (el) {
+                el.innerHTML = json.data.filter(r => r.activo).map(r => `
+                    <a href="${r.url}" target="_blank" rel="noopener"
+                       style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);
+                              display:flex;align-items:center;justify-content:center;color:#fff;
+                              transition:background .2s;text-decoration:none;"
+                       onmouseover="this.style.background='rgba(255,255,255,.3)'"
+                       onmouseout="this.style.background='rgba(255,255,255,.15)'"
+                       title="${r.tipo}">
+                        ${iconos[r.tipo] || '🔗'}
+                    </a>`).join('');
+            }
+        }
+    } catch (e) { console.error('Error cargando redes:', e); }
 }
 
 const style = document.createElement('style');
