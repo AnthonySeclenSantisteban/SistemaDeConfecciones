@@ -121,6 +121,7 @@ router.get('/api/ventas/stats', requireAuth, async (req, res) => {
                 COUNT(*) FILTER (WHERE TRUE)                             AS total_ventas,
                 COUNT(*) FILTER (WHERE estado = 'pagada')               AS ventas_pagadas,
                 COUNT(*) FILTER (WHERE estado = 'pendiente')            AS ventas_pendientes,
+                COUNT(*) FILTER (WHERE estado = 'anulada')              AS ventas_anuladas,
                 COALESCE(SUM(total) FILTER (WHERE estado = 'pagada'), 0) AS monto_pagadas,
                 COALESCE(SUM(total) FILTER (
                     WHERE estado = 'pagada'
@@ -366,15 +367,12 @@ router.post('/api/ventas', requireAuth, uploadComprobante.array('capturas', 5), 
             }
         }
 
-        // 4. Pedido
         const codigoSeg = `LIX-${Date.now()}`;
         const pedRes    = await client.query(
-            `INSERT INTO pedidos (id_cliente,total,estado,codigo_seguimiento) VALUES ($1,$2,'pendiente',$3) RETURNING id_pedido`,
+            `INSERT INTO pedidos (id_cliente,total,estado,codigo_seguimiento,tipo_entrega) VALUES ($1,$2,'entregado',$3,'recojo_tienda') RETURNING id_pedido`,
             [id_cliente, total, codigoSeg]
         );
         const id_pedido = pedRes.rows[0].id_pedido;
-
-        // 5. Detalle pedido + stock
         for (const item of items) {
             const cant = parseInt(item.cantidad), pu = parseFloat(item.precio_unitario);
             await client.query(
@@ -600,28 +598,31 @@ router.get('/api/reniec/:dni', requireAuth, async (req, res) => {
             });
         }
 
-        // Si no está en BD, consultar API externa
-        const respuesta = await fetch(
+       const respuesta = await fetch(
             `https://api.decolecta.com/v1/reniec/dni?numero=${dni}`,
             {
                 headers: {
-                    Authorization:  `Bearer ${process.env.API_RENIEC}`,
+                    Authorization: `Bearer ${process.env.API_RENIEC}`,
                     'Content-Type': 'application/json'
                 }
             }
         );
 
         const data = await respuesta.json();
-        console.log('RENIEC response:', data);
+        console.log('RENIEC response:', JSON.stringify(data));
 
-        if (!respuesta.ok)
-            return res.json({ ok: false, mensaje: 'DNI no encontrado' });
+        if (!respuesta.ok || (!data.full_name && !data.first_name))
+            return res.json({ ok: false, mensaje: 'DNI no encontrado en RENIEC' });
+
+        const nombres   = data.first_name || '';
+        const apellidos = `${data.first_last_name || ''} ${data.second_last_name || ''}`.trim();
+        const nombreCompleto = data.full_name || `${nombres} ${apellidos}`.trim();
 
         return res.json({
             ok: true,
-            nombre:    `${data.first_name} ${data.first_last_name} ${data.second_last_name}`.trim(),
-            nombres:   data.first_name,
-            apellidos: `${data.first_last_name} ${data.second_last_name}`.trim(),
+            nombre:    nombreCompleto,
+            nombres,
+            apellidos,
             fuente:    'reniec'
         });
 

@@ -28,6 +28,15 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+.filtros-row select {
+  width: auto;
+  flex: 0 1 auto;
+  min-width: 168px;
+}
+.filtros-row input[type="date"] {
+  width: auto;
+  flex: 0 0 auto;
+}
 .filtro-dni-wrap {
   display: flex;
   align-items: center;

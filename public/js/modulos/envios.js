@@ -38,11 +38,7 @@ async function cargarEnvios() {
         }
 
         _enviosData = json.data;
-        
-        // 1. Calcular estadísticas
         _calcularEstadisticasEnvios(_enviosData);
-
-        // 2. Renderizar tabla con filtros aplicados
         _aplicarFiltrosEnvios();
 
     } catch (err) {
@@ -57,7 +53,7 @@ function _calcularEstadisticasEnvios(data) {
     let pendientes = 0;
     let enCamino = 0;
     let entregados = 0;
-    let incidencias = 0; // fallido o demora
+    let incidencias = 0; 
 
     data.forEach(e => {
         if (e.estado_entrega === 'pendiente') pendientes++;
@@ -78,8 +74,6 @@ function _aplicarFiltrosEnvios() {
     _envFiltroEstado = document.getElementById('env-filtro-estado').value;
     _envFiltroTipo = document.getElementById('env-filtro-tipo').value;
     _envRegistrosPorPagina = parseInt(document.getElementById('env-por-pagina').value) || 10;
-
-    // Filtrar data
     const filtrados = _enviosData.filter(e => {
         const busquedaStr = `${e.id_envio} ${e.cliente} ${e.telefono || ''} ${e.direccion || ''} ${e.codigo_venta || ''}`.toLowerCase();
         const matchBusqueda = !_envFiltroBusqueda || busquedaStr.includes(_envFiltroBusqueda);
@@ -125,13 +119,11 @@ function _renderTablaEnvios(data) {
         totalLabel.textContent = '0 registros';
         return;
     }
-
     empty.style.display = 'none';
     tablaWrap.style.display = 'block';
     paginacion.style.display = 'flex';
     totalLabel.textContent = `${data.length} registro${data.length !== 1 ? 's' : ''}`;
 
-    // Paginación
     const totalRegistros = data.length;
     const totalPaginas = Math.ceil(totalRegistros / _envRegistrosPorPagina);
     if (_envPaginaActual > totalPaginas) _envPaginaActual = totalPaginas || 1;
@@ -167,8 +159,6 @@ function _renderTablaEnvios(data) {
         const docTxt = e.codigo_venta 
             ? `<strong>${_envEsc(e.codigo_venta)}</strong>`
             : `<span style="font-family:var(--mono);font-size:12px;color:var(--muted);">Sin NV</span>`;
-
-        // Deshabilitar botón si ya fue entregado
         const esEntregado = e.estado_entrega === 'entregado';
         const editDisabled = esEntregado 
             ? 'disabled style="opacity: 0.4; cursor: not-allowed;" title="Envío ya entregado (Finalizado)"' 
@@ -201,15 +191,12 @@ function _renderTablaEnvios(data) {
             </tr>
         `;
     }).join('');
-
-    // Pintar paginación
     document.getElementById('env-pag-info').textContent = `Mostrando ${inicioIdx + 1}-${finIdx} de ${totalRegistros}`;
 
     const pagBotones = document.getElementById('env-pag-botones');
     pagBotones.innerHTML = '';
 
     if (totalPaginas > 1) {
-        // Botón Anterior
         const btnAnt = document.createElement('button');
         btnAnt.className = 'btn-pag';
         btnAnt.disabled = _envPaginaActual === 1;
@@ -221,8 +208,6 @@ function _renderTablaEnvios(data) {
             }
         };
         pagBotones.appendChild(btnAnt);
-
-        // Botones de páginas
         for (let idx = 1; idx <= totalPaginas; idx++) {
             const btnPag = document.createElement('button');
             btnPag.className = `btn-pag ${idx === _envPaginaActual ? 'active' : ''}`;
@@ -248,10 +233,6 @@ function _renderTablaEnvios(data) {
         pagBotones.appendChild(btnSig);
     }
 }
-
-// ────────────────────────────────────────────────────────
-// MODAL: VER DETALLE ENVÍO
-// ────────────────────────────────────────────────────────
 async function abrirVerEnvio(id) {
     const modal = document.getElementById('modal-envio-ver');
     
@@ -292,7 +273,6 @@ async function abrirVerEnvio(id) {
 
         const e = json.envio;
         const items = json.items;
-
         document.getElementById('ver-envio-cliente').textContent = e.cliente;
         document.getElementById('ver-envio-telefono').textContent = e.telefono || '—';
         document.getElementById('ver-envio-correo').textContent = e.correo || '—';
@@ -301,12 +281,10 @@ async function abrirVerEnvio(id) {
         document.getElementById('ver-envio-distrito').textContent = e.distrito || '—';
         document.getElementById('ver-envio-direccion').textContent = e.direccion || '—';
         document.getElementById('ver-envio-referencia').textContent = e.referencia || '—';
-        
         document.getElementById('ver-envio-codigo-venta').textContent = e.codigo_venta || 'Sin NV';
         document.getElementById('ver-envio-fecha-pedido').textContent = e.fecha_pedido ? new Date(e.fecha_pedido).toLocaleString('es-PE') : '—';
         document.getElementById('ver-envio-metodo-pago').textContent = e.metodo_pago ? e.metodo_pago.toUpperCase() : 'EFECTIVO';
         document.getElementById('ver-envio-total-venta').textContent = `S/ ${parseFloat(e.total_pedido).toFixed(2)}`;
-
         document.getElementById('ver-envio-fecha-estimada').textContent = e.fecha_estimada ? _envFmtFecha(e.fecha_estimada) : '—';
         document.getElementById('ver-envio-fecha-entrega').textContent = e.fecha_entrega ? new Date(e.fecha_entrega).toLocaleString('es-PE') : 'No entregado aún';
         document.getElementById('ver-envio-observaciones').textContent = e.observaciones || 'Sin comentarios adicionales.';
@@ -320,8 +298,6 @@ async function abrirVerEnvio(id) {
         else if (e.estado_entrega === 'fallido') { badgeClase = 'badge-env-fallido'; badgeTxt = 'Fallido'; }
 
         document.getElementById('ver-envio-badge').innerHTML = `<span class="badge ${badgeClase}" style="font-size:11px;font-weight:600;padding:2px 8px;">${badgeTxt}</span>`;
-
-        // Pintar items
         if (items.length === 0) {
             document.getElementById('ver-envio-items-tbody').innerHTML = `
                 <tr>
@@ -360,9 +336,6 @@ async function abrirVerEnvio(id) {
     }
 }
 
-// ────────────────────────────────────────────────────────
-// MODAL: EDITAR ESTADO DE ENVÍO
-// ────────────────────────────────────────────────────────
 async function abrirEditarEnvio(id) {
     const modal = document.getElementById('modal-envio-editar');
     document.getElementById('modal-envio-alert').style.display = 'none';
@@ -376,21 +349,28 @@ async function abrirEditarEnvio(id) {
 
     modal.style.display = 'flex';
 
+    const hoyStr = new Date().toISOString().split('T')[0];
+    document.getElementById('edit-envio-fecha-estimada').min = hoyStr;
+
     try {
         const res = await fetch(`/api/envios/${id}`);
         const json = await res.json();
-
         if (!json.ok) throw new Error(json.mensaje);
-
         _envioSeleccionado = json.envio;
-
         document.getElementById('edit-envio-cliente-nombre').textContent = _envioSeleccionado.cliente;
         document.getElementById('edit-envio-estado').value = _envioSeleccionado.estado_entrega;
         document.getElementById('edit-envio-observaciones').value = _envioSeleccionado.observaciones || '';
-
-        // Formatear fechas para los inputs date (YYYY-MM-DD)
         if (_envioSeleccionado.fecha_estimada) {
             document.getElementById('edit-envio-fecha-estimada').value = _envioSeleccionado.fecha_estimada.split('T')[0];
+        } else {
+            const hoy  = new Date();
+            const tipo = (_envioSeleccionado.tipo_entrega || '').toLowerCase();
+            const dias = (tipo === 'recojo' || tipo === 'recojo_tienda') ? 2 : 5;
+            hoy.setDate(hoy.getDate() + dias);
+            const yyyy = hoy.getFullYear();
+            const mm   = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dd   = String(hoy.getDate()).padStart(2, '0');
+            document.getElementById('edit-envio-fecha-estimada').value = `${yyyy}-${mm}-${dd}`;
         }
         if (_envioSeleccionado.fecha_entrega) {
             document.getElementById('edit-envio-fecha-entrega').value = _envioSeleccionado.fecha_entrega.split('T')[0];
@@ -409,8 +389,6 @@ function _evaluarVisibilidadFechaEntrega() {
     const fieldFecha = document.getElementById('field-fecha-entrega');
     const reqObs = document.querySelector('.req-obs');
     const reqEstimada = document.querySelector('.req-estimada');
-    
-    // Reset asteriscos
     reqObs.style.display = 'none';
     reqEstimada.style.display = 'none';
 
@@ -436,6 +414,22 @@ async function guardarEdicionEnvio() {
     const fecha_estimada = document.getElementById('edit-envio-fecha-estimada').value;
     const fecha_entrega = document.getElementById('edit-envio-fecha-entrega').value;
     const observaciones = document.getElementById('edit-envio-observaciones').value.trim();
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    if (fecha_estimada) {
+        const fechaEst = new Date(fecha_estimada + 'T00:00:00');
+        const anio = fechaEst.getFullYear();
+        if (anio < 2024 || anio > 2100) {
+            _mostrarAlertaEnvio('La fecha ingresada no es válida. Verifica el año.');
+            return;
+        }
+        if (fechaEst < hoy) {
+            _mostrarAlertaEnvio('La fecha estimada de entrega no puede ser anterior a hoy.');
+            return;
+        }
+    }
 
     if (estado_entrega === 'entregado' && !fecha_entrega) {
         _mostrarAlertaEnvio('Es obligatorio ingresar la fecha real de entrega.');
@@ -513,7 +507,6 @@ function _mostrarAlertaEnvio(msg) {
 }
 
 document.addEventListener('click', function(e) {
-    // 1. Acciones en la tabla
     const btnAccion = e.target.closest('[data-accion]');
     if (btnAccion && btnAccion.closest('#env-tabla-wrap')) {
         const id = btnAccion.dataset.id;
@@ -522,14 +515,11 @@ document.addEventListener('click', function(e) {
             return;
         }
         if (btnAccion.dataset.accion === 'editar') {
-            // Validar si el botón está deshabilitado
             if (btnAccion.disabled) return;
             abrirEditarEnvio(id);
             return;
         }
     }
-
-    // 2. Cierre de modales
     const clickId = e.target.closest('button')?.id || e.target.id;
     if (clickId === 'btn-cerrar-envio-ver' || clickId === 'btn-cerrar-envio-ver2') {
         cerrarModalVerEnvio();
@@ -598,13 +588,9 @@ document.addEventListener('change', function(e) {
         return;
     }
 });
-
-// Helpers
 function _envEsc(str) {
     return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-
-// date formatted as DD/MM/YYYY
 function _envFmtFecha(ts) {
     if (!ts) return '—';
     const dateObj = new Date(ts);

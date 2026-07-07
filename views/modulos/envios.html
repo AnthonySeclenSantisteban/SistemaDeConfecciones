@@ -327,7 +327,7 @@
             <div class="field">
                 <label for="edit-envio-fecha-estimada">Fecha Est. Entrega <span class="req-estimada" style="color:var(--error);display:none;">*</span></label>
                 <div class="input-wrap">
-                    <input type="date" id="edit-envio-fecha-estimada">
+                    <input type="date" id="edit-envio-fecha-estimada" id="edit-envio-fecha-estimada">
                 </div>
             </div>
 
@@ -394,8 +394,31 @@
         border: 1px solid #cbd5e0;
     }
 
-    /* Tabla pequeña en detalles */
     #ver-envio-items-tbody td {
         padding: 8px 10px;
+    }
+    #modal-envio-ver.modal-overlay,
+    #modal-envio-editar.modal-overlay {
+        align-items: flex-start !important;
+        padding-top: 90px;
+        padding-bottom: 24px;
+        overflow-y: auto;
+    }
+    #modal-envio-ver .modal,
+    #modal-envio-editar .modal {
+        margin: 0 auto;
+        max-height: calc(100vh - 114px);
+        overflow-y: auto;
+    }
+    @media (max-width: 640px) {
+        #modal-envio-ver.modal-overlay,
+        #modal-envio-editar.modal-overlay {
+            padding-top: 16px;
+            padding-bottom: 16px;
+        }
+        #modal-envio-ver .modal,
+        #modal-envio-editar .modal {
+            width: 95%;
+        }
     }
 </style>

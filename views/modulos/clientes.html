@@ -17,6 +17,16 @@
     <span class="total-label" id="total-clientes"></span>
   </div>
 
+  <div style="display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;">
+    <div class="input-wrap" style="flex:1;min-width:180px;">
+      <span class="input-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </span>
+      <input type="text" id="cli-filtro-texto" placeholder="Buscar por nombre, DNI o correo…">
+    </div>
+    <button class="btn-secondary" id="cli-btn-limpiar" style="padding:7px 14px;font-size:13px;">✕ Limpiar</button>
+  </div>
+
   <div id="clientes-loading" class="spinner-wrap">
     <div class="spinner"></div>
   </div>
@@ -53,11 +63,6 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title" id="modal-cliente-titulo">Nuevo cliente</span>
-      <button class="modal-close" id="btn-cerrar-modal-cliente">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
     </div>
 
     <div class="alert alert-error" id="modal-cliente-alert" style="display:none;">
@@ -182,11 +187,6 @@
   <div class="modal modal-sm">
     <div class="modal-header">
       <span class="modal-title">¿Eliminar cliente?</span>
-      <button class="modal-close" id="btn-cerrar-eliminar-cliente">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
     </div>
     <p class="modal-desc">
       El cliente <strong id="eliminar-cliente-nombre"></strong> será marcado como eliminado.
@@ -239,3 +239,43 @@
     </div>
   </div>
 </div>
+<div class="modal-overlay" id="modal-eliminar-dir" style="display:none;">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">¿Eliminar dirección?</span>
+    </div>
+    <p class="modal-desc">Esta dirección será eliminada permanentemente.</p>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cancelar-eliminar-dir">Cancelar</button>
+      <button class="btn-danger" id="btn-confirmar-eliminar-dir">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+<style>
+  #modal-cliente.modal-overlay,
+  #modal-eliminar-cliente.modal-overlay,
+  #modal-historial-cliente.modal-overlay,
+  #modal-eliminar-dir.modal-overlay {
+    align-items: flex-start !important;
+    padding-top: 100px;
+    padding-bottom: 24px;
+    overflow-y: auto;
+  }
+  #modal-cliente .modal,
+  #modal-eliminar-cliente .modal,
+  #modal-historial-cliente .modal {
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    margin: 0 auto;
+  }
+  @media (max-width: 600px) {
+    #modal-cliente.modal-overlay,
+    #modal-eliminar-cliente.modal-overlay {
+      padding-top: 16px;
+      padding-bottom: 16px;
+    }
+    #modal-cliente .modal {
+      width: 95%;
+    }
+  }
+</style>

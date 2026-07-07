@@ -9,11 +9,15 @@ function requireAuth(req, res, next) {
 }
 
 router.get('/api/pedidos', requireAuth, async (req, res) => {
-    const { codigo, estado, fecha_desde, fecha_hasta, page = 1, limit = 15 } = req.query;
+    const { codigo, estado, cliente, fecha_desde, fecha_hasta, page = 1, limit = 15 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const params = [];
     const conds  = ['p.id_pedido IS NOT NULL'];
 
+    if (cliente) {
+        params.push(`%${cliente}%`);
+        conds.push(`(c.nombres ILIKE $${params.length} OR c.apellidos ILIKE $${params.length} OR CONCAT(c.nombres, ' ', COALESCE(c.apellidos,'')) ILIKE $${params.length})`);
+    }
     if (codigo) { params.push(`%${codigo}%`); conds.push(`p.codigo_seguimiento ILIKE $${params.length}`); }
     if (estado) { params.push(estado); conds.push(`p.estado = $${params.length}`); }
     if (fecha_desde) { params.push(fecha_desde); conds.push(`p.fecha_pedido::date >= $${params.length}::date`); }

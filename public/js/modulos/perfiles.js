@@ -106,12 +106,31 @@ function confirmarEliminar(id, nombre) {
     document.getElementById('eliminar-nombre').textContent = nombre;
     document.getElementById('modal-eliminar').style.display = 'flex';
     document.getElementById('btn-confirmar-eliminar').onclick = async () => {
-        const res = await fetch(`/api/perfiles/${id}`, { method: 'DELETE' });
-        const json = await res.json();
-        if (json.ok) {
+        const btn = document.getElementById('btn-confirmar-eliminar');
+        const btnText = document.getElementById('btn-eliminar-text');
+        const spinner = document.getElementById('btn-eliminar-spinner');
+        btn.disabled = true;
+        btnText.textContent = 'Eliminando…';
+        spinner.style.display = 'block';
+
+        try {
+            const res = await fetch(`/api/perfiles/${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (json.ok) {
+                cerrarModalEliminar();
+                cargar_perfiles();
+                mostrarToast(json.mensaje, 'success');
+            } else {
+                cerrarModalEliminar();
+                mostrarToast(json.mensaje || 'No se pudo eliminar el perfil', 'error');
+            }
+        } catch (err) {
             cerrarModalEliminar();
-            cargar_perfiles();
-            mostrarToast(json.mensaje, 'success');
+            mostrarToast('Error de conexión', 'error');
+        } finally {
+            btn.disabled = false;
+            btnText.textContent = 'Sí, eliminar';
+            spinner.style.display = 'none';
         }
     };
 }
@@ -254,6 +273,7 @@ async function cargarPerfiles() {
                         <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
                 </button>
+                ${p.nombre.toLowerCase() === 'administrador' ? '' : `
                 <button class="btn-icon btn-icon-danger" title="Eliminar"
                     onclick="confirmarEliminar(${p.id_perfil},'${p.nombre}')">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -262,7 +282,7 @@ async function cargarPerfiles() {
                         <path d="M10 11v6M14 11v6"/>
                         <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
                     </svg>
-                </button>
+                </button>`}
             </div>
         </td>
             </tr>`

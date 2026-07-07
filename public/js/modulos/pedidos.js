@@ -23,11 +23,13 @@ async function cargarStatsPedidos() {
         const pendientes = data.filter(p => p.estado === 'pendiente').length;
         const enProceso = data.filter(p => ['procesando', 'enviado'].includes(p.estado)).length;
         const entregados = data.filter(p => p.estado === 'entregado').length;
+        const cancelados = data.filter(p => p.estado === 'cancelado').length;
 
         _setText('statTotalPedidos', total);
         _setText('statPendientes', pendientes);
         _setText('statEnProceso', enProceso);
         _setText('statEntregados', entregados);
+        _setText('statCancelados', cancelados);
     } catch (e) {
         console.error('cargarStatsPedidos:', e);
     }
@@ -69,10 +71,12 @@ async function cargarTablaPedidos(page = 1) {
 
 function _construirParamsPedidos(page) {
     const p = new URLSearchParams({ page, limit: _pPorPagina });
+    const cliente = _val('filtroCliente').trim();
     const codigo = _val('filtroCodigo').trim();
     const estado = _val('filtroEstadoPedido');
     const desde = _val('filtroFechaDesde');
     const hasta = _val('filtroFechaHasta');
+    if (cliente) p.set('cliente', cliente);
     if (codigo) p.set('codigo', codigo);
     if (estado) p.set('estado', estado);
     if (desde) p.set('fecha_desde', desde);
@@ -106,7 +110,7 @@ function _filaPedido(p) {
                 </button>
                 ${p.estado !== 'cancelado' && p.estado !== 'entregado' ? `
                 <button class="btn-icon" title="Cambiar estado"
-                    onclick="abrirCambiarEstado(${p.id_pedido}, '${_esc(p.codigo_seguimiento)}', '${p.estado}')">
+                    onclick="abrirCambiarEstado(${p.id_pedido}, '${_esc(p.codigo_seguimiento)}', '${p.estado}', '${p.tipo_entrega || ''}')">
                     <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
                 </button>` : ''}
             </div>
@@ -216,10 +220,27 @@ async function abrirDetallePedido(id) {
     }
 }
 
-function abrirCambiarEstado(id, codigo, estadoActual) {
+function abrirCambiarEstado(id, codigo, estadoActual, tipoEntrega) {
     document.getElementById('cambiarEstadoIdPedido').value = id;
     _setText('cambiarEstadoCodigo', codigo);
-    document.getElementById('selectNuevoEstado').value = estadoActual;
+
+    const esRecojo = (tipoEntrega || '').toLowerCase().includes('recojo');
+    const sel = document.getElementById('selectNuevoEstado');
+
+    sel.innerHTML = esRecojo ? `
+        <option value="pendiente">Pendiente</option>
+        <option value="listo_recoger">Listo para recoger</option>
+        <option value="entregado">Entregado</option>
+        <option value="cancelado">Cancelado</option>
+    ` : `
+        <option value="pendiente">Pendiente</option>
+        <option value="procesando">Procesando</option>
+        <option value="enviado">Enviado</option>
+        <option value="entregado">Entregado</option>
+        <option value="cancelado">Cancelado</option>
+    `;
+
+    sel.value = estadoActual;
     _hide('alertaCambioEstado');
     _show('modalCambiarEstado');
 }
@@ -279,7 +300,7 @@ function aplicarFiltrosPedidos() {
 }
 
 function limpiarFiltrosPedidos() {
-    ['filtroCodigo', 'filtroFechaDesde', 'filtroFechaHasta'].forEach(id => {
+    ['filtroCliente', 'filtroCodigo', 'filtroFechaDesde', 'filtroFechaHasta'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });

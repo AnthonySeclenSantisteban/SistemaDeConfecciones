@@ -112,11 +112,26 @@ router.delete('/api/perfiles/:id', verificarSesion, async (req, res) => {
     const { id } = req.params;
     const id_usuario = req.session.usuario.id;
     try {
+        const perfilRes = await pool.query(
+            'SELECT nombre FROM perfiles WHERE id_perfil = $1', [id]
+        );
+        if (!perfilRes.rows.length)
+            return res.json({ ok: false, mensaje: 'Perfil no encontrado' });
+
+        if (perfilRes.rows[0].nombre.toLowerCase() === 'administrador')
+            return res.json({ ok: false, mensaje: 'No se puede eliminar el perfil Administrador' });
+
+        const usuariosVinculados = await pool.query(
+            'SELECT COUNT(*) FROM usuarios WHERE id_perfil = $1 AND estado != 2', [id]
+        );
+        if (parseInt(usuariosVinculados.rows[0].count) > 0)
+            return res.json({ ok: false, mensaje: `Este perfil tiene ${usuariosVinculados.rows[0].count} usuario(s) activo(s) vinculado(s). Primero desvincula o elimina esos usuarios.` });
+
         await pool.query(
             'UPDATE perfiles SET estado=2, deleted_at=NOW(), deleted_by=$1 WHERE id_perfil=$2',
             [id_usuario, id]
         );
-        res.json({ ok: true, mensaje: 'Perfil eliminado' });
+        res.json({ ok: true, mensaje: 'Perfil eliminado correctamente' });
     } catch (error) {
         res.json({ ok: false, mensaje: error.message });
     }
@@ -426,10 +441,23 @@ router.delete('/api/categorias/:id', verificarSesion, async (req, res) => {
     const { id } = req.params;
     const id_usuario = req.session.usuario.id;
     try {
+        const categoriaRes = await pool.query(
+            'SELECT nombre, estado FROM categorias WHERE id_categoria = $1', [id]
+        );
+        if (!categoriaRes.rows.length)
+            return res.json({ ok: false, mensaje: 'Categoría no encontrada' });
+
+        if (categoriaRes.rows[0].estado === 1)
+            return res.json({ ok: false, mensaje: 'Debes desactivar la categoría antes de eliminarla' });
+
+        const productosVinculados = await pool.query(
+            'SELECT COUNT(*) FROM productos WHERE id_categoria = $1 AND estado != 2', [id]
+        );
+        if (parseInt(productosVinculados.rows[0].count) > 0)
+            return res.json({ ok: false, mensaje: `Esta categoría tiene ${productosVinculados.rows[0].count} producto(s) vinculado(s). Primero elimina o reasigna esos productos.` });
+
         await pool.query(
-            `UPDATE categorias
-             SET estado = 2, deleted_at = NOW(), deleted_by = $1
-             WHERE id_categoria = $2`,
+            `UPDATE categorias SET estado = 2, deleted_at = NOW(), deleted_by = $1 WHERE id_categoria = $2`,
             [id_usuario, id]
         );
         res.json({ ok: true, mensaje: 'Categoría eliminada correctamente' });
@@ -652,16 +680,39 @@ router.get('/api/reniec/:dni', verificarSesion, async (req, res) => {
     if (!/^\d{8}$/.test(dni))
         return res.json({ ok: false, mensaje: 'DNI debe tener 8 dígitos' });
     try {
-        const resp = await fetch(`https://api.apis.net.pe/v2/reniec/dni?numero=${dni}`, {
-            headers: { Authorization: `Bearer ${process.env.API_RENIEC}` }
+        const local = await pool.query(
+            `SELECT nombres, apellidos FROM clientes WHERE dni = $1 AND estado != 2 LIMIT 1`,
+            [dni]
+        );
+        if (local.rows.length) {
+            const c = local.rows[0];
+            return res.json({
+                ok: true,
+                nombre:    `${c.nombres} ${c.apellidos || ''}`.trim(),
+                nombres:   c.nombres,
+                apellidos: c.apellidos || '',
+                fuente:    'local'
+            });
+        }
+        const resp = await fetch(`https://api.decolecta.com/v1/reniec/dni?numero=${dni}`, {
+            headers: {
+                Authorization: `Bearer ${process.env.API_RENIEC}`,
+                'Content-Type': 'application/json'
+            }
         });
         const data = await resp.json();
-        if (!data.nombreCompleto)
+        console.log('RENIEC Decolecta response:', JSON.stringify(data));
+        if (!resp.ok || (!data.full_name && !data.first_name))
             return res.json({ ok: false, mensaje: 'DNI no encontrado en RENIEC' });
+        const nombres   = data.first_name || '';
+        const apellidos = `${data.first_last_name || ''} ${data.second_last_name || ''}`.trim();
+
         res.json({
             ok: true,
-            nombres: data.nombres,
-            apellidos: `${data.apellidoPaterno} ${data.apellidoMaterno}`.trim()
+            nombre:    data.full_name || `${nombres} ${apellidos}`.trim(),
+            nombres,
+            apellidos,
+            fuente:    'reniec'
         });
     } catch (e) {
         res.json({ ok: false, mensaje: 'Error consultando RENIEC' });
@@ -854,6 +905,12 @@ router.post('/api/clientes/:id/direcciones', verificarSesion, async (req, res) =
 
 router.delete('/api/clientes/:id/direcciones/:idDir', verificarSesion, async (req, res) => {
     try {
+        const pedidosVinculados = await pool.query(
+            'SELECT COUNT(*) FROM pedidos WHERE id_direccion = $1', [req.params.idDir]
+        );
+        if (parseInt(pedidosVinculados.rows[0].count) > 0)
+            return res.json({ ok: false, mensaje: `Esta dirección está vinculada a ${pedidosVinculados.rows[0].count} pedido(s) y no puede eliminarse.` });
+
         await pool.query(
             'DELETE FROM direcciones_cliente WHERE id_direccion=$1 AND id_cliente=$2',
             [req.params.idDir, req.params.id]
@@ -1402,29 +1459,48 @@ router.get('/api/dashboard/top-productos', verificarSesion, async (req, res) => 
 
 router.get('/api/colegios', verificarSesion, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM colegios ORDER BY id_colegio');
+        const result = await pool.query(
+            'SELECT * FROM colegios WHERE estado != 2 ORDER BY id_colegio'
+        );
         res.json({ ok: true, data: result.rows });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
 });
 
 router.post('/api/colegios', verificarSesion, async (req, res) => {
-    const { nombre_colegio, distrito, provincia } = req.body;
+    const { nombre_colegio, distrito, provincia, estado } = req.body;
     if (!nombre_colegio) return res.json({ ok: false, mensaje: 'Nombre requerido' });
     try {
+        const eliminado = await pool.query(
+            'SELECT id_colegio FROM colegios WHERE LOWER(nombre_colegio) = LOWER($1) AND estado = 2',
+            [nombre_colegio]
+        );
+        if (eliminado.rows.length > 0) {
+            await pool.query(
+                'UPDATE colegios SET distrito=$1, provincia=$2, estado=1 WHERE id_colegio=$3',
+                [distrito || 'Chiclayo', provincia || 'Chiclayo', eliminado.rows[0].id_colegio]
+            );
+            return res.json({ ok: true, mensaje: 'Colegio reactivado correctamente' });
+        }
+        const existe = await pool.query(
+            'SELECT id_colegio FROM colegios WHERE LOWER(nombre_colegio) = LOWER($1) AND estado != 2',
+            [nombre_colegio]
+        );
+        if (existe.rows.length > 0)
+            return res.json({ ok: false, mensaje: 'Ya existe un colegio activo con ese nombre' });
         await pool.query(
-            'INSERT INTO colegios (nombre_colegio, distrito, provincia) VALUES ($1, $2, $3)',
-            [nombre_colegio, distrito || 'Chiclayo', provincia || 'Chiclayo']
+            'INSERT INTO colegios (nombre_colegio, distrito, provincia, estado) VALUES ($1, $2, $3, $4)',
+            [nombre_colegio, distrito || 'Chiclayo', provincia || 'Chiclayo', estado ?? 1]
         );
         res.json({ ok: true, mensaje: 'Colegio creado correctamente' });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
 });
 
 router.put('/api/colegios/:id', verificarSesion, async (req, res) => {
-    const { nombre_colegio, distrito, provincia } = req.body;
+    const { nombre_colegio, distrito, provincia, estado } = req.body;
     try {
         await pool.query(
-            'UPDATE colegios SET nombre_colegio=$1, distrito=$2, provincia=$3, fecha_actualizacion=NOW() WHERE id_colegio=$4',
-            [nombre_colegio, distrito, provincia, req.params.id]
+            'UPDATE colegios SET nombre_colegio=$1, distrito=$2, provincia=$3, estado=$4, fecha_actualizacion=NOW() WHERE id_colegio=$5',
+            [nombre_colegio, distrito, provincia, estado ?? 1, req.params.id]
         );
         res.json({ ok: true, mensaje: 'Colegio actualizado correctamente' });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
@@ -1432,7 +1508,13 @@ router.put('/api/colegios/:id', verificarSesion, async (req, res) => {
 
 router.delete('/api/colegios/:id', verificarSesion, async (req, res) => {
     try {
-        await pool.query('DELETE FROM colegios WHERE id_colegio=$1', [req.params.id]);
+        const productosVinculados = await pool.query(
+            'SELECT COUNT(*) FROM productos WHERE id_colegio = $1 AND estado != 2', [req.params.id]
+        );
+        if (parseInt(productosVinculados.rows[0].count) > 0)
+            return res.json({ ok: false, mensaje: `Este colegio tiene ${productosVinculados.rows[0].count} producto(s) vinculado(s). Primero elimina o reasigna esos productos.` });
+
+        await pool.query('UPDATE colegios SET estado=2 WHERE id_colegio=$1', [req.params.id]);
         res.json({ ok: true, mensaje: 'Colegio eliminado correctamente' });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
 });

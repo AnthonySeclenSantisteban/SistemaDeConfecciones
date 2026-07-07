@@ -1,11 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/bd');
- 
+const multer = require('multer');
+const path = require('path');
+
 function verificarSesion(req, res, next) {
     if (!req.session || !req.session.usuario) return res.status(401).json({ error: 'No autorizado' });
     next();
 }
+
+const uploadComprobante = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => cb(null, 'public/uploads/comprobantes/'),
+        filename: (req, file, cb) => cb(null, `comp-${Date.now()}${path.extname(file.originalname)}`)
+    }),
+    fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/'))
+});
  
 router.get('/admin/pagos/verificacion', verificarSesion, async (req, res) => {
     try {
@@ -96,12 +106,37 @@ router.get('/admin/pagos/:id', verificarSesion, async (req, res) => {
         res.status(500).json({ error: 'Error al obtener detalle', detalle: e.message });
     }
 });
- 
+
+router.post('/admin/pagos/:id/comprobante', verificarSesion, uploadComprobante.single('comprobante'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { numero_operacion } = req.body;
+        if (!req.file) return res.status(400).json({ error: 'Debes seleccionar una imagen del comprobante' });
+
+        const urlComprobante = `/uploads/comprobantes/${req.file.filename}`;
+
+        const result = await pool.query(
+            `UPDATE pagos
+             SET evidencia = $1,
+                 numero_operacion = COALESCE(NULLIF($2, ''), numero_operacion)
+             WHERE id_pago = $3 AND estado = 'pendiente'
+             RETURNING *`,
+            [urlComprobante, numero_operacion || null, id]
+        );
+
+        if (!result.rows.length) return res.status(404).json({ error: 'Pago no encontrado o ya procesado' });
+
+        res.json({ ok: true, evidencia: urlComprobante });
+    } catch (e) {
+        console.error('POST /admin/pagos/:id/comprobante:', e);
+        res.status(500).json({ error: 'Error al subir el comprobante', detalle: e.message });
+    }
+});
+
 router.post('/admin/pagos/:id/verificar', verificarSesion, async (req, res) => {
     const client = await pool.connect();
     try {
         const { id } = req.params;
-        // Soporta tanto .id como .id_usuario en la sesión
         const id_usuario = req.session.usuario.id || req.session.usuario.id_usuario;
         await client.query('BEGIN');
  

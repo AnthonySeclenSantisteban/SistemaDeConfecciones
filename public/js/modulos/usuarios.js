@@ -130,6 +130,21 @@ async function abrirEditarUsuario(id) {
     document.getElementById('modal-usuario').style.display = 'flex';
 }
  
+function _limpiarErroresUsuario() {
+    document.querySelectorAll('#modal-usuario .campo-error').forEach(el => el.classList.remove('show'));
+    document.querySelectorAll('#modal-usuario .input-wrap').forEach(el => el.classList.remove('campo-invalido'));
+}
+
+function _marcarErrorUsuario(idCampo, mensaje) {
+    const errorEl = document.getElementById(`error-usuario-${idCampo}`);
+    const wrap = document.getElementById(`usuario-${idCampo}`)?.closest('.input-wrap');
+    if (errorEl) {
+        if (mensaje) errorEl.textContent = mensaje;
+        errorEl.classList.add('show');
+    }
+    if (wrap) wrap.classList.add('campo-invalido');
+}
+
 async function guardarUsuario() {
     if (_usuarioGuardando) return;  
  
@@ -139,26 +154,41 @@ async function guardarUsuario() {
     const contrasena = document.getElementById('usuario-contrasena').value;
     const id_perfil  = document.getElementById('usuario-perfil').value;
     const estado     = document.getElementById('usuario-estado').value;
- 
-    if (!nombre || !correo || !id_perfil) {
-        _mostrarAlertaUsuario('Nombre, correo y perfil son requeridos');
-        return;
-    }
 
-    const validarCorreo = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-    if (!validarCorreo.test(correo)) {
-        _mostrarAlertaUsuario('Ingresa un correo válido (ejemplo: usuario@gmail.com)');
-        return;
-    }
+    _limpiarErroresUsuario();
+    let hayError = false;
 
+    if (!nombre) {
+        _marcarErrorUsuario('nombre', 'Campo obligatorio');
+        hayError = true;
+    }
+    if (!correo) {
+        _marcarErrorUsuario('correo', 'Campo obligatorio');
+        hayError = true;
+    } else {
+        const validarCorreo = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+        if (!validarCorreo.test(correo)) {
+            _marcarErrorUsuario('correo', 'Ingresa un correo válido (ejemplo: usuario@gmail.com)');
+            hayError = true;
+        }
+    }
+    if (!id_perfil) {
+        _marcarErrorUsuario('perfil', 'Campo obligatorio');
+        hayError = true;
+    }
     if (!id && !contrasena) {
-        _mostrarAlertaUsuario('La contraseña es requerida para nuevos usuarios');
-        return;
+        _marcarErrorUsuario('contrasena', 'Campo obligatorio');
+        hayError = true;
     }
     if (contrasena && contrasena !== document.getElementById('usuario-confirmar').value) {
-    _mostrarAlertaUsuario('Las contraseñas no coinciden');
-    return;
-}
+        _marcarErrorUsuario('confirmar', 'Las contraseñas no coinciden');
+        hayError = true;
+    }
+
+    if (hayError) {
+        _mostrarAlertaUsuario('Por favor completa los campos obligatorios marcados en rojo');
+        return;
+    }
 
     _usuarioGuardando = true;
     const btn = document.getElementById('btn-guardar-usuario');
@@ -264,8 +294,7 @@ document.addEventListener('click', function (e) {
     if (id === 'btn-cerrar-eliminar-usuario')    cerrarModalEliminarUsuario();
     if (id === 'btn-cancelar-eliminar-usuario')  cerrarModalEliminarUsuario();
     if (id === 'btn-confirmar-eliminar-usuario') confirmarEliminarUsuario();
-    if (e.target.id === 'modal-usuario')          cerrarModalUsuario();
-    if (e.target.id === 'modal-eliminar-usuario') cerrarModalEliminarUsuario();
+    
 });
         
  
@@ -296,7 +325,8 @@ function _limpiarModalUsuario() {
     document.getElementById('usuario-estado').value      = '1';
     document.getElementById('modal-usuario-alert').style.display = 'none';
     document.getElementById('usuario-confirmar').value = '';
-}       
+    _limpiarErroresUsuario();
+}    
  
 function _mostrarAlertaUsuario(msg) {
     const el = document.getElementById('modal-usuario-alert');

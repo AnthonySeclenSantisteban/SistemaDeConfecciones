@@ -72,6 +72,7 @@ async function cargarModulo(modulo) {
             envios: 'Envíos',
             'verificacion-pagos': 'Verificación de Pagos',
             inventario: 'Inventario',
+            produccion: 'Producción',
             compras: 'Compras',
             'gestion-tienda': 'Gestión Tienda',
             configuracion: 'Configuración'

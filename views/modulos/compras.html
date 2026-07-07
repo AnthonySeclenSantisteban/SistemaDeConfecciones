@@ -6,6 +6,11 @@
   <button class="btn-primary" id="btn-nueva-compra" type="button">+ Nueva compra</button>
 </div>
 
+<div class="alert alert-error" id="compras-alerta-agotados" style="display:none;margin-bottom:16px;">
+  <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+  <span id="compras-alerta-agotados-texto"></span>
+</div>
+
 <div class="content-card">
   <div class="content-card-header">
     <span class="content-card-title">Historial de compras</span>
@@ -41,11 +46,41 @@
   </div>
 </div>
 
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Stock de insumos</span>
+    <span class="total-label" id="total-insumos"></span>
+  </div>
+
+  <div id="insumos-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="insumos-empty" class="empty-state" style="display:none;">
+    <p>Todavía no hay insumos en stock</p>
+    <small>Aparecerán aquí en cuanto registres una compra</small>
+  </div>
+
+  <div id="insumos-tabla" style="display:none; overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Insumo</th>
+          <th>Categoría</th>
+          <th>Stock disponible</th>
+          <th>Costo promedio</th>
+          <th>Valor en stock</th>
+        </tr>
+      </thead>
+      <tbody id="insumos-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-compra" style="display:none;">
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title" id="modal-compra-titulo">Nueva compra de insumo</span>
-      <button class="modal-close" id="btn-cerrar-modal-compra" type="button">×</button>
     </div>
 
     <input type="hidden" id="compra-id">
@@ -131,7 +166,6 @@
   <div class="modal modal-sm">
     <div class="modal-header">
       <span class="modal-title">Eliminar compra</span>
-      <button class="modal-close" id="btn-cerrar-eliminar-compra" type="button">×</button>
     </div>
 
     <p class="modal-desc">
@@ -143,6 +177,23 @@
       <button class="btn-danger" id="btn-confirmar-eliminar-compra" type="button">
         <span id="btn-eliminar-compra-text">Sí, eliminar</span>
       </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ver-compra" style="display:none;">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <span class="modal-title" style="display:flex;align-items:center;gap:9px;">
+        <span class="cv-title-chip"><i data-lucide="receipt" style="width:11px;height:11px;"></i></span>
+        Detalle de la compra
+      </span>
+    </div>
+
+    <div id="ver-compra-cuerpo"></div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-cerrar-ver-compra" type="button">Cerrar</button>
     </div>
   </div>
 </div>
@@ -211,4 +262,75 @@ document.addEventListener('change', function(e) {
 .toast-msg.ok { background: #16a34a; }
 .toast-msg.error { background: #dc2626; }
 .toast-msg.warn { background: #d97706; }
+
+/* Detalle de compra estilo "recibo" */
+.cv-title-chip {
+    width: 20px; height: 20px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; flex-shrink: 0;
+}
+.cv-hero { display: flex; align-items: center; gap: 12px; padding: 2px 2px 16px; }
+.cv-hero-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; flex-shrink: 0;
+    box-shadow: 0 8px 20px -6px #c8622a55;
+}
+.cv-hero-icon svg { width: 22px; height: 22px; }
+.cv-hero-info .nombre { font-size: 15.5px; font-weight: 700; color: var(--text); }
+.cv-hero-info .cat-row { margin-top: 4px; }
+
+.cv-ticket {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px 0;
+    overflow: hidden;
+}
+.cv-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 9px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 13px;
+}
+.cv-row-label { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+.cv-row-label i, .cv-row-label svg { width: 13px; height: 13px; color: var(--accent); opacity: .8; }
+.cv-row-value { font-family: var(--mono); font-weight: 600; color: var(--text); text-align: right; }
+.cv-total-row {
+    margin: 4px -16px 0;
+    padding: 13px 16px;
+    background: linear-gradient(135deg, #c8622a14, #e8845a14);
+    border-top: 1px dashed var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+}
+.cv-total-row .cv-row-label { color: var(--text); font-weight: 600; }
+.cv-total-value { font-family: var(--mono); font-size: 17px; font-weight: 800; color: var(--accent); }
+
+.cv-meta {
+    margin-top: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+}
+.cv-meta-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+.cv-meta-row i, .cv-meta-row svg { width: 13px; height: 13px; color: var(--accent); opacity: .8; }
+.cv-meta-row strong { color: var(--text); font-weight: 500; }
+
+.cv-obs {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #c8622a0d;
+    border: 1px solid #c8622a33;
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--text);
+}
+.cv-obs .lbl {
+    color: var(--accent); font-weight: 600; display: block;
+    margin-bottom: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+}
 </style>
