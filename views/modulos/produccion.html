@@ -1,0 +1,156 @@
+<div class="modulo-header">
+  <div>
+    <h2 class="modulo-titulo">Producción</h2>
+    <p class="modulo-subtitulo">Define la receta de cada producto y registra producciones descontando insumos</p>
+  </div>
+</div>
+
+<div class="content-card" style="margin-bottom:16px;">
+  <div class="content-card-header">
+    <span class="content-card-title">1. Elige un producto</span>
+  </div>
+  <div class="content-card-body">
+    <div class="field" style="margin-bottom:0;">
+      <label for="prod-producto-select">Producto</label>
+      <div class="input-wrap">
+        <select id="prod-producto-select">
+          <option value="">Selecciona un producto...</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="prod-seccion-receta" class="content-card" style="margin-bottom:16px;display:none;">
+  <div class="content-card-header">
+    <span class="content-card-title">2. Receta de insumos</span>
+    <span class="total-label" id="prod-receta-total"></span>
+  </div>
+  <div class="content-card-body">
+    <div id="prod-receta-empty" class="empty-state" style="display:none;padding:24px;">
+      <p>Este producto todavía no tiene receta</p>
+      <small>Agrega abajo los insumos que lleva, antes de poder producirlo</small>
+    </div>
+    <div id="prod-receta-tabla-wrap" style="display:none;overflow-x:auto;margin-bottom:16px;">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Insumo</th>
+            <th>Cantidad por unidad</th>
+            <th>Costo estimado por unidad</th>
+            <th style="text-align:right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="prod-receta-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="field" style="margin-bottom:0;flex:1;min-width:220px;">
+        <label for="prod-receta-insumo">Agregar insumo a la receta</label>
+        <div class="input-wrap">
+          <select id="prod-receta-insumo">
+            <option value="">Selecciona un insumo...</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;width:160px;">
+        <label for="prod-receta-cantidad">Cantidad por unidad</label>
+        <div class="input-wrap">
+          <input type="number" id="prod-receta-cantidad" min="0.01" step="0.01" placeholder="Ej: 1.5">
+        </div>
+      </div>
+      <button class="btn-secondary" id="btn-agregar-receta" type="button" style="height:44px;">
+        <i data-lucide="plus" style="width:14px;height:14px;"></i> Agregar
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="prod-seccion-producir" class="content-card" style="margin-bottom:16px;display:none;">
+  <div class="content-card-header">
+    <span class="content-card-title">3. Registrar producción</span>
+  </div>
+  <div class="content-card-body">
+    <div class="alert alert-info" id="prod-sin-receta-alert" style="display:none;">
+      <i data-lucide="info" style="width:16px;height:16px;"></i>
+      <span>Agrega al menos un insumo a la receta antes de poder registrar una producción.</span>
+    </div>
+
+    <div id="prod-form-producir">
+      <div class="form-grid">
+        <div class="field">
+          <label for="prod-variante-select">Talla / color a producir</label>
+          <div class="input-wrap">
+            <select id="prod-variante-select">
+              <option value="">Selecciona...</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="prod-cantidad-producir">Cantidad a producir</label>
+          <div class="input-wrap">
+            <input type="number" id="prod-cantidad-producir" min="1" step="1" placeholder="Ej: 10">
+          </div>
+        </div>
+      </div>
+
+      <div id="prod-preview" style="display:none;">
+        <div class="divider"></div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Esto va a consumir</div>
+        <div id="prod-preview-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--bg-alt);border-radius:8px;font-size:13.5px;">
+          <span>Costo total en insumos:</span>
+          <strong id="prod-preview-costo-total" style="color:var(--accent);">S/ 0.00</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:10px 14px;font-size:12.5px;color:var(--muted);">
+          <span>Costo de insumo por unidad:</span>
+          <span id="prod-preview-costo-unidad">S/ 0.00</span>
+        </div>
+      </div>
+
+      <div id="prod-alerta-faltante" class="alert alert-warning" style="display:none;margin-top:14px;"></div>
+
+      <div style="margin-top:16px;">
+        <button class="btn-primary" id="btn-confirmar-produccion" type="button">
+          <i data-lucide="check-circle"></i> Confirmar producción
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content-card">
+  <div class="content-card-header">
+    <span class="content-card-title">Historial de producción</span>
+    <span class="total-label" id="prod-historial-total"></span>
+  </div>
+
+  <div id="prod-historial-loading" class="spinner-wrap">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="prod-historial-empty" class="empty-state" style="display:none;">
+    <p>Todavía no has registrado ninguna producción</p>
+    <small>Aparecerán aquí en cuanto confirmes la primera</small>
+  </div>
+
+  <div id="prod-historial-tabla" style="display:none;overflow-x:auto;">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Producto</th>
+          <th>Talla / Color</th>
+          <th>Cantidad</th>
+          <th>Costo total insumos</th>
+          <th>Costo por unidad</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody id="prod-historial-tbody"></tbody>
+    </table>
+  </div>
+</div>

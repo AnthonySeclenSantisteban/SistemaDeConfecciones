@@ -111,7 +111,7 @@ router.get('/api/metodos-pago-catalogo', async (req, res) => {
 });
 
 router.post('/api/checkout/confirmar', async (req, res) => {
-    const { metodo_pago, numero_operacion, tipo_documento, carrito: carritoBody } = req.body;
+    const { metodo_pago, numero_operacion, tipo_documento, tipo_entrega, carrito: carritoBody } = req.body;
     const carrito = carritoBody || req.session.carrito || [];
     const cliente  = req.session.checkout_cliente;
     const datosEnv = req.session.checkout_datos;
@@ -164,11 +164,10 @@ router.post('/api/checkout/confirmar', async (req, res) => {
 
         const total = carrito.reduce((s, i) => s + (parseFloat(i.precio || i.precio_unitario || 0) * parseInt(i.cantidad || 1)), 0);
         const codigoSeg = `LIX-${Date.now()}`;
-
         const pedido = await client.query(
-            `INSERT INTO pedidos (id_cliente, total, estado, id_direccion, codigo_seguimiento)
-             VALUES ($1, $2, 'pendiente', $3, $4) RETURNING id_pedido`,
-            [id_cliente, total.toFixed(2), id_direccion, codigoSeg]
+            `INSERT INTO pedidos (id_cliente, total, estado, id_direccion, codigo_seguimiento, tipo_entrega)
+             VALUES ($1, $2, 'pendiente', $3, $4, $5) RETURNING id_pedido`,
+            [id_cliente, total.toFixed(2), id_direccion, codigoSeg, tipo_entrega || 'delivery']
         );
         const id_pedido = pedido.rows[0].id_pedido;
 

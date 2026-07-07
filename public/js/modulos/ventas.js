@@ -4,15 +4,12 @@ let _vTotalPags    = 1;
 let _vItems        = [];
 let _vBusqTimer    = null;
 let _vGuardando    = false;
-let _vReniecFiltro = null;
-let _vHistorialId  = null;
 let _nvPagos = []; 
 let _nvConfirmData = null;
 
 function cargar_ventas() {
     _vPagActual    = 1;
     _vItems        = [];
-    _vReniecFiltro = null;
     cargarStatsVentas();
     cargarTablaVentas();
 }
@@ -29,6 +26,7 @@ async function cargarStatsVentas() {
         _setText('statIngresosMes',     `S/ ${parseFloat(d.ingresos_mes).toFixed(2)}`);
         _setText('statMontoPagadas',    `S/ ${parseFloat(d.monto_pagadas).toFixed(2)} acumulado`);
         _setText('statMesNombre',       d.mes_nombre || 'mes actual');
+        _setText('statVentasAnuladas',  d.ventas_anuladas || 0);
     } catch (e) { console.error('cargarStatsVentas:', e); }
 }
 
@@ -77,7 +75,7 @@ function _construirParams(page) {
     const desde   = _val('filtroFechaDesde');
     const hasta   = _val('filtroFechaHasta');
 
-    if (_vReniecFiltro?.dni || dni) p.set('dni', _vReniecFiltro?.dni || dni);
+    if (dni) p.set('dni', dni);
     if (numV)    p.set('numero_venta', numV);
     if (estado)  p.set('estado', estado);
     if (tipoDoc) p.set('tipo_documento', tipoDoc);
@@ -784,23 +782,27 @@ function _mostrarConfirmacionVenta(data, nombres, apellidos, tipoDoc, total, cor
     const tipoLabel = tipoDoc === 'boleta' ? 'Boleta' : 'Nota de Venta';
 
     document.getElementById('confirmVentaResumen').innerHTML = `
-        <div style="text-align:center;margin-bottom:16px;">
-            <div style="font-size:3rem;">✅</div>
-            <h3 style="color:var(--azul);margin:8px 0 4px;">${tipoLabel} registrada</h3>
-            <div style="font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--accent);">${data.numero_venta}</div>
+        <div class="confirm-badge-wrap">
+            <div class="confirm-ring"></div>
+            <div class="confirm-ring delay"></div>
+            <div class="confirm-badge"><i data-lucide="check"></i></div>
         </div>
-        <div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
-                <span style="color:var(--muted);font-size:13px;">Cliente</span>
+        <div class="confirm-doclabel">
+            <div class="tipo">${tipoLabel} registrada correctamente</div>
+            <div class="num">${data.numero_venta}</div>
+        </div>
+        <div class="confirm-summary">
+            <div class="confirm-row">
+                <span class="confirm-row-label"><i data-lucide="user"></i> Cliente</span>
                 <strong style="font-size:13px;">${nombres} ${apellidos||''}</strong>
             </div>
-            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);">
-                <span style="color:var(--muted);font-size:13px;">Documento</span>
+            <div class="confirm-row">
+                <span class="confirm-row-label"><i data-lucide="file-text"></i> Documento</span>
                 <strong style="font-size:13px;">${tipoLabel}</strong>
             </div>
-            <div style="display:flex;justify-content:space-between;padding:5px 0;">
-                <span style="color:var(--muted);font-size:13px;">Total</span>
-                <strong style="font-size:15px;color:var(--accent);">S/ ${parseFloat(total).toFixed(2)}</strong>
+            <div class="confirm-row">
+                <span class="confirm-row-label"><i data-lucide="wallet"></i> Total</span>
+                <strong style="font-size:15.5px;color:var(--accent);">S/ ${parseFloat(total).toFixed(2)}</strong>
             </div>
         </div>`;
 

@@ -95,8 +95,8 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="vpModalDetalle" style="display:none;">
-  <div class="modal modal-lg">
+<div class="modal-overlay vp-modal-espaciado" id="vpModalDetalle" style="display:none;">
+  <div class="modal modal-lg modal-scroll">
     <div class="modal-header">
       <div>
         <div class="modal-title" id="vpModalTitulo">Detalle del pago</div>
@@ -106,7 +106,7 @@
         <i data-lucide="x" style="width:14px;height:14px;"></i>
       </button>
     </div>
-    <div id="vpModalBody"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+    <div id="vpModalBody" class="modal-scroll-body"><div class="spinner-wrap"><div class="spinner"></div></div></div>
     <div class="modal-footer" id="vpModalBotones"></div>
   </div>
 </div>
@@ -185,7 +185,6 @@
         <label>Tipo de Comprobante</label>
         <select id="vpGVTipoDoc">
           <option value="nota_venta">Nota de Venta</option>
-          <option value="boleta">Boleta</option>
         </select>
       </div>
     </div>
@@ -199,3 +198,91 @@
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="vpModalConfirmarVerificar" style="display:none;">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">Verificar pago</div>
+      <button class="modal-close" onclick="vpCerrarModal('vpModalConfirmarVerificar')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div class="alert alert-warning" style="margin-bottom:16px;">
+      <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+      <span>Verifica que el comprobante corresponda al monto y código de operación antes de confirmar. Esta acción no se puede deshacer.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:var(--muted);">Cliente:</span>
+        <strong id="vpCVCliente">—</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:var(--muted);">Monto:</span>
+        <strong id="vpCVMonto" style="color:var(--accent);">—</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+        <span style="color:var(--muted);">Método:</span>
+        <span id="vpCVMetodo">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:var(--muted);">Código operación:</span>
+        <code id="vpCVCodigo" style="font-size:12px;background:var(--bg-alt);padding:2px 8px;border-radius:5px;">—</code>
+      </div>
+    </div>
+    <div id="vpCVComprobanteWrap"></div>
+    <input type="hidden" id="vpCVIdPago">
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="vpCerrarModal('vpModalConfirmarVerificar')">Cancelar</button>
+      <button class="btn-primary" onclick="vpConfirmarVerificacion()" id="vpBtnConfirmarVerificar">
+        <i data-lucide="check-circle"></i> Sí, verificar pago
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="vpModalSubirComprobante" style="display:none;">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">Subir comprobante</div>
+      <button class="modal-close" onclick="vpCerrarModal('vpModalSubirComprobante')">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+    <div class="alert alert-info" style="margin-bottom:16px;">
+      <i data-lucide="info" style="width:16px;height:16px;"></i>
+      <span>Si el cliente envió la captura de pago por WhatsApp, súbela aquí para poder verificar el pago.</span>
+    </div>
+    <div class="field">
+      <label>Imagen del comprobante *</label>
+      <input type="file" id="vpSCArchivo" accept="image/png,image/jpeg,image/webp" onchange="vpPreviewComprobante(this)">
+    </div>
+    <div id="vpSCPreview"></div>
+    <div class="field" style="margin-top:12px;">
+      <label>Código de operación (opcional)</label>
+      <input type="text" id="vpSCCodigoOperacion" placeholder="Ej: 000123456">
+    </div>
+    <input type="hidden" id="vpSCIdPago">
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="vpCerrarModal('vpModalSubirComprobante')">Cancelar</button>
+      <button class="btn-primary" onclick="vpConfirmarSubirComprobante()" id="vpBtnSubirComprobante">
+        <i data-lucide="upload"></i> Subir comprobante
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .vp-modal-espaciado.modal-overlay {
+    align-items: flex-start !important;
+    padding-top: 90px;
+    padding-bottom: 24px;
+  }
+  .vp-modal-espaciado .modal {
+    margin: 0 auto;
+    max-height: calc(100vh - 114px);
+  }
+  @media (max-width: 640px) {
+    .vp-modal-espaciado.modal-overlay { padding-top: 16px; padding-bottom: 16px; }
+    .vp-modal-espaciado .modal { width: 95%; }
+  }
+</style>

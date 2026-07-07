@@ -58,7 +58,9 @@ function _calcularEstadisticas(data) {
     const totalProductos = data.length;
     let stockCritico = 0;
     let stockOptimo = 0;
+    let stockAgotado = 0;
     let valorTotal = 0.0;
+    const nombresAgotados = [];
 
     data.forEach(p => {
         const stock = parseInt(p.stock_general);
@@ -66,7 +68,8 @@ function _calcularEstadisticas(data) {
         valorTotal += parseFloat(p.valor);
 
         if (stock === 0) {
-            // Agotado, no entra en óptimo ni crítico
+            stockAgotado++;
+            nombresAgotados.push(p.nombre_producto);
         } else if (stock < minimo) {
             stockCritico++;
         } else {
@@ -75,9 +78,21 @@ function _calcularEstadisticas(data) {
     });
 
     document.getElementById('inv-stat-total').textContent = totalProductos;
+    document.getElementById('inv-stat-agotado').textContent = stockAgotado;
     document.getElementById('inv-stat-critico').textContent = stockCritico;
     document.getElementById('inv-stat-optimo').textContent = stockOptimo;
     document.getElementById('inv-stat-valor').textContent = `S/ ${valorTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const alerta = document.getElementById('inv-alerta-agotados');
+    const alertaTexto = document.getElementById('inv-alerta-agotados-texto');
+    if (stockAgotado > 0) {
+        const listado = nombresAgotados.slice(0, 3).join(', ') + (nombresAgotados.length > 3 ? ` y ${nombresAgotados.length - 3} más` : '');
+        alertaTexto.textContent = `Tienes ${stockAgotado} producto${stockAgotado !== 1 ? 's' : ''} sin ninguna unidad en stock: ${listado}.`;
+        alerta.style.display = 'flex';
+        if (window.lucide) lucide.createIcons();
+    } else {
+        alerta.style.display = 'none';
+    }
 }
 
 function _cargarFiltroCategorias(data) {

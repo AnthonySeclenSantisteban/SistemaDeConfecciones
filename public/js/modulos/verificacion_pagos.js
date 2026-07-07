@@ -93,7 +93,11 @@ function vpFila(p) {
     ? `<button class="btn-icon" onclick="vpVerImagen('${p.evidencia}')" title="Ver comprobante">
          <i data-lucide="image" style="width:14px;height:14px;"></i> Ver
        </button>`
-    : '<span style="font-size:11px;color:var(--muted);">Sin imagen</span>';
+    : (p.estado === 'pendiente'
+        ? `<button class="btn-secondary btn-sm" onclick="vpAbrirSubirComprobante(${p.id_pago})" title="Subir comprobante">
+             <i data-lucide="upload" style="width:13px;height:13px;"></i> Subir
+           </button>`
+        : '<span style="font-size:11px;color:var(--muted);">Sin imagen</span>');
 
   const nota = p.nota_venta_numero
     ? `<span class="badge badge-green" style="cursor:pointer;" onclick="vpVerNota(${p.id_pedido})">${p.nota_venta_numero}</span>`
@@ -107,7 +111,7 @@ function vpFila(p) {
 
   if (p.estado === 'pendiente') {
     acciones += `
-      <button class="btn-icon btn-icon-success" onclick="vpVerificar(${p.id_pago})" title="Verificar pago">
+      <button class="btn-icon btn-icon-success" onclick="vpAbrirConfirmarVerificar(${p.id_pago})" title="Verificar pago">
         <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
       </button>
       <button class="btn-icon btn-icon-danger" onclick="vpAbrirRechazar(${p.id_pago})" title="Rechazar pago">
@@ -207,7 +211,15 @@ async function vpVerDetalle(idPago) {
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Comprobante</div>
       ${p.evidencia
         ? `<img src="${p.evidencia}" alt="Comprobante" style="width:100%;border-radius:8px;border:1px solid var(--border);cursor:pointer;" onclick="vpVerImagen('${p.evidencia}')">`
-        : '<div style="width:100%;height:160px;background:var(--bg-alt);border-radius:8px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;">Sin comprobante</div>'}
+        : (p.estado === 'pendiente'
+            ? `<div style="width:100%;padding:22px 16px;background:var(--bg-alt);border-radius:8px;border:1px dashed var(--border);text-align:center;">
+                 <i data-lucide="upload-cloud" style="width:26px;height:26px;color:var(--muted);margin-bottom:8px;"></i>
+                 <p style="font-size:12.5px;color:var(--muted);margin:0 0 12px;">Sin comprobante. Si el cliente lo envió por WhatsApp, súbelo aquí.</p>
+                 <button class="btn-secondary btn-sm" onclick="vpCerrarModal('vpModalDetalle');vpAbrirSubirComprobante(${p.id_pago})">
+                   <i data-lucide="upload" style="width:13px;height:13px;"></i> Subir comprobante
+                 </button>
+               </div>`
+            : '<div style="width:100%;height:160px;background:var(--bg-alt);border-radius:8px;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;">Sin comprobante</div>')}
       ${p.nota_venta_numero ? `<div style="margin-top:12px;padding:10px 14px;background:#16a34a11;border:1px solid #16a34a44;border-radius:8px;font-size:13px;"><strong>Nota de Venta:</strong> ${p.nota_venta_numero}</div>` : ''}
     </div>
   </div>
@@ -219,16 +231,7 @@ async function vpVerDetalle(idPago) {
     </table>
   </div>` : ''}`;
 
-    let botones = `<button class="btn-secondary" onclick="vpCerrarModal('vpModalDetalle')">Cerrar</button>`;
-    if (p.estado === 'pendiente') {
-      botones = `<button class="btn-secondary" onclick="vpCerrarModal('vpModalDetalle')">Cancelar</button>
-        <button class="btn-danger" onclick="vpCerrarModal('vpModalDetalle');vpAbrirRechazar(${p.id_pago})">
-          <i data-lucide="x-circle"></i> Rechazar
-        </button>
-        <button class="btn-primary" onclick="vpCerrarModal('vpModalDetalle');vpVerificar(${p.id_pago})">
-          <i data-lucide="check-circle"></i> Verificar pago
-        </button>`;
-    }
+    const botones = `<button class="btn-secondary" onclick="vpCerrarModal('vpModalDetalle')">Cerrar</button>`;
     document.getElementById('vpModalBotones').innerHTML = botones;
     if (window.lucide) lucide.createIcons();
   } catch {
@@ -236,8 +239,32 @@ async function vpVerDetalle(idPago) {
   }
 }
 
-async function vpVerificar(idPago) {
-  if (!confirm('¿Confirmar verificación de este pago?')) return;
+function vpAbrirConfirmarVerificar(idPago) {
+  const p = vpPagos.find(x => x.id_pago == idPago);
+  if (!p) return;
+  document.getElementById('vpCVIdPago').value = idPago;
+  document.getElementById('vpCVCliente').textContent = p.cliente_nombre || '—';
+  document.getElementById('vpCVMonto').textContent = 'S/ ' + parseFloat(p.monto || 0).toFixed(2);
+  document.getElementById('vpCVMetodo').innerHTML = vpMetodoBadge(p.metodo_pago);
+  document.getElementById('vpCVCodigo').textContent = p.codigo_operacion || '—';
+
+  const wrap = document.getElementById('vpCVComprobanteWrap');
+  wrap.innerHTML = p.evidencia
+    ? `<img src="${p.evidencia}" alt="Comprobante" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border);">`
+    : `<div class="alert alert-warning" style="margin:0;">
+         <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+         <span>Este pago no tiene comprobante adjunto. Si el cliente lo envió por WhatsApp, súbelo antes de verificar.</span>
+       </div>`;
+
+  if (window.lucide) lucide.createIcons();
+  document.getElementById('vpModalConfirmarVerificar').style.display = 'flex';
+}
+
+async function vpConfirmarVerificacion() {
+  const idPago = document.getElementById('vpCVIdPago').value;
+  const btn = document.getElementById('vpBtnConfirmarVerificar');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Verificando...';
   try {
     const res = await fetch(`/admin/pagos/${idPago}/verificar`, {
         method: 'POST',
@@ -246,14 +273,64 @@ async function vpVerificar(idPago) {
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || 'Error');
     mostrarToast('Pago verificado correctamente', 'success');
+    vpCerrarModal('vpModalConfirmarVerificar');
     await vpCargarDatos();
-    
-    const pagoActualizado = vpPagos.find(p => p.id_pago == idPago); 
+
+    const pagoActualizado = vpPagos.find(p => p.id_pago == idPago);
     if (pagoActualizado && !pagoActualizado.nota_venta_numero) {
       vpAbrirGenerarVenta(pagoActualizado);
     }
   } catch (e) {
     mostrarToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="check-circle"></i> Sí, verificar pago';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function vpAbrirSubirComprobante(idPago) {
+  const p = vpPagos.find(x => x.id_pago == idPago);
+  document.getElementById('vpSCIdPago').value = idPago;
+  document.getElementById('vpSCCodigoOperacion').value = (p && p.codigo_operacion) || '';
+  document.getElementById('vpSCArchivo').value = '';
+  document.getElementById('vpSCPreview').innerHTML = '';
+  document.getElementById('vpModalSubirComprobante').style.display = 'flex';
+}
+
+function vpPreviewComprobante(input) {
+  const wrap = document.getElementById('vpSCPreview');
+  const file = input.files[0];
+  if (!file) { wrap.innerHTML = ''; return; }
+  const url = URL.createObjectURL(file);
+  wrap.innerHTML = `<img src="${url}" alt="Vista previa" style="width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border);margin-top:10px;">`;
+}
+
+async function vpConfirmarSubirComprobante() {
+  const idPago = document.getElementById('vpSCIdPago').value;
+  const archivo = document.getElementById('vpSCArchivo').files[0];
+  const numeroOp = document.getElementById('vpSCCodigoOperacion').value.trim();
+  if (!archivo) { mostrarToast('Selecciona una imagen del comprobante', 'warning'); return; }
+
+  const btn = document.getElementById('vpBtnSubirComprobante');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;"></div> Subiendo...';
+  try {
+    const fd = new FormData();
+    fd.append('comprobante', archivo);
+    if (numeroOp) fd.append('numero_operacion', numeroOp);
+    const res = await fetch(`/admin/pagos/${idPago}/comprobante`, { method: 'POST', body: fd });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Error al subir comprobante');
+    mostrarToast('Comprobante subido correctamente', 'success');
+    vpCerrarModal('vpModalSubirComprobante');
+    await vpCargarDatos();
+  } catch (e) {
+    mostrarToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="upload"></i> Subir comprobante';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -350,9 +427,11 @@ function vpExportarCSV() {
   a.click();
 }
 
+const VP_MODALES = ['vpModalDetalle', 'vpModalImagen', 'vpModalRechazar', 'vpModalGenerarVenta', 'vpModalConfirmarVerificar', 'vpModalSubirComprobante'];
+
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['vpModalDetalle', 'vpModalImagen', 'vpModalRechazar', 'vpModalGenerarVenta'].forEach(id => {
+    VP_MODALES.forEach(id => {
       const el = document.getElementById(id);
       if (el && el.style.display !== 'none') vpCerrarModal(id);
     });
@@ -361,7 +440,7 @@ document.addEventListener('keydown', e => {
 
 function cargar_verificacion_pagos() {
     vpCargarDatos();
-    ['vpModalDetalle', 'vpModalImagen', 'vpModalRechazar', 'vpModalGenerarVenta'].forEach(id => {
+    VP_MODALES.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', function(e) {
             if (e.target === this) vpCerrarModal(id);

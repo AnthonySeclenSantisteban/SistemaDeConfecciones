@@ -12,14 +12,10 @@
  
   <div class="card">
     <div class="logo-area">
-      <img class="logo-img" id="logo-img" src="" alt="Logo">
- 
+      <img class="logo-img" id="logo-img" src="" alt="Logo" style="display:none;">
 
-      <div class="logo-text" id="logo-default">
-        <div class="logo-icon">🧵</div>
-        <div>
-          <div class="logo-name">Confecciones <span>Lix</span></div>
-        </div>
+      <div class="logo-name" style="font-family:'Sora',sans-serif;font-size:1.6rem;font-weight:700;color:#1a3c5e;margin-top:.4rem;">
+        Confecciones <span style="color:#c8622a;">Lix</span>
       </div>
       <div class="tagline">Sistema de gestión</div>
     </div>
@@ -78,6 +74,21 @@
 
    <script>
    
+    fetch('/api/gestion-tienda/logo-publico')
+      .then(r => r.json())
+      .then(j => {
+        if (j.ok && j.url) {
+          const img = document.getElementById('logo-img');
+          img.src = j.url;
+          img.style.display = 'block';
+          img.style.width = '64px';
+          img.style.height = '64px';
+          img.style.borderRadius = '14px';
+          img.style.objectFit = 'cover';
+          img.style.margin = '0 auto';
+        }
+      }).catch(() => {});
+
     const params = new URLSearchParams(window.location.search);
     const errorMsg = document.getElementById('error-msg');
     const errorText = document.getElementById('error-text');
@@ -103,11 +114,41 @@
       this.textContent = isPass ? ' ' : '👁';
     });
  
-    document.getElementById('loginForm').addEventListener('submit', function () {
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+      const correo = document.getElementById('correo').value.trim();
+      const contra = document.getElementById('contra').value;
+
+      if (!correo) {
+        e.preventDefault();
+        mostrarErrorLocal('Ingresa tu correo electrónico.');
+        return;
+      }
+      if (!correo.includes('@')) {
+        e.preventDefault();
+        mostrarErrorLocal('El correo debe contener el símbolo @ (ejemplo: usuario@gmail.com).');
+        return;
+      }
+      const partes = correo.split('@');
+      if (partes.length !== 2 || !partes[1].includes('.')) {
+        e.preventDefault();
+        mostrarErrorLocal('El correo no tiene un formato válido (ejemplo: usuario@gmail.com).');
+        return;
+      }
+      if (!contra) {
+        e.preventDefault();
+        mostrarErrorLocal('Ingresa tu contraseña.');
+        return;
+      }
+
       const btn = document.getElementById('btnLogin');
       btn.classList.add('loading');
       btn.disabled = true;
     });
+
+    function mostrarErrorLocal(msg) {
+      errorMsg.classList.add('show');
+      errorText.textContent = msg;
+    }
   </script>
 
 </body>

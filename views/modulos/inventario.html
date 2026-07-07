@@ -15,7 +15,11 @@
     </div>
 </div>
 
-<!-- ── TARJETAS RESUMEN ── -->
+<div class="alert alert-error" id="inv-alerta-agotados" style="display:none;margin-bottom:16px;">
+    <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+    <span id="inv-alerta-agotados-texto"></span>
+</div>
+
 <div class="stats-grid" id="inv-stats">
     <div class="stat-card">
         <div class="stat-icon">
@@ -28,6 +32,19 @@
         <div class="stat-label">Total Productos</div>
         <div class="stat-value" id="inv-stat-total">—</div>
         <div class="stat-sub">con presentaciones activas</div>
+    </div>
+
+    <div class="stat-card" style="border-color:#f5c6c2;">
+        <div class="stat-icon" style="background:linear-gradient(135deg,#fdf0ef,#fbeaea);color:var(--error);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+        </div>
+        <div class="stat-label">Agotados</div>
+        <div class="stat-value" id="inv-stat-agotado" style="color:var(--error);">—</div>
+        <div class="stat-sub">sin ninguna unidad</div>
     </div>
 
     <div class="stat-card" style="border-color:#f5c6c2;">
@@ -494,4 +511,32 @@
 .btn-pag:hover { background: var(--azul-light, #e8f0fa); color: var(--azul); border-color: var(--azul); }
 .btn-pag.active { background: var(--azul); color: #fff; border-color: var(--azul); }
 .btn-pag:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Mismo espaciado que usa el modal de Productos: el modal siempre queda con
+   aire respecto al header, en vez de pegarse arriba en pantallas altas. */
+#modal-inv-ver.modal-overlay,
+#modal-inv-actualizar.modal-overlay {
+  align-items: flex-start !important;
+  padding-top: 100px;
+  padding-bottom: 24px;
+  overflow-y: auto;
+}
+#modal-inv-ver .modal,
+#modal-inv-actualizar .modal {
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+  margin: 0 auto;
+}
+@media (max-width: 600px) {
+  #modal-inv-ver.modal-overlay,
+  #modal-inv-actualizar.modal-overlay {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  #modal-inv-ver .modal,
+  #modal-inv-actualizar .modal {
+    width: 95%;
+    max-height: calc(100vh - 32px);
+  }
+}
 </style>

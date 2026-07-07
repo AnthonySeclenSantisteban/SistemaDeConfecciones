@@ -9,7 +9,9 @@
   --muted:     #8a8480;
   --border:    #e0dbd5;
   --input-bg:  #faf8f6;
+  --bg-alt:    #f0ece6;
   --error:     #c0392b;
+  --success:   #16a34a;
   --sidebar-w: 240px;
   --topbar-h:  64px;
   --font:      'Sora', sans-serif;
@@ -550,6 +552,13 @@ nav::-webkit-scrollbar-thumb { background: #2e2a26; border-radius: 4px; }
  
 .btn-icon:hover { background: var(--input-bg); color: var(--text); }
 
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.btn-sm i,
+.btn-sm svg { width: 13px; height: 13px; }
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -704,6 +713,14 @@ textarea { resize: vertical; min-height: 90px; }
 }
  
 .modal-close:hover { background: var(--input-bg); color: var(--text); }
+
+#modal-compra .modal-header {
+  margin-bottom: 28px;
+}
+
+#modal-compra .modal {
+  max-height: 75vh;
+}
  
 .modal-footer {
   display: flex;
@@ -712,6 +729,28 @@ textarea { resize: vertical; min-height: 90px; }
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
+}
+
+.modal.modal-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-scroll .modal-header {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-scroll .modal-footer {
+  flex-shrink: 0;
+}
+.modal-scroll-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding-top: 20px;
+  padding-bottom: 4px;
 }
 
 .alert {
@@ -816,6 +855,16 @@ textarea { resize: vertical; min-height: 90px; }
 .btn-icon-danger:hover {
     background: #fdf0ef;
     color: var(--error);
+}
+
+.btn-icon-success {
+    color: var(--success);
+    border-color: #bbe6c8;
+}
+
+.btn-icon-success:hover {
+    background: #eaf4ec;
+    color: var(--success);
 }
 
 .empty-state {

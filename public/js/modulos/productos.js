@@ -166,14 +166,50 @@ async function guardarProducto() {
     const estado         = document.getElementById('producto-estado').value;
     const stock_minimo   = document.getElementById('producto-stock-minimo').value;
 
-    if (!nombre_producto) { _mostrarAlertaProducto('El nombre es requerido'); return; }
-    if (!id_categoria) { _mostrarAlertaProducto('Debes seleccionar una categoría'); return; }
-    if (!genero) { _mostrarAlertaProducto('Debes seleccionar un género'); return; }
-    if (!precio_costo || parseFloat(precio_costo) <= 0) { _mostrarAlertaProducto('El precio costo debe ser mayor a 0'); return; }
-    if (!precio_venta || parseFloat(precio_venta) <= 0) { _mostrarAlertaProducto('El precio venta debe ser mayor a 0'); return; }
-    if (parseFloat(precio_venta) <= parseFloat(precio_costo)) {
-        _mostrarAlertaProducto(`El precio de venta (S/ ${parseFloat(precio_venta).toFixed(2)}) debe ser mayor al precio de costo (S/ ${parseFloat(precio_costo).toFixed(2)}) para obtener ganancias`); return;
+    // Limpiar errores previos
+    document.querySelectorAll('#modal-producto .input-wrap').forEach(w => w.classList.remove('campo-invalido'));
+
+    let hayError = false;
+
+    if (!nombre_producto) {
+        document.getElementById('producto-nombre').closest('.input-wrap').classList.add('campo-invalido');
+        _mostrarAlertaProducto('El nombre del producto es obligatorio.');
+        hayError = true;
     }
+    if (!id_categoria) {
+        document.getElementById('producto-categoria').closest('.input-wrap').classList.add('campo-invalido');
+        if (!hayError) _mostrarAlertaProducto('Debes seleccionar una categoría.');
+        hayError = true;
+    }
+    if (!genero) {
+        document.getElementById('producto-genero').closest('.input-wrap').classList.add('campo-invalido');
+        if (!hayError) _mostrarAlertaProducto('Debes seleccionar un género.');
+        hayError = true;
+    }
+    if (!precio_costo || isNaN(parseFloat(precio_costo))) {
+        document.getElementById('producto-precio-costo').closest('.input-wrap').classList.add('campo-invalido');
+        if (!hayError) _mostrarAlertaProducto('El precio de costo es obligatorio y debe ser un número válido.');
+        hayError = true;
+    } else if (parseFloat(precio_costo) <= 0) {
+        document.getElementById('producto-precio-costo').closest('.input-wrap').classList.add('campo-invalido');
+        if (!hayError) _mostrarAlertaProducto('El precio de costo debe ser mayor a 0.');
+        hayError = true;
+    }
+    if (!precio_venta || isNaN(parseFloat(precio_venta))) {
+        document.getElementById('producto-precio-venta').closest('.input-wrap').classList.add('campo-invalido');
+        if (!hayError) _mostrarAlertaProducto('El precio de venta es obligatorio y debe ser un número válido.');
+        hayError = true;
+    } else if (parseFloat(precio_venta) <= 0) {
+        document.getElementById('producto-precio-venta').closest('.input-wrap').classList.add('campo-invalido');
+        if (!hayError) _mostrarAlertaProducto('El precio de venta debe ser mayor a 0.');
+        hayError = true;
+    } else if (precio_costo && parseFloat(precio_venta) <= parseFloat(precio_costo)) {
+        document.getElementById('producto-precio-venta').closest('.input-wrap').classList.add('campo-invalido');
+        if (!hayError) _mostrarAlertaProducto(`El precio de venta (S/ ${parseFloat(precio_venta).toFixed(2)}) debe ser mayor al precio de costo (S/ ${parseFloat(precio_costo).toFixed(2)}).`);
+        hayError = true;
+    }
+
+    if (hayError) return;
 
     const btn = document.getElementById('btn-guardar-producto');
     if (btn.dataset.procesando) return;
@@ -471,9 +507,6 @@ document.addEventListener('click', function(e) {
     if (id === 'btn-cerrar-eliminar-producto')     cerrarModalEliminarProducto();
     if (id === 'btn-cancelar-eliminar-producto')   cerrarModalEliminarProducto();
     if (id === 'btn-confirmar-eliminar-producto')  confirmarEliminarProducto();
-    if (e.target.id === 'modal-producto')          cerrarModalProducto();
-    if (e.target.id === 'modal-eliminar-producto') cerrarModalEliminarProducto();
-
     if (id === 'btn-agregar-url-imagen') _agregarImagenUrl();
     if (id === 'btn-subir-imagen-local') document.getElementById('imagen-file-input').click();
 });

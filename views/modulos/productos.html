@@ -73,11 +73,6 @@
 
     <div class="modal-header">
       <span class="modal-title" id="modal-producto-titulo">Nuevo producto</span>
-      <button class="modal-close" id="btn-cerrar-modal-producto">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
     </div>
 
     <div class="alert alert-error" id="modal-producto-alert" style="display:none;">
@@ -93,7 +88,7 @@
 
     <div class="form-grid">
       <div class="field" style="grid-column:1/-1;">
-        <label for="producto-nombre">Nombre del producto</label>
+        <label for="producto-nombre">Nombre del producto <span style="color:#dc2626;">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -112,7 +107,7 @@
         </div>
       </div>
       <div class="field">
-  <label for="producto-precio-costo">Precio costo (S/)</label>
+  <label for="producto-precio-costo">Precio costo (S/) <span style="color:#dc2626;">*</span></label>
   <div class="input-wrap">
     <span class="input-icon">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -125,7 +120,7 @@
 </div>
 
 <div class="field">
-  <label for="producto-precio-venta">Precio venta (S/)</label>
+  <label for="producto-precio-venta">Precio venta (S/) <span style="color:#dc2626;">*</span></label>
   <div class="input-wrap">
     <span class="input-icon">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -222,11 +217,6 @@
 
     <div class="modal-header">
       <span class="modal-title">¿Eliminar producto?</span>
-      <button class="modal-close" id="btn-cerrar-eliminar-producto">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
     </div>
 
     <p class="modal-desc">
@@ -244,3 +234,39 @@
 
   </div>
 </div>
+<style>
+  #modal-producto.modal-overlay,
+  #modal-eliminar-producto.modal-overlay {
+    align-items: flex-start !important;
+    padding-top: 100px;
+    padding-bottom: 24px;
+    overflow-y: auto;
+  }
+  #modal-producto .modal {
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+    margin: 0 auto;
+  }
+  #modal-eliminar-producto .modal {
+    margin: 0 auto;
+  }
+  @media (max-width: 600px) {
+    #modal-producto.modal-overlay,
+    #modal-eliminar-producto.modal-overlay {
+      padding-top: 16px;
+      padding-bottom: 16px;
+    }
+    #modal-producto .modal {
+      width: 95%;
+      max-height: calc(100vh - 32px);
+    }
+    .form-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  .campo-invalido input,
+  .campo-invalido select,
+  .campo-invalido textarea {
+    border-color: #dc2626 !important;
+  }
+</style>

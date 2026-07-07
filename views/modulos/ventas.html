@@ -1,4 +1,4 @@
-<div class="stats-grid">
+<div class="stats-grid" style="margin-bottom:20px;">
   <div class="stat-card">
     <div class="stat-icon"><i data-lucide="receipt"></i></div>
     <div class="stat-label">Total ventas</div>
@@ -23,30 +23,22 @@
     <div class="stat-value" id="statIngresosMes">—</div>
     <div class="stat-sub" id="statMesNombre">mes actual</div>
   </div>
+  <div class="stat-card">
+    <div class="stat-icon"><i data-lucide="x-circle"></i></div>
+    <div class="stat-label">Anuladas</div>
+    <div class="stat-value" id="statVentasAnuladas">—</div>
+    <div class="stat-sub">ventas anuladas</div>
+  </div>
 </div>
-
 
 <div class="content-card" style="margin-bottom:16px;">
   <div class="content-card-body" style="padding:14px 20px;">
     <div class="filtros-row">
-      <div class="filtro-dni-wrap">
-        <div class="input-wrap">
-          <span class="input-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
-          <input type="text" id="filtroDni" placeholder="Buscar por DNI..."
-                 maxlength="8" style="width:160px;"
-                 oninput="this.value=this.value.replace(/\D/g,'')"
-                 onkeydown="if(event.key==='Enter') buscarReniecFiltro()">
-        </div>
-        <button class="btn-reniec" id="btnReniecFiltro" onclick="buscarReniecFiltro()">
-          <i data-lucide="user-search"></i> RENIEC
-        </button>
-      </div>
-      <div class="reniec-result" id="reniecResultFiltro" style="display:none;">
-        <i data-lucide="badge-check" style="width:13px;height:13px;"></i>
-        <span id="reniecNombreFiltro"></span>
-        <button class="reniec-clear" onclick="limpiarReniecFiltro()">
-          <i data-lucide="x" style="width:11px;height:11px;"></i>
-        </button>
+      <div class="input-wrap" style="width:160px;">
+        <span class="input-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
+        <input type="text" id="filtroDni" placeholder="Buscar por DNI..."
+               maxlength="8"
+               oninput="this.value=this.value.replace(/\D/g,'');aplicarFiltrosVentas()">
       </div>
       <input type="text" id="filtroNumeroVenta" placeholder="N° venta..."
              style="width:140px;" oninput="aplicarFiltrosVentas()">
@@ -59,10 +51,8 @@
       <select id="filtroTipoDoc" onchange="aplicarFiltrosVentas()">
         <option value="">Todos los documentos</option>
         <option value="nota_venta">Nota de venta</option>
-        <option value="boleta">Boleta</option>
       </select>
       <input type="date" id="filtroFechaDesde" onchange="aplicarFiltrosVentas()" title="Desde">
-      <input type="date" id="filtroFechaHasta" onchange="aplicarFiltrosVentas()" title="Hasta">
       <button class="btn-secondary" onclick="limpiarFiltrosVentas()" style="padding:8px 14px;">
         <i data-lucide="x" style="width:13px;height:13px;"></i> Limpiar
       </button>
@@ -134,29 +124,31 @@
 <div class="modal-overlay" id="modalHistorialPagos" style="display:none;">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
-      <div>
-        <div class="modal-title">💳 Historial de Pagos</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px;" id="historialSubtitulo">Gestiona y descarga tus recibos de pago</div>
-      </div>
-      <button class="modal-close" onclick="cerrarModalVentas('modalHistorialPagos')">
-        <i data-lucide="x" style="width:14px;height:14px;"></i>
-      </button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px 20px;background:var(--bg);border-bottom:1px solid var(--border);">
-      <div style="text-align:center;">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Total</div>
-        <div style="font-size:20px;font-weight:700;color:var(--accent);" id="historialTotal">S/ 0.00</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Pagado</div>
-        <div style="font-size:20px;font-weight:700;color:#059669;" id="historialPagado">S/ 0.00</div>
-      </div>
-      <div style="text-align:center;">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Deuda</div>
-        <div style="font-size:20px;font-weight:700;color:#dc2626;" id="historialDeuda">S/ 0.00</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#c8622a12,#e8845a18);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;">
+          <i data-lucide="credit-card" style="width:18px;height:18px;"></i>
+        </div>
+        <div>
+          <div class="modal-title">Historial de Pagos</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="historialSubtitulo">Gestiona y descarga tus recibos de pago</div>
+        </div>
       </div>
     </div>
-    <div style="padding:16px 20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 20px;">
+      <div style="text-align:center;padding:14px 8px;border-radius:12px;background:#fbeee6;">
+        <div style="font-size:10.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;font-weight:600;">Total</div>
+        <div style="font-size:19px;font-weight:700;color:var(--accent);" id="historialTotal">S/ 0.00</div>
+      </div>
+      <div style="text-align:center;padding:14px 8px;border-radius:12px;background:#eaf4ec;">
+        <div style="font-size:10.5px;color:#276936;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;font-weight:600;">Pagado</div>
+        <div style="font-size:19px;font-weight:700;color:#276936;" id="historialPagado">S/ 0.00</div>
+      </div>
+      <div style="text-align:center;padding:14px 8px;border-radius:12px;background:#fdf0ef;">
+        <div style="font-size:10.5px;color:var(--error);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;font-weight:600;">Deuda</div>
+        <div style="font-size:19px;font-weight:700;color:var(--error);" id="historialDeuda">S/ 0.00</div>
+      </div>
+    </div>
+    <div style="padding:0 20px 16px;">
       <table class="tabla">
         <thead>
           <tr>
@@ -169,10 +161,17 @@
         </thead>
         <tbody id="historialBody"></tbody>
       </table>
-      <div id="historialVacio" style="display:none;text-align:center;padding:20px;color:var(--muted);font-size:13px;">Sin pagos registrados</div>
+      <div id="historialVacio" style="display:none;text-align:center;padding:32px 20px;color:var(--muted);">
+        <i data-lucide="receipt" style="width:32px;height:32px;opacity:.3;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;"></i>
+        <p style="font-size:13px;">Sin pagos registrados</p>
+      </div>
     </div>
     <div class="modal-footer">
-      <div style="font-size:12px;color:var(--muted);" id="historialFooterInfo"></div>
+      <div style="font-size:12px;color:var(--muted);margin-right:auto;" id="historialFooterInfo"></div>
+      <button class="btn-secondary" onclick="cerrarModalVentas('modalHistorialPagos')">Cerrar</button>
+    </div>
+  </div>
+</div>
       <button class="btn-secondary" onclick="cerrarModalVentas('modalHistorialPagos')">Cerrar</button>
       <button class="btn-primary" id="historialBtnMarcar" onclick="_marcarPagadoDesdeHistorial()" style="display:none;">
         <i data-lucide="check-circle"></i> Marcar como pagada
@@ -191,11 +190,10 @@
     </div>
     <div id="alertaNuevaVenta"></div>
 
-    <!-- PASO 1: CLIENTE -->
     <p class="paso-label">① Datos del cliente</p>
     <div class="form-grid">
       <div class="field">
-        <label>DNI</label>
+        <label>DNI <span style="color:#dc2626;">*</span></label>
         <div style="display:flex;gap:8px;">
           <input type="text" id="nvDni" placeholder="12345678" maxlength="8"
                  oninput="this.value=this.value.replace(/\D/g,'')">
@@ -209,15 +207,15 @@
         </div>
       </div>
       <div class="field">
-        <label>Nombres *</label>
+        <label>Nombres <span style="color:#dc2626;">*</span></label>
         <input type="text" id="nvNombres" placeholder="Nombres del cliente">
       </div>
       <div class="field">
-        <label>Apellidos</label>
+        <label>Apellidos <span style="color:#dc2626;">*</span></label>
         <input type="text" id="nvApellidos" placeholder="Apellidos">
       </div>
       <div class="field">
-        <label>Teléfono *</label>
+        <label>Teléfono <span style="color:#dc2626;">*</span></label>
         <input type="text" id="nvTelefono" placeholder="9XXXXXXXX" maxlength="9"
        oninput="this.value=this.value.replace(/\D/g,'')">
       </div>
@@ -227,16 +225,14 @@
       </div>
       <div class="field">
         <label>Tipo comprobante</label>
-        <select id="nvTipoDoc">
+         <select id="nvTipoDoc">
           <option value="nota_venta">Nota de venta</option>
-          <option value="boleta">Boleta</option>
         </select>
       </div>
     </div>
 
     <div class="divider"></div>
 
-    <!-- PASO 2: PRODUCTOS -->
     <p class="paso-label">② Productos</p>
     <div class="input-wrap" style="margin-bottom:10px;">
       <span class="input-icon"><i data-lucide="search" style="width:14px;height:14px;"></i></span>
@@ -274,8 +270,6 @@
     </div>
 
     <div class="divider" style="margin:12px 0;"></div>
-
-    <!-- PASO 3: PAGOS -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <p class="paso-label" style="margin:0;">③ Forma de pago</p>
       <button class="btn-secondary" style="padding:5px 12px;font-size:12px;" onclick="agregarMetodoPago()">
@@ -293,24 +287,26 @@
   </div>
 </div>
 
-<!-- MODAL CONFIRMACIÓN VENTA -->
 <div class="modal-overlay" id="modalConfirmVenta" style="display:none;">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header" style="background:var(--accent);color:#fff;border-radius:8px 8px 0 0;">
-      <div class="modal-title" style="color:#fff;">✅ Venta registrada</div>
-      <button class="modal-close" style="color:#fff;" onclick="cerrarModalVentas('modalConfirmVenta')">
+  <div class="modal confirm-venta-modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title" style="display:flex;align-items:center;gap:9px;">
+        <span class="confirm-title-chip"><i data-lucide="check" style="width:11px;height:11px;"></i></span>
+        Venta registrada
+      </div>
+      <button class="modal-close" onclick="cerrarModalVentas('modalConfirmVenta')">
         <i data-lucide="x" style="width:14px;height:14px;"></i>
       </button>
     </div>
-    <div style="padding:20px 24px;">
+    <div style="padding:4px 2px 0;">
       <div id="confirmVentaResumen"></div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px;">
-        <button class="btn-primary" onclick="_imprimirDesdeConfirm()" style="width:100%;">
+        <button class="btn-primary" onclick="_imprimirDesdeConfirm()" style="width:100%;justify-content:center;">
           <i data-lucide="printer"></i> Imprimir comprobante
         </button>
+        <div class="confirm-divider"><span>o envíalo por correo</span></div>
         <div style="display:flex;gap:8px;">
-          <input type="email" id="confirmCorreoEnvio" placeholder="correo@email.com"
-                 style="flex:1;" id="confirmCorreoEnvio">
+          <input type="email" id="confirmCorreoEnvio" placeholder="correo@email.com" style="flex:1;">
           <button class="btn-secondary" onclick="_enviarCorreoConfirm()" id="btnEnviarCorreoConfirm">
             <i data-lucide="mail"></i> Enviar
           </button>
@@ -368,3 +364,118 @@
     <div id="ventaDocumentoPreview" class="documento-preview"></div>
   </div>
 </div>
+
+<style>
+  #modalNuevaVenta.modal-overlay,
+  #modalDetalleVenta.modal-overlay,
+  #modalAnularVenta.modal-overlay,
+  #modalImprimirVenta.modal-overlay,
+  #modalHistorialPagos.modal-overlay,
+  #modalConfirmVenta.modal-overlay {
+    align-items: flex-start !important;
+    padding-top: 80px;
+    padding-bottom: 24px;
+    overflow-y: auto;
+  }
+  #modalNuevaVenta .modal,
+  #modalDetalleVenta .modal,
+  #modalAnularVenta .modal,
+  #modalImprimirVenta .modal,
+  #modalHistorialPagos .modal,
+  #modalConfirmVenta .modal {
+    margin: 0 auto;
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+  }
+  @media (max-width: 640px) {
+    #modalNuevaVenta.modal-overlay {
+      padding-top: 16px;
+      padding-bottom: 16px;
+    }
+    #modalNuevaVenta .modal { width: 95%; }
+    .form-grid { grid-template-columns: 1fr !important; }
+  }
+
+  /* --- Modal de confirmación de venta (rediseño) --- */
+  .confirm-title-chip {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .confirm-badge-wrap {
+    position: relative;
+    width: 78px; height: 78px;
+    margin: 6px auto 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .confirm-ring {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    border-top-color: var(--accent);
+    border-right-color: var(--accent2);
+    opacity: .5;
+    animation: confirmSpin 2.6s linear infinite;
+  }
+  .confirm-ring.delay {
+    inset: 9px;
+    opacity: .3;
+    animation-duration: 3.4s;
+    animation-direction: reverse;
+  }
+  .confirm-badge {
+    position: relative;
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 26px -8px #c8622a70, 0 0 0 6px #c8622a14;
+    animation: confirmPop .45s cubic-bezier(.16,1,.3,1) both;
+  }
+  .confirm-badge svg { width: 23px; height: 23px; color: #fff; stroke-width: 3; }
+
+  .confirm-doclabel { text-align: center; margin-bottom: 16px; }
+  .confirm-doclabel .tipo { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .confirm-doclabel .num {
+    font-family: var(--mono); font-size: 1.15rem; font-weight: 700;
+    color: var(--accent); margin-top: 4px; letter-spacing: .01em;
+  }
+
+  .confirm-summary {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2px 16px;
+  }
+  .confirm-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .confirm-row:last-child { border-bottom: none; }
+  .confirm-row-label {
+    display: flex; align-items: center; gap: 7px;
+    color: var(--muted); font-size: 13px;
+  }
+  .confirm-row-label i, .confirm-row-label svg { color: var(--accent); opacity: .8; width: 13px; height: 13px; }
+
+  .confirm-divider {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--muted); font-size: 11.5px;
+    margin: 2px 0;
+  }
+  .confirm-divider::before, .confirm-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  @keyframes confirmSpin { to { transform: rotate(360deg); } }
+  @keyframes confirmPop {
+    0%   { transform: scale(.4); opacity: 0; }
+    70%  { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+</style>

@@ -28,44 +28,9 @@ async function cargarClientes() {
             return;
         }
 
-        total.textContent = `${json.data.length} registros`;
+        _todosClientes = json.data;
         tabla.style.display = 'block';
-
-        tbody.innerHTML = json.data.map((c, i) => `
-            <tr>
-                <td style="color:var(--muted);font-family:var(--mono);font-size:12px;">${i + 1}</td>
-                <td><strong>${_esc(c.nombres)} ${_esc(c.apellidos || '')}</strong></td>
-                <td style="font-family:var(--mono);font-size:12px;">${c.dni || '—'}</td>
-                <td>${c.telefono || '—'}</td>
-                <td style="color:var(--muted);font-size:12px;">${c.correo || '—'}</td>
-                <td>${_badgeEstado(c.estado)}</td>
-                <td style="font-size:12px;color:var(--muted);font-family:var(--mono);">${_fmtFecha(c.fecha_registro)}</td>
-                <td>
-                    <div style="display:flex;gap:6px;justify-content:flex-end;">
-                        <button class="btn-icon" title="Ver historial" onclick="abrirHistorial(${c.id_cliente}, '${_esc(c.nombres)} ${_esc(c.apellidos || '')}')">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                        </button>
-                        <button class="btn-icon" title="Editar" onclick="abrirEditarCliente(${c.id_cliente})">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                            </svg>
-                        </button>
-                        <button class="btn-icon btn-icon-danger" title="Eliminar" onclick="abrirEliminarCliente(${c.id_cliente}, '${_esc(c.nombres)}')">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                                <path d="M10 11v6M14 11v6"/>
-                                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-                            </svg>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        _renderClientes(json.data);
 
     } catch (error) {
         loading.style.display = 'none';
@@ -311,15 +276,20 @@ document.addEventListener('click', function(e) {
 
     if (id === 'btn-nuevo-cliente') abrirNuevoCliente();
     if (id === 'btn-guardar-cliente') guardarCliente();
-    if (id === 'btn-cerrar-modal-cliente' || id === 'btn-cancelar-modal-cliente') cerrarModalCliente();
-    if (id === 'btn-cerrar-eliminar-cliente' || id === 'btn-cancelar-eliminar-cliente') cerrarModalEliminarCliente();
+    if (id === 'btn-cancelar-modal-cliente') cerrarModalCliente();
+    if (id === 'btn-cancelar-eliminar-cliente') cerrarModalEliminarCliente();
     if (id === 'btn-confirmar-eliminar-cliente') confirmarEliminarCliente();
-     if (id === 'btn-cerrar-historial-cliente') cerrarHistorialCliente();
+    if (id === 'btn-cerrar-historial-cliente') cerrarHistorialCliente();
     if (id === 'btn-buscar-reniec') buscarReniec();
     if (id === 'btn-agregar-direccion') _agregarDireccion();
     if (e.target.closest('[data-accion="eliminar-dir"]')) {
         const el = e.target.closest('[data-accion="eliminar-dir"]');
-        _eliminarDireccion(el.dataset.id);
+        _pedirConfirmEliminarDir(el.dataset.id);
+    }
+    if (id === 'btn-confirmar-eliminar-dir') _confirmarEliminarDir();
+    if (id === 'btn-cancelar-eliminar-dir') {
+        document.getElementById('modal-eliminar-dir').style.display = 'none';
+        _dirEliminarId = null;
     }
 });
 
@@ -367,7 +337,7 @@ async function _cargarDirecciones(id) {
         lista.innerHTML = json.data.map(d => `
             <div style="display:flex;align-items:flex-start;justify-content:space-between;
                         padding:10px 12px;border:1px solid var(--border);border-radius:8px;gap:8px;">
-                <div style="flex:1;">
+                <div style="flex:1;" data-dir-texto="${_esc(d.direccion)}">
                     <div style="font-size:13px;font-weight:600;">${_esc(d.direccion)}${d.distrito ? `, ${_esc(d.distrito)}` : ''}</div>
                     ${d.referencia ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">Ref: ${_esc(d.referencia)}</div>` : ''}
                     ${d.direcc_principal ? '<span class="badge badge-green" style="font-size:10px;margin-top:4px;">Principal</span>' : ''}
@@ -391,6 +361,15 @@ async function _agregarDireccion() {
         document.getElementById('modal-cliente-alert').style.display = 'flex';
         return;
     }
+    const listaDirs = document.querySelectorAll('#direcciones-lista [data-dir-texto]');
+    for (const el of listaDirs) {
+        if (el.dataset.dirTexto.toLowerCase() === direccion.toLowerCase()) {
+            document.getElementById('modal-cliente-alert-msg').textContent = 'Esta dirección ya está registrada para este cliente';
+            document.getElementById('modal-cliente-alert').style.display = 'flex';
+            return;
+        }
+    }
+
     const btn = document.getElementById('btn-agregar-direccion');
     btn.disabled = true;
     try {
@@ -418,17 +397,92 @@ async function _agregarDireccion() {
     }
 }
 
-async function _eliminarDireccion(idDir) {
-    if (!_clienteDireccionesId) return;
-    if (!confirm('¿Eliminar esta dirección?')) return;
+let _dirEliminarId = null;
+
+function _pedirConfirmEliminarDir(idDir) {
+    _dirEliminarId = idDir;
+    document.getElementById('modal-eliminar-dir').style.display = 'flex';
+}
+
+async function _confirmarEliminarDir() {
+    if (!_dirEliminarId || !_clienteDireccionesId) return;
+    const btn = document.getElementById('btn-confirmar-eliminar-dir');
+    btn.disabled = true;
+    btn.textContent = 'Eliminando…';
     try {
-        const res = await fetch(`/api/clientes/${_clienteDireccionesId}/direcciones/${idDir}`, { method: 'DELETE' });
+        const res = await fetch(`/api/clientes/${_clienteDireccionesId}/direcciones/${_dirEliminarId}`, { method: 'DELETE' });
         const json = await res.json();
         if (json.ok) {
+            document.getElementById('modal-eliminar-dir').style.display = 'none';
+            _dirEliminarId = null;
             await _cargarDirecciones(_clienteDireccionesId);
             mostrarToastCliente('Dirección eliminada', 'success');
+        } else {
+            mostrarToastCliente(json.mensaje || 'Error al eliminar', 'error');
         }
     } catch (e) {
-        mostrarToastCliente('Error al eliminar', 'error');
+        mostrarToastCliente('Error de conexión', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sí, eliminar';
     }
 }
+
+let _todosClientes = [];
+
+function _aplicarFiltroClientes() {
+    const q = document.getElementById('cli-filtro-texto')?.value.toLowerCase().trim() || '';
+    const filtrados = _todosClientes.filter(c => {
+        const nombre = `${c.nombres} ${c.apellidos || ''}`.toLowerCase();
+        const dni = (c.dni || '').toLowerCase();
+        const correo = (c.correo || '').toLowerCase();
+        return !q || nombre.includes(q) || dni.includes(q) || correo.includes(q);
+    });
+    _renderClientes(filtrados);
+}
+
+function _renderClientes(data) {
+    const tbody = document.getElementById('clientes-tbody');
+    const total = document.getElementById('total-clientes');
+    total.textContent = `${data.length} registro${data.length !== 1 ? 's' : ''}`;
+
+    if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--muted);">Sin resultados</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.map((c, i) => `
+        <tr>
+            <td style="color:var(--muted);font-family:var(--mono);font-size:12px;">${i + 1}</td>
+            <td><strong>${_esc(c.nombres)} ${_esc(c.apellidos || '')}</strong></td>
+            <td style="font-family:var(--mono);font-size:12px;">${c.dni || '—'}</td>
+            <td>${c.telefono || '—'}</td>
+            <td style="color:var(--muted);font-size:12px;">${c.correo || '—'}</td>
+            <td>${_badgeEstado(c.estado)}</td>
+            <td style="font-size:12px;color:var(--muted);font-family:var(--mono);">${_fmtFecha(c.fecha_registro)}</td>
+            <td>
+                <div style="display:flex;gap:6px;justify-content:flex-end;">
+                    <button class="btn-icon" title="Ver historial" onclick="abrirHistorial(${c.id_cliente}, '${_esc(c.nombres)} ${_esc(c.apellidos || '')}')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button class="btn-icon" title="Editar" onclick="abrirEditarCliente(${c.id_cliente})">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="btn-icon btn-icon-danger" title="Eliminar" onclick="abrirEliminarCliente(${c.id_cliente}, '${_esc(c.nombres)}')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+document.addEventListener('input', function(e) {
+    if (e.target.id === 'cli-filtro-texto') _aplicarFiltroClientes();
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'cli-btn-limpiar' || e.target.closest('#cli-btn-limpiar')) {
+        document.getElementById('cli-filtro-texto').value = '';
+        _aplicarFiltroClientes();
+    }
+});

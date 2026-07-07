@@ -1,5 +1,6 @@
 let _categoriaGuardando = false;
 let _categoriaEliminarId = null;
+let _todasCategorias = []; 
 
 async function cargarCategorias() {
     const loading = document.getElementById('categorias-loading');
@@ -23,6 +24,7 @@ async function cargarCategorias() {
             return;
         }
 
+        _todasCategorias = json.data;
         total.textContent = `${json.data.length} registro${json.data.length !== 1 ? 's' : ''}`;
         tabla.style.display = 'block';
 
@@ -177,6 +179,7 @@ async function confirmarEliminarCategoria() {
             cargarCategorias();
             mostrarToast(json.mensaje, 'success');
         } else {
+            cerrarModalEliminarCategoria();
             mostrarToast(json.mensaje || 'No se pudo eliminar', 'error');
         }
     } catch (err) {
@@ -275,3 +278,65 @@ function mostrarToast(msg, tipo = 'success') {
         setTimeout(() => t.remove(), 300);
     }, 3500);
 }
+
+function _aplicarFiltrosCategorias() {
+    const nombre    = document.getElementById('cat-filtro-nombre')?.value.toLowerCase().trim() || '';
+    const estado    = document.getElementById('cat-filtro-estado')?.value || '';
+    const tbody     = document.getElementById('categorias-tbody');
+    const totalEl   = document.getElementById('total-categorias');
+
+    let filtradas = _todasCategorias.filter(c => {
+        const matchNombre = !nombre || c.nombre.toLowerCase().includes(nombre);
+        const matchEstado = estado === '' || String(c.estado) === estado;
+        return matchNombre && matchEstado;
+    });
+
+    totalEl.textContent = `${filtradas.length} registro${filtradas.length !== 1 ? 's' : ''}`;
+
+    if (!filtradas.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--muted);">Sin resultados</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtradas.map((c, i) => `
+        <tr>
+            <td style="color:var(--muted);font-family:var(--mono);font-size:12px;">${i + 1}</td>
+            <td><strong>${_esc(c.nombre)}</strong></td>
+            <td style="color:var(--muted);font-size:13px;">${_esc(c.descripcion || '—')}</td>
+            <td>${_badgeEstado(c.estado)}</td>
+            <td style="font-size:12px;color:var(--muted);font-family:var(--mono);">${_fmtFecha(c.fecha_registro)}</td>
+            <td>
+                <div style="display:flex;gap:6px;justify-content:flex-end;">
+                    <button class="btn-icon" title="Editar" data-accion="editar" data-id="${c.id_categoria}">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon btn-icon-danger" title="Eliminar" data-accion="eliminar" data-id="${c.id_categoria}" data-nombre="${_esc(c.nombre)}">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                        </svg>
+                    </button>
+                </div>
+            </td>
+        </tr>`
+    ).join('');
+}
+
+document.addEventListener('input', function(e) {
+    if (e.target.id === 'cat-filtro-nombre') _aplicarFiltrosCategorias();
+});
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'cat-filtro-estado') _aplicarFiltrosCategorias();
+});
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'cat-btn-limpiar' || e.target.closest('#cat-btn-limpiar')) {
+        document.getElementById('cat-filtro-nombre').value = '';
+        document.getElementById('cat-filtro-estado').value = '';
+        _aplicarFiltrosCategorias();
+    }
+});
