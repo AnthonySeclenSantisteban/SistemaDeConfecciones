@@ -1019,13 +1019,7 @@ function cerrarModalVentas(id) {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
 }
 
-document.addEventListener('click', function(e) {
-    ['modalDetalleVenta','modalNuevaVenta','modalAnularVenta',
-     'modalImprimirVenta','modalHistorialPagos'].forEach(id => {
-        const modal = document.getElementById(id);
-        if (modal && e.target === modal) cerrarModalVentas(id);
-    });
-});
+
 
 
 function mostrarAlertaNV(tipo, msg) {

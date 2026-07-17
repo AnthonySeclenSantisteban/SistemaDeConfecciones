@@ -50,23 +50,23 @@ async function recalcularInsumo(client, id_insumo) {
 }
 
 
-router.get('/api/productos/:id/receta', verificarSesion, async (req, res) => {
+router.get('/api/productos/:id/receta/:idTalla', verificarSesion, async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT r.id_receta, r.id_insumo, r.cantidad_por_unidad,
                    i.nombre_insumo, i.unidad_medida, i.costo_promedio, i.stock_actual
             FROM receta_producto r
             JOIN insumos i ON i.id_insumo = r.id_insumo
-            WHERE r.id_producto = $1
+            WHERE r.id_producto = $1 AND r.id_talla = $2
             ORDER BY i.nombre_insumo ASC
-        `, [req.params.id]);
+        `, [req.params.id, req.params.idTalla]);
         res.json({ ok: true, data: result.rows });
     } catch (error) {
         res.json({ ok: false, mensaje: error.message });
     }
 });
 
-router.post('/api/productos/:id/receta', verificarSesion, async (req, res) => {
+router.post('/api/productos/:id/receta/:idTalla', verificarSesion, async (req, res) => {
     const { id_insumo, cantidad_por_unidad } = req.body;
 
     if (!id_insumo) return res.json({ ok: false, mensaje: 'Selecciona un insumo' });
@@ -76,18 +76,18 @@ router.post('/api/productos/:id/receta', verificarSesion, async (req, res) => {
 
     try {
         const existe = await pool.query(
-            `SELECT id_receta FROM receta_producto WHERE id_producto = $1 AND id_insumo = $2`,
-            [req.params.id, id_insumo]
+            `SELECT id_receta FROM receta_producto WHERE id_producto = $1 AND id_talla = $2 AND id_insumo = $3`,
+            [req.params.id, req.params.idTalla, id_insumo]
         );
         if (existe.rows.length) {
-            return res.json({ ok: false, mensaje: 'Este insumo ya está en la receta. Edítalo en vez de agregarlo de nuevo.' });
+            return res.json({ ok: false, mensaje: 'Este insumo ya está en la receta de esta talla. Edítalo en vez de agregarlo de nuevo.' });
         }
 
         await pool.query(
-            `INSERT INTO receta_producto (id_producto, id_insumo, cantidad_por_unidad) VALUES ($1, $2, $3)`,
-            [req.params.id, id_insumo, parseFloat(cantidad_por_unidad)]
+            `INSERT INTO receta_producto (id_producto, id_talla, id_insumo, cantidad_por_unidad) VALUES ($1, $2, $3, $4)`,
+            [req.params.id, req.params.idTalla, id_insumo, parseFloat(cantidad_por_unidad)]
         );
-        res.json({ ok: true, mensaje: 'Insumo agregado a la receta' });
+        res.json({ ok: true, mensaje: 'Insumo agregado a la receta de esta talla' });
     } catch (error) {
         res.json({ ok: false, mensaje: error.message });
     }
@@ -123,7 +123,7 @@ router.delete('/api/receta/:id_receta', verificarSesion, async (req, res) => {
 router.get('/api/productos/:id/variantes', verificarSesion, async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT vp.id_variante, vp.color, vp.stock, t.nombre_talla
+            SELECT vp.id_variante, vp.id_talla, vp.color, vp.stock, t.nombre_talla
             FROM variantes_producto vp
             LEFT JOIN tallas t ON t.id_talla = vp.id_talla
             WHERE vp.id_producto = $1
@@ -169,24 +169,26 @@ router.post('/api/produccion/ordenes', verificarSesion, async (req, res) => {
         await client.query('BEGIN');
 
         const variante = await client.query(
-            `SELECT id_variante, id_producto, stock FROM variantes_producto WHERE id_variante = $1 FOR UPDATE`,
+            `SELECT id_variante, id_producto, id_talla, stock FROM variantes_producto WHERE id_variante = $1 FOR UPDATE`,
             [id_variante]
         );
         if (!variante.rows.length) throw new Error('La variante seleccionada no existe');
         if (String(variante.rows[0].id_producto) !== String(id_producto)) {
             throw new Error('Esa talla/color no pertenece al producto seleccionado');
         }
+        const idTallaProducida = variante.rows[0].id_talla;
+        if (!idTallaProducida) throw new Error('Esta variante no tiene una talla asignada');
 
         const receta = await client.query(
             `SELECT r.id_insumo, r.cantidad_por_unidad, i.nombre_insumo, i.unidad_medida, i.stock_actual, i.costo_promedio
              FROM receta_producto r
              JOIN insumos i ON i.id_insumo = r.id_insumo
-             WHERE r.id_producto = $1
+             WHERE r.id_producto = $1 AND r.id_talla = $2
              FOR UPDATE OF i`,
-            [id_producto]
+            [id_producto, idTallaProducida]
         );
         if (!receta.rows.length) {
-            throw new Error('Este producto no tiene una receta definida. Defínela primero en la sección "Receta".');
+            throw new Error('Esta talla todavía no tiene una receta definida. Defínela primero en la sección "Receta".');
         }
         const faltantes = [];
         let costoTotal = 0;
@@ -232,10 +234,28 @@ router.post('/api/produccion/ordenes', verificarSesion, async (req, res) => {
             VALUES ($1, $2, 'entrada', $3, 'Producción interna', $4, $5, $6)
         `, [id_producto, id_variante, parseInt(cantidad_producida), stockAntes, stockDespues, idOrden]);
         const costoPorUnidad = costoTotal / parseInt(cantidad_producida);
-        await client.query(
-            `UPDATE productos SET precio_costo = $1 WHERE id_producto = $2`,
-            [costoPorUnidad.toFixed(2), id_producto]
+        const productoRow = await client.query(
+            `SELECT precio_venta FROM productos WHERE id_producto = $1`,
+            [id_producto]
         );
+        const precioVentaGeneral = parseFloat(productoRow.rows[0].precio_venta);
+        const tallaConPrecioPropio = await client.query(
+            `SELECT precio_venta FROM producto_talla_costo WHERE id_producto = $1 AND id_talla = $2`,
+            [id_producto, idTallaProducida]
+        );
+        const precioVentaTalla = tallaConPrecioPropio.rows.length
+            ? parseFloat(tallaConPrecioPropio.rows[0].precio_venta)
+            : precioVentaGeneral;
+        await client.query(`
+            INSERT INTO producto_talla_costo (id_producto, id_talla, precio_costo, precio_venta)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id_producto, id_talla)
+            DO UPDATE SET precio_costo = $3, actualizado_en = CURRENT_TIMESTAMP
+        `, [id_producto, idTallaProducida, costoPorUnidad.toFixed(2), precioVentaTalla.toFixed(2)]);
+        let avisoMargen = null;
+        if (costoPorUnidad >= precioVentaTalla) {
+            avisoMargen = `El costo real de esta talla (S/ ${costoPorUnidad.toFixed(2)}) ya es igual o mayor a su precio de venta (S/ ${precioVentaTalla.toFixed(2)}). Revisa el precio de esta talla.`;
+        }
 
         await client.query('COMMIT');
         res.json({
@@ -243,7 +263,8 @@ router.post('/api/produccion/ordenes', verificarSesion, async (req, res) => {
             mensaje: 'Producción registrada correctamente',
             id_orden: idOrden,
             costo_total_insumos: costoTotal.toFixed(2),
-            costo_por_unidad: costoPorUnidad.toFixed(2)
+            costo_por_unidad: costoPorUnidad.toFixed(2),
+            aviso_margen: avisoMargen
         });
     } catch (error) {
         await client.query('ROLLBACK');

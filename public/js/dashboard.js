@@ -132,8 +132,26 @@ function enlazarMenu() {
 
             const modulo = this.getAttribute('data-modulo');
             cargarModulo(modulo);
+            cerrarSidebarMobil();
         });
     });
+}
+
+function abrirSidebarMobil() {
+    document.querySelector('.sidebar').classList.add('sidebar-open');
+    document.getElementById('sidebarOverlay').classList.add('active');
+}
+
+function cerrarSidebarMobil() {
+    document.querySelector('.sidebar').classList.remove('sidebar-open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+function enlazarHamburguesa() {
+    const btn = document.getElementById('btnHamburger');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (btn) btn.addEventListener('click', abrirSidebarMobil);
+    if (overlay) overlay.addEventListener('click', cerrarSidebarMobil);
 }
 
 function cargarFechaActual() {
@@ -162,9 +180,7 @@ async function cargarMisOpciones() {
             if (modulo === 'dashboard' || modulo === 'catalogo') return;
 
             const rutaModulo = modulo + '.html';
-            if (!opciones.includes(rutaModulo)) {
-                item.style.display = 'none';
-            }
+            item.style.display = opciones.includes(rutaModulo) ? '' : 'none';
         });
     } catch (error) {
         console.error('Error cargando opciones:', error);
@@ -228,6 +244,7 @@ async function cargarLogoSidebar() {
 }
 async function iniciarDashboard() {
     enlazarMenu();
+    enlazarHamburguesa();
     cargarFechaActual();
 
     await cargarDatosSesion();

@@ -668,7 +668,10 @@ body {
     overflow: hidden;
     position: relative;
 }
-@media (max-width: 640px) { .detalle-galeria { border-radius: 20px 20px 0 0; min-height: 240px; } }
+@media (max-width: 640px) {
+    .detalle-galeria { border-radius: 20px 20px 0 0; min-height: 240px; }
+    .galeria-principal { min-height: 240px; }
+}
 
 .galeria-principal {
     width: 100%;
@@ -679,6 +682,16 @@ body {
     justify-content: center;
     position: relative;
     overflow: hidden;
+}
+
+.galeria-blur {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(30px) brightness(.94) saturate(1.05);
+    transform: scale(1.15);
+    z-index: 0;
 }
 
 .galeria-img {
@@ -721,6 +734,35 @@ body {
 .variante-chip:hover { border-color: var(--azul-med); }
 .variante-chip.active { border-color: var(--azul); background: var(--azul-light); color: var(--azul); font-weight: 700; }
 .variante-chip.sin-stock { opacity: .4; cursor: not-allowed; text-decoration: line-through; }
+
+.swatches-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+.color-swatch {
+    width: 44px; height: 44px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    padding: 2px;
+    background: #fff;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color .15s, transform .1s;
+}
+.color-swatch img { width: 100%; height: 100%; object-fit: cover; border-radius: 5px; display: block; }
+.swatch-color { display: block; width: 100%; height: 100%; border-radius: 5px; }
+.color-swatch:hover { border-color: var(--accent2); transform: translateY(-1px); }
+.color-swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent2); }
+
+.talla-select {
+    width: 100%;
+    padding: .6rem .8rem;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: .9rem;
+    color: var(--text);
+    background: #fff;
+    cursor: pointer;
+}
+.talla-select:focus { outline: none; border-color: var(--accent); }
 
 .detalle-cantidad { display: flex; flex-direction: column; }
 
@@ -780,13 +822,20 @@ body {
 .btn-agregar-detalle:hover { background: var(--azul-med); transform: translateY(-1px); }
 .btn-agregar-detalle:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
 
-/* Recomendaciones */
 .detalle-recomendaciones {
     border-top: 1px solid var(--border);
     padding: 1.5rem 2rem 2rem;
 }
 .recom-titulo { font-family: var(--font-display); font-size: 1.1rem; color: var(--azul); margin-bottom: 1rem; }
 .recom-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
+
+@media (max-width: 640px) {
+    .detalle-recomendaciones { padding: 1.2rem 1rem 1.5rem; }
+    .recom-grid { grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    .recom-img { height: 70px; font-size: 1.5rem; }
+    .recom-nombre { font-size: .68rem; }
+    .recom-precio { font-size: .72rem; }
+}
 .recom-card {
     background: var(--gris-light);
     border-radius: var(--radius-sm);
@@ -805,12 +854,12 @@ body {
     font-size: 2.5rem;
     overflow: hidden;
 }
-.recom-img img { width: 100%; height: 100%; object-fit: cover; }
+.recom-img img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
 .recom-info { padding: .5rem .6rem; }
 .recom-nombre { font-size: .75rem; font-weight: 600; color: var(--text); line-height: 1.3; }
 .recom-precio { font-size: .8rem; color: var(--accent); font-weight: 700; }
 
-/* ── CARRITO DRAWER ── */
+
 .carrito-overlay {
     position: fixed;
     inset: 0;
@@ -1283,4 +1332,10 @@ body {
     .filtros-inner { flex-direction: column; align-items: flex-start; }
     .filtros-right { width: 100%; flex-direction: column; align-items: flex-start; }
     .select-filtro { width: 100%; }
+    .header-inner { gap: .8rem; padding: 0 1rem; }
+    .brand-sub { display: none; }
+    .brand-nombre { font-size: 1rem; }
+    .modal-detalle { border-radius: 14px; }
+    .modal-checkout { padding: 1.2rem; border-radius: 14px; }
+    .checkout-pasos .paso { font-size: .72rem; padding: .5rem .2rem; }
 }

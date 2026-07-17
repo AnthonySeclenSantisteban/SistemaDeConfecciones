@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/bd');
 const { generarNumeroVenta } = require('../utils/GenerarNum');
 const { enviarConfirmacionPedido } = require('../utils/remitente');
+const { agregarPendiente } = require('../utils/clientesPendientes');
 
 router.get('/catalogo/identificacion', (req, res) => {
     res.sendFile(require('path').join(__dirname, '../views/catalogo/identificacion.html'));
@@ -130,6 +131,7 @@ router.post('/api/checkout/confirmar', async (req, res) => {
         await client.query('BEGIN');
 
         let id_cliente = cliente.id_cliente;
+        let clienteTempRef = null;
 
         if (id_cliente) {
             await client.query(
@@ -142,18 +144,22 @@ router.post('/api/checkout/confirmar', async (req, res) => {
                  cliente.dni, cliente.correo, id_cliente]
             );
         } else {
-            const r = await client.query(
-                `INSERT INTO clientes (nombres, apellidos, telefono, correo, dni, estado)
-                 VALUES ($1, $2, $3, $4, $5, 1) RETURNING id_cliente`,
-                [cliente.nombres, cliente.apellidos || '',
-                 cliente.telefono, cliente.correo || null,
-                 cliente.dni || null]
-            );
-            id_cliente = r.rows[0].id_cliente;
+            clienteTempRef = agregarPendiente({
+                nombres: cliente.nombres,
+                apellidos: cliente.apellidos || '',
+                dni: cliente.dni || '',
+                telefono: cliente.telefono,
+                correo: cliente.correo || '',
+                tipo_entrega: datosEnv.tipo_entrega,
+                direccion: datosEnv.direccion || '',
+                distrito: datosEnv.distrito || '',
+                referencia: datosEnv.referencia || ''
+            });
+            id_cliente = null;
         }
 
         let id_direccion = null;
-        if (datosEnv.tipo_entrega === 'delivery' && datosEnv.direccion) {
+        if (id_cliente && datosEnv.tipo_entrega === 'delivery' && datosEnv.direccion) {
             const dir = await client.query(
                 `INSERT INTO direcciones_cliente (id_cliente, direccion, distrito, referencia, direcc_principal)
                  VALUES ($1, $2, $3, $4, false) RETURNING id_direccion`,
@@ -165,9 +171,9 @@ router.post('/api/checkout/confirmar', async (req, res) => {
         const total = carrito.reduce((s, i) => s + (parseFloat(i.precio || i.precio_unitario || 0) * parseInt(i.cantidad || 1)), 0);
         const codigoSeg = `LIX-${Date.now()}`;
         const pedido = await client.query(
-            `INSERT INTO pedidos (id_cliente, total, estado, id_direccion, codigo_seguimiento, tipo_entrega)
-             VALUES ($1, $2, 'pendiente', $3, $4, $5) RETURNING id_pedido`,
-            [id_cliente, total.toFixed(2), id_direccion, codigoSeg, tipo_entrega || 'delivery']
+            `INSERT INTO pedidos (id_cliente, total, estado, id_direccion, codigo_seguimiento, tipo_entrega, cliente_temp_ref)
+             VALUES ($1, $2, 'pendiente', $3, $4, $5, $6) RETURNING id_pedido`,
+            [id_cliente, total.toFixed(2), id_direccion, codigoSeg, tipo_entrega || 'delivery', clienteTempRef]
         );
         const id_pedido = pedido.rows[0].id_pedido;
 

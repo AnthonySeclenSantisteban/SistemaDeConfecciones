@@ -398,10 +398,74 @@ canvas#chartVentas {
 
 
 .mono { font-family: var(--mono); }
+.db-seccion-titulo {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--azul);
+  letter-spacing: -.01em;
+  margin: 1.6rem 0 .2rem;
+}
+.db-seccion-sub {
+  font-size: .8rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.kpi-card.morado::before { background: #7c3aed; }
+.kpi-card.morado .kpi-icon { background: #f5f3ff; }
+.metodo-lista { display: flex; flex-direction: column; gap: .6rem; }
+.metodo-item {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  padding: .6rem .8rem;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.metodo-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.metodo-info { flex: 1; min-width: 0; }
+.metodo-nombre { font-size: .8rem; font-weight: 700; color: var(--text); text-transform: capitalize; }
+.metodo-bar-wrap { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: .3rem; }
+.metodo-bar { height: 100%; border-radius: 3px; }
+.metodo-monto { font-family: var(--mono); font-size: .85rem; font-weight: 700; white-space: nowrap; }
+.gastos-tabla { width: 100%; border-collapse: collapse; }
+.gastos-tabla th {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+  padding: .5rem .6rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.gastos-tabla td {
+  padding: .55rem .6rem;
+  font-size: .78rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.gastos-tabla tr:last-child td { border-bottom: none; }
+.gastos-tabla tr:hover td { background: var(--bg); }
+.gasto-cat {
+  font-size: .65rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
 </style>
 
-
-<!-- HEADER -->
 <div class="db-header">
   <div>
     <div class="db-titulo">Dashboard</div>
@@ -409,8 +473,6 @@ canvas#chartVentas {
   </div>
   <div class="db-fecha" id="db-fecha-hoy">—</div>
 </div>
-
-<!-- KPIs FILA 1 -->
 <div class="kpi-grid">
   <div class="kpi-card">
     <div class="kpi-icon">
@@ -504,6 +566,66 @@ canvas#chartVentas {
       <div class="stock-lista" id="stock-lista">
         <div class="db-loading"><div class="db-spinner"></div> Cargando...</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="db-seccion-titulo">Control de Caja</div>
+<div class="db-seccion-sub">Dinero que ingresa por ventas (según método de pago) y dinero que sale para comprar insumos — mes actual</div>
+
+<div class="kpi-grid" style="grid-template-columns: repeat(3,1fr);">
+  <div class="kpi-card verde">
+    <div class="kpi-icon"><i data-lucide="arrow-down-circle" style="width:18px;height:18px;color:#059669;"></i></div>
+    <div class="kpi-label">Ingresos del Mes</div>
+    <div class="kpi-valor" id="kpi-ingresos-mes">—</div>
+    <div class="kpi-delta" id="kpi-ingresos-dia-delta">Hoy: —</div>
+  </div>
+  <div class="kpi-card rojo">
+    <div class="kpi-icon"><i data-lucide="arrow-up-circle" style="width:18px;height:18px;color:#dc2626;"></i></div>
+    <div class="kpi-label">Gastos en Insumos</div>
+    <div class="kpi-valor" id="kpi-gastos-mes">—</div>
+    <div class="kpi-delta" id="kpi-gastos-dia-delta">Hoy: —</div>
+  </div>
+  <div class="kpi-card morado">
+    <div class="kpi-icon"><i data-lucide="wallet" style="width:18px;height:18px;color:#7c3aed;"></i></div>
+    <div class="kpi-label">Balance Neto</div>
+    <div class="kpi-valor" id="kpi-balance-mes">—</div>
+    <div class="kpi-delta">Ingresos − Gastos</div>
+  </div>
+</div>
+
+<div class="db-row">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-titulo">Ingresos por Método de Pago</div>
+      <span style="font-size:.72rem;color:var(--muted);">Mes actual</span>
+    </div>
+    <div class="panel-body">
+      <div class="metodo-lista" id="metodo-lista">
+        <div class="db-loading"><div class="db-spinner"></div> Cargando...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-titulo">Últimas Compras de Insumos</div>
+      <span style="font-size:.72rem;color:var(--muted);">Gastos recientes</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="gastos-tabla">
+        <thead>
+          <tr>
+            <th>Insumo</th>
+            <th>Categoría</th>
+            <th>Costo</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="gastos-tbody">
+          <tr><td colspan="4" class="db-loading"><div class="db-spinner"></div> Cargando...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -631,15 +753,12 @@ async function cargarGrafico() {
   if (!document.getElementById('chartVentas')) return;
   const anio = parseInt(selectAnio.value);
   const periodo = document.querySelector('.periodo-btn.active').dataset.periodo;
-
   try {
     const res = await fetch(`/api/dashboard/grafico?anio=${anio}&periodo=${periodo}`);
     const json = await res.json();
     if (!json.ok) throw new Error();
-
     iniciarChart(json.labels, json.vendido, json.credito, json.cobrado);
   } catch {
-    // Datos de ejemplo si falla
     const labels = periodo === 'mensual' ? MESES : ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     const mock = () => labels.map(() => Math.random() * 800 + 50);
     iniciarChart(labels, mock(), mock(), mock());
@@ -672,13 +791,11 @@ async function cargarStockCritico() {
     const res = await fetch('/api/dashboard/stock-critico');
     const json = await res.json();
     const lista = document.getElementById('stock-lista');
-
     if (!json.ok || !json.data.length) {
       lista.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:.82rem;">✓ Sin stock crítico</div>';
       document.getElementById('stock-count-label').textContent = '0 productos';
       return;
     }
-
     document.getElementById('stock-count-label').textContent = `${json.data.length} productos`;
     lista.innerHTML = json.data.slice(0, 6).map(p => {
       const pct = Math.min(100, Math.round((p.stock / p.stock_minimo) * 100));
@@ -708,7 +825,6 @@ async function cargarPedidosRecientes() {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--muted);">Sin pedidos</td></tr>';
       return;
     }
-
     const badges = {
       pendiente:  'badge-pend',
       procesando: 'badge-proc',
@@ -716,7 +832,6 @@ async function cargarPedidosRecientes() {
       entregado:  'badge-entre',
       cancelado:  'badge-can'
     };
-
     tbody.innerHTML = json.data.map(p => `
       <tr>
         <td><span class="mono" style="font-size:.75rem;color:var(--muted);">${p.codigo_seguimiento || '—'}</span></td>
@@ -736,7 +851,6 @@ async function cargarTopProductos() {
     const res = await fetch('/api/dashboard/top-productos');
     const json = await res.json();
     const lista = document.getElementById('top-productos');
-
     if (!json.ok || !json.data.length) {
       lista.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Sin datos</div>';
       return;
@@ -757,6 +871,87 @@ async function cargarTopProductos() {
   }
 }
 
+const METODO_COLOR = {
+  efectivo:      '#059669',
+  yape:          '#7c3aed',
+  plin:          '#2563a8',
+  transferencia: '#f59e0b',
+  visa:          '#c8622a'
+};
+const METODO_ICONO = {
+  efectivo:      'banknote',
+  yape:          'smartphone',
+  plin:          'smartphone',
+  transferencia: 'landmark',
+  visa:          'credit-card'
+};
+const METODO_LABEL = {
+  efectivo: 'Efectivo', yape: 'Yape', plin: 'Plin',
+  transferencia: 'Transferencia BCP', visa: 'Tarjeta Visa'
+};
+
+async function cargarFinanzas() {
+  if (!document.getElementById('kpi-ingresos-mes')) return;
+  const fmt = n => 'S/ ' + parseFloat(n || 0).toLocaleString('es-PE', {minimumFractionDigits:2});
+  try {
+    const res = await fetch('/api/dashboard/finanzas');
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.mensaje || 'Error');
+
+    document.getElementById('kpi-ingresos-mes').textContent = fmt(json.ingresos_mes);
+    document.getElementById('kpi-ingresos-dia-delta').textContent = 'Hoy: ' + fmt(json.ingresos_dia);
+    document.getElementById('kpi-gastos-mes').textContent = fmt(json.gastos_mes);
+    document.getElementById('kpi-gastos-dia-delta').textContent = 'Hoy: ' + fmt(json.gastos_dia);
+
+    const balanceEl = document.getElementById('kpi-balance-mes');
+    balanceEl.textContent = fmt(json.balance_mes);
+    balanceEl.style.color = json.balance_mes < 0 ? 'var(--rojo)' : 'var(--azul)';
+
+    const metodoLista = document.getElementById('metodo-lista');
+    if (!json.metodos_pago || !json.metodos_pago.length) {
+      metodoLista.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--muted);font-size:.82rem;">Sin ingresos registrados este mes</div>';
+    } else {
+      const maxMonto = Math.max(...json.metodos_pago.map(m => parseFloat(m.total)));
+      metodoLista.innerHTML = json.metodos_pago.map(m => {
+        const color = METODO_COLOR[m.metodo_pago] || '#64748b';
+        const icono = METODO_ICONO[m.metodo_pago] || 'circle-dollar-sign';
+        const label = METODO_LABEL[m.metodo_pago] || m.metodo_pago;
+        const pct = maxMonto > 0 ? Math.round((parseFloat(m.total) / maxMonto) * 100) : 0;
+        return `
+          <div class="metodo-item">
+            <div class="metodo-icon" style="background:${color}22;">
+              <i data-lucide="${icono}" style="width:16px;height:16px;color:${color};"></i>
+            </div>
+            <div class="metodo-info">
+              <div class="metodo-nombre">${label}</div>
+              <div class="metodo-bar-wrap"><div class="metodo-bar" style="width:${pct}%;background:${color};"></div></div>
+            </div>
+            <div class="metodo-monto" style="color:${color};">${fmt(m.total)}</div>
+          </div>`;
+      }).join('');
+    }
+
+    const gastosTbody = document.getElementById('gastos-tbody');
+    if (!json.ultimas_compras || !json.ultimas_compras.length) {
+      gastosTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1rem;color:var(--muted);">Sin compras registradas</td></tr>';
+    } else {
+      gastosTbody.innerHTML = json.ultimas_compras.map(c => `
+        <tr>
+          <td style="font-weight:600;">${c.nombre_insumo}</td>
+          <td><span class="gasto-cat">${c.categoria_insumo || 'General'}</span></td>
+          <td><span class="mono" style="color:var(--rojo);font-weight:700;">${fmt(c.costo)}</span></td>
+          <td style="color:var(--muted);font-size:.72rem;">${new Date(c.fecha_compra).toLocaleDateString('es-PE',{day:'2-digit',month:'short'})}</td>
+        </tr>`).join('');
+    }
+
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    console.error('Error finanzas:', e);
+    document.getElementById('metodo-lista').innerHTML = '<div style="color:var(--muted);font-size:.8rem;">Error al cargar</div>';
+    document.getElementById('gastos-tbody').innerHTML = '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:1rem;">Error al cargar</td></tr>';
+  }
+}
+
 document.querySelectorAll('.periodo-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
@@ -770,6 +965,7 @@ cargarGrafico();
 cargarStockCritico();
 cargarPedidosRecientes();
 cargarTopProductos();
+cargarFinanzas();
 
 const _dbInterval = setInterval(() => {
     if (!document.getElementById('kpi-venta-dia')) {
@@ -778,7 +974,7 @@ const _dbInterval = setInterval(() => {
     }
     cargarKPIs();
     cargarPedidosRecientes();
+    cargarFinanzas();
 }, 120000);
-
 if (window.lucide) lucide.createIcons();
 </script>

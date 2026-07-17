@@ -15,8 +15,19 @@ const verificarSesion = (req, res, next) => {
 router.get('/login', controladorAuth.mostrarLogin);
 router.post('/login', controladorAuth.procesarLogin);
 router.get('/logout', controladorAuth.cerrarSesion);
-router.get('/api/mis-opciones', verificarSesion, (req, res) => {
-    res.json({ ok: true, opciones: req.session.usuario.opciones || [] });
+router.get('/api/mis-opciones', verificarSesion, async (req, res) => {
+    try {
+        const opcionesRes = await pool.query(
+            `SELECT o.ruta FROM opciones o
+             INNER JOIN perfiles_opciones po ON po.id_opcion = o.id_opcion
+             WHERE po.id_perfil = $1 AND po.deleted_at IS NULL`,
+            [req.session.usuario.id_perfil]
+        );
+        res.json({ ok: true, opciones: opcionesRes.rows.map(o => o.ruta) });
+    } catch (error) {
+        console.error('GET /api/mis-opciones:', error);
+        res.json({ ok: true, opciones: req.session.usuario.opciones || [] });
+    }
 });
 
 router.get('/dashboard', verificarSesion, (req, res) => {
@@ -26,9 +37,17 @@ router.get('/dashboard', verificarSesion, (req, res) => {
 
 
 router.get('/vistas/modulos/:modulo', verificarSesion, (req, res) => {
-    const modulo = req.params.modulo;
-    const archivo = path.join(__dirname, `../views/modulos/${modulo}`);
-    res.sendFile(archivo);
+    const nombreModulo = path.basename(req.params.modulo);
+    const carpetaBase = path.join(__dirname, '../views/modulos');
+    const archivo = path.join(carpetaBase, nombreModulo);
+
+    if (!archivo.startsWith(carpetaBase + path.sep)) {
+        return res.status(400).send('Ruta inválida');
+    }
+
+    res.sendFile(archivo, (err) => {
+        if (err) res.status(404).send('Módulo no encontrado');
+    });
 });
 
 router.get('/', (req, res) => {
@@ -64,11 +83,10 @@ router.post('/api/perfiles', verificarSesion, async (req, res) => {
         if (eliminado.rows.length > 0) {
             await pool.query(
                 `UPDATE perfiles
-                 SET descripcion=$1, estado=1,
-                     updated_at=NOW(), updated_by=$2,
-                     deleted_at=NULL, deleted_by=NULL
-                 WHERE id_perfil=$3`,
-                [descripcion, id_usuario, eliminado.rows[0].id_perfil]
+                SET descripcion=$1, estado=1,
+                    deleted_at=NULL, deleted_by=NULL
+                WHERE id_perfil=$2`,
+                [descripcion, eliminado.rows[0].id_perfil]
             );
             return res.json({ ok: true, mensaje: 'Perfil reactivado correctamente' });
         }
@@ -472,11 +490,18 @@ router.get('/api/productos', verificarSesion, async (req, res) => {
             `SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio_costo, p.precio_venta,
                     p.genero, p.estado, p.created_at,
                     c.nombre AS categoria_nombre,
-                    co.nombre_colegio
+                    co.nombre_colegio,
+                    LEAST(p.precio_venta, COALESCE(MIN(ptc.precio_venta), p.precio_venta)) AS precio_venta_min,
+                    GREATEST(p.precio_venta, COALESCE(MAX(ptc.precio_venta), p.precio_venta)) AS precio_venta_max,
+                    LEAST(p.precio_costo, COALESCE(MIN(ptc.precio_costo), p.precio_costo)) AS precio_costo_min,
+                    GREATEST(p.precio_costo, COALESCE(MAX(ptc.precio_costo), p.precio_costo)) AS precio_costo_max,
+                    (COUNT(ptc.id_producto_talla_costo) > 0) AS tiene_precios_por_talla
              FROM productos p
              LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
              LEFT JOIN colegios co ON co.id_colegio = p.id_colegio
+             LEFT JOIN producto_talla_costo ptc ON ptc.id_producto = p.id_producto
              WHERE p.estado != 2
+             GROUP BY p.id_producto, c.nombre, co.nombre_colegio
              ORDER BY p.id_producto`
         );
         res.json({ ok: true, data: resultado.rows });
@@ -599,13 +624,22 @@ router.get('/api/catalogo/productos', async (req, res) => {
                 p.estado,
                 c.nombre AS categoria_nombre,
                 co.nombre_colegio,
-                -- Imágenes como array
                 COALESCE(
                     (SELECT json_agg(ip.url_imagen ORDER BY ip.id_imagen)
                      FROM imagenes_producto ip
                      WHERE ip.id_producto = p.id_producto),
                     '[]'
                 ) AS imagenes,
+                COALESCE(
+                    (SELECT json_object_agg(sub.color_key, sub.urls)
+                     FROM (
+                        SELECT LOWER(TRIM(ip.color)) AS color_key, json_agg(ip.url_imagen ORDER BY ip.id_imagen) AS urls
+                        FROM imagenes_producto ip
+                        WHERE ip.id_producto = p.id_producto AND ip.color IS NOT NULL AND TRIM(ip.color) != ''
+                        GROUP BY LOWER(TRIM(ip.color))
+                     ) sub),
+                    '{}'
+                ) AS imagenes_color,
                 COALESCE(
                     (SELECT json_agg(json_build_object(
                         'id_variante', vp.id_variante,
@@ -623,6 +657,9 @@ router.get('/api/catalogo/productos', async (req, res) => {
             LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
             LEFT JOIN colegios co ON co.id_colegio = p.id_colegio
             WHERE p.estado = 1
+              AND EXISTS (
+                  SELECT 1 FROM variantes_producto vp WHERE vp.id_producto = p.id_producto
+              )
             ORDER BY co.nombre_colegio, p.nombre_producto
         `);
         res.json({ ok: true, data: result.rows });
@@ -1321,12 +1358,12 @@ router.get('/api/productos/:id/imagenes', verificarSesion, async (req, res) => {
 });
 
 router.post('/api/productos/:id/imagenes', verificarSesion, async (req, res) => {
-    const { url_imagen } = req.body;
+    const { url_imagen, color } = req.body;
     if (!url_imagen) return res.json({ ok: false, mensaje: 'URL requerida' });
     try {
         await pool.query(
-            'INSERT INTO imagenes_producto (id_producto, url_imagen) VALUES ($1, $2)',
-            [req.params.id, url_imagen]
+            'INSERT INTO imagenes_producto (id_producto, url_imagen, color) VALUES ($1, $2, $3)',
+            [req.params.id, url_imagen, color || null]
         );
         res.json({ ok: true, mensaje: 'Imagen agregada' });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
@@ -1336,6 +1373,180 @@ router.delete('/api/imagenes/:id', verificarSesion, async (req, res) => {
     try {
         await pool.query('DELETE FROM imagenes_producto WHERE id_imagen = $1', [req.params.id]);
         res.json({ ok: true, mensaje: 'Imagen eliminada' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/tallas', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id_talla, nombre_talla FROM tallas ORDER BY id_talla');
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/productos/:id/variantes', verificarSesion, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT vp.id_variante, vp.id_talla, vp.color, t.nombre_talla, vp.stock
+            FROM variantes_producto vp
+            LEFT JOIN tallas t ON t.id_talla = vp.id_talla
+            WHERE vp.id_producto = $1
+            ORDER BY vp.color, t.id_talla
+        `, [req.params.id]);
+        res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.post('/api/productos/:id/variantes', verificarSesion, async (req, res) => {
+    const { color, id_tallas } = req.body;
+    if (!color || !Array.isArray(id_tallas) || id_tallas.length === 0) {
+        return res.json({ ok: false, mensaje: 'El color y al menos una talla son requeridos' });
+    }
+    try {
+        let creadas = 0;
+        for (const idTalla of id_tallas) {
+            const r = await pool.query(
+                `INSERT INTO variantes_producto (id_producto, id_talla, color, stock, precio_extra)
+                 VALUES ($1, $2, $3, 0, 0)
+                 ON CONFLICT (id_producto, id_talla, color) DO NOTHING
+                 RETURNING id_variante`,
+                [req.params.id, idTalla, color.trim()]
+            );
+            if (r.rows.length) creadas++;
+        }
+        res.json({ ok: true, mensaje: `${creadas} talla${creadas !== 1 ? 's' : ''} agregada${creadas !== 1 ? 's' : ''} para "${color.trim()}"` });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.put('/api/productos/:id/variantes/:color', verificarSesion, async (req, res) => {
+    const { id, color } = req.params;
+    const { id_tallas } = req.body;
+    if (!Array.isArray(id_tallas)) {
+        return res.json({ ok: false, mensaje: 'Lista de tallas inválida' });
+    }
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const actuales = await client.query(
+            `SELECT vp.id_variante, vp.id_talla, vp.stock, vp.color, t.nombre_talla
+             FROM variantes_producto vp
+             LEFT JOIN tallas t ON t.id_talla = vp.id_talla
+             WHERE vp.id_producto = $1 AND LOWER(TRIM(vp.color)) = LOWER(TRIM($2))`,
+            [id, color]
+        );
+        if (!actuales.rows.length) {
+            await client.query('ROLLBACK');
+            return res.json({ ok: false, mensaje: 'Ese color no existe para este producto' });
+        }
+        const nombreColorOriginal = actuales.rows[0].color || color;
+        const idTallasNuevas = id_tallas.map(t => parseInt(t));
+        const aQuitar = actuales.rows.filter(r => !idTallasNuevas.includes(r.id_talla));
+        const aAgregar = idTallasNuevas.filter(idT => !actuales.rows.some(r => r.id_talla === idT));
+        const bloqueadas = aQuitar.filter(r => Number(r.stock) > 0);
+        if (bloqueadas.length) {
+            await client.query('ROLLBACK');
+            const nombres = bloqueadas.map(b => b.nombre_talla).join(', ');
+            return res.json({
+                ok: false,
+                mensaje: `No puedes desmarcar la talla ${nombres} porque todavía tiene stock. Primero descarga el stock desde Inventario.`
+            });
+        }
+        for (const r of aQuitar) {
+            await client.query('DELETE FROM variantes_producto WHERE id_variante = $1', [r.id_variante]);
+        }
+        for (const idT of aAgregar) {
+            await client.query(
+                `INSERT INTO variantes_producto (id_producto, id_talla, color, stock, precio_extra)
+                 VALUES ($1, $2, $3, 0, 0)
+                 ON CONFLICT (id_producto, id_talla, color) DO NOTHING`,
+                [id, idT, nombreColorOriginal]
+            );
+        }
+        await client.query('COMMIT');
+        res.json({ ok: true, mensaje: `Tallas de "${nombreColorOriginal}" actualizadas` });
+    } catch (e) {
+        await client.query('ROLLBACK');
+        res.json({ ok: false, mensaje: e.message });
+    } finally {
+        client.release();
+    }
+});
+
+router.delete('/api/productos/:id/variantes/:color', verificarSesion, async (req, res) => {
+    const { id, color } = req.params;
+    try {
+        const actuales = await pool.query(
+            `SELECT vp.id_variante, vp.stock, t.nombre_talla
+             FROM variantes_producto vp
+             LEFT JOIN tallas t ON t.id_talla = vp.id_talla
+             WHERE vp.id_producto = $1 AND LOWER(TRIM(vp.color)) = LOWER(TRIM($2))`,
+            [id, color]
+        );
+        if (!actuales.rows.length) {
+            return res.json({ ok: false, mensaje: 'Ese color no existe para este producto' });
+        }
+        const conStock = actuales.rows.filter(r => Number(r.stock) > 0);
+        if (conStock.length) {
+            const nombres = conStock.map(r => r.nombre_talla).join(', ');
+            return res.json({
+                ok: false,
+                mensaje: `No puedes eliminar este color: las tallas ${nombres} todavía tienen stock. Primero descarga el stock desde Inventario.`
+            });
+        }
+        await pool.query(
+            `DELETE FROM variantes_producto WHERE id_producto = $1 AND LOWER(TRIM(color)) = LOWER(TRIM($2))`,
+            [id, color]
+        );
+        res.json({ ok: true, mensaje: 'Color eliminado' });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/productos/:id/precios-talla', verificarSesion, async (req, res) => {
+    try {
+        const prod = await pool.query(
+            'SELECT precio_costo, precio_venta FROM productos WHERE id_producto = $1',
+            [req.params.id]
+        );
+        if (!prod.rows.length) return res.json({ ok: false, mensaje: 'Producto no encontrado' });
+
+        const result = await pool.query(`
+            SELECT t.id_talla, t.nombre_talla,
+                   ptc.precio_costo, ptc.precio_venta,
+                   (ptc.id_talla IS NOT NULL) AS tiene_precio_propio
+            FROM tallas t
+            LEFT JOIN producto_talla_costo ptc
+                   ON ptc.id_talla = t.id_talla AND ptc.id_producto = $1
+            ORDER BY t.id_talla
+        `, [req.params.id]);
+
+        res.json({
+            ok: true,
+            precio_general: prod.rows[0],
+            data: result.rows
+        });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.post('/api/productos/:id/precios-talla/:idTalla', verificarSesion, async (req, res) => {
+    const { precio_costo, precio_venta } = req.body;
+    const costo = parseFloat(precio_costo);
+    const venta = parseFloat(precio_venta);
+
+    if (isNaN(costo) || isNaN(venta) || costo < 0) {
+        return res.json({ ok: false, mensaje: 'Costo y venta deben ser números válidos' });
+    }
+    if (venta <= costo) {
+        return res.json({ ok: false, mensaje: 'El precio de venta debe ser mayor al costo' });
+    }
+
+    try {
+        await pool.query(`
+            INSERT INTO producto_talla_costo (id_producto, id_talla, precio_costo, precio_venta)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id_producto, id_talla)
+            DO UPDATE SET precio_costo = $3, precio_venta = $4, actualizado_en = CURRENT_TIMESTAMP
+        `, [req.params.id, req.params.idTalla, costo, venta]);
+
+        res.json({ ok: true, mensaje: 'Precio de talla guardado correctamente' });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
 });
 
@@ -1454,6 +1665,59 @@ router.get('/api/dashboard/top-productos', verificarSesion, async (req, res) => 
             GROUP BY p.id_producto, p.nombre_producto, co.nombre_colegio
             ORDER BY total_vendido DESC LIMIT 5`);
         res.json({ ok: true, data: result.rows });
+    } catch (e) { res.json({ ok: false, mensaje: e.message }); }
+});
+
+router.get('/api/dashboard/finanzas', verificarSesion, async (req, res) => {
+    try {
+        const hoy = new Date();
+        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const [metodosRes, ingresosDiaRes, ingresosMesRes, gastosDiaRes, gastosMesRes, comprasRes] = await Promise.all([
+            pool.query(
+                `SELECT metodo_pago, COALESCE(SUM(monto),0) AS total
+                 FROM pagos
+                 WHERE estado = 'pagado' AND fecha_pago >= $1
+                 GROUP BY metodo_pago
+                 ORDER BY total DESC`,
+                [inicioMes]
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(monto),0) AS total FROM pagos
+                 WHERE estado = 'pagado' AND DATE(fecha_pago) = CURRENT_DATE`
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(monto),0) AS total FROM pagos
+                 WHERE estado = 'pagado' AND fecha_pago >= $1`,
+                [inicioMes]
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(costo),0) AS total FROM compras_insumos
+                 WHERE DATE(fecha_compra) = CURRENT_DATE`
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(costo),0) AS total FROM compras_insumos
+                 WHERE fecha_compra >= $1`,
+                [inicioMes]
+            ),
+            pool.query(
+                `SELECT nombre_insumo, categoria_insumo, costo, lugar_compra, fecha_compra
+                 FROM compras_insumos
+                 ORDER BY fecha_compra DESC
+                 LIMIT 8`
+            )
+        ]);
+        const ingresosMes = parseFloat(ingresosMesRes.rows[0].total);
+        const gastosMes = parseFloat(gastosMesRes.rows[0].total);
+        res.json({
+            ok: true,
+            ingresos_dia: ingresosDiaRes.rows[0].total,
+            ingresos_mes: ingresosMes,
+            gastos_dia: gastosDiaRes.rows[0].total,
+            gastos_mes: gastosMes,
+            balance_mes: ingresosMes - gastosMes,
+            metodos_pago: metodosRes.rows,
+            ultimas_compras: comprasRes.rows
+        });
     } catch (e) { res.json({ ok: false, mensaje: e.message }); }
 });
 

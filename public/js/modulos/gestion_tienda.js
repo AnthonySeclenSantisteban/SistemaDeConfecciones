@@ -226,16 +226,18 @@ async function cambiarEstadoLogo(idRecurso, nuevoEstado) {
     }
 }
 
-async function eliminarLogo(id) {
-    if (!confirm('¿Eliminar logo?')) return;
-    try {
-        const res = await fetch(`/api/gestion-tienda/logo/${id}`, { method: 'DELETE' });
-        const json = await res.json();
-        if (json.ok) cargarLogos();
-        mostrarToastGestion(json.mensaje, json.ok ? 'success' : 'error');
-    } catch (error) {
-        mostrarToastGestion('Error al eliminar logo', 'error');
-    }
+function eliminarLogo(id) {
+    abrirEliminarGT({
+        titulo: '¿Eliminar logo?',
+        descripcion: 'El logo será eliminado permanentemente.',
+        onConfirmar: async () => {
+            const res = await fetch(`/api/gestion-tienda/logo/${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (json.ok) cargarLogos();
+            mostrarToastGestion(json.mensaje, json.ok ? 'success' : 'error');
+            return json.ok;
+        }
+    });
 }
 
 async function cargarSliders() {
@@ -382,14 +384,18 @@ async function toggleSlider(id, activo) {
     } catch (error) { mostrarToastGestion('Error al actualizar slider', 'error'); }
 }
 
-async function eliminarSlider(id) {
-    if (!confirm('¿Eliminar slider?')) return;
-    try {
-        const res = await fetch(`/api/gestion-tienda/sliders/${id}`, { method: 'DELETE' });
-        const json = await res.json();
-        if (json.ok) cargarSliders();
-        mostrarToastGestion(json.mensaje, json.ok ? 'success' : 'error');
-    } catch (error) { mostrarToastGestion('Error al eliminar slider', 'error'); }
+function eliminarSlider(id) {
+    abrirEliminarGT({
+        titulo: '¿Eliminar slider?',
+        descripcion: 'El slider será eliminado permanentemente.',
+        onConfirmar: async () => {
+            const res = await fetch(`/api/gestion-tienda/sliders/${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (json.ok) cargarSliders();
+            mostrarToastGestion(json.mensaje, json.ok ? 'success' : 'error');
+            return json.ok;
+        }
+    });
 }
 
 async function cargarRedes() {
@@ -497,14 +503,18 @@ async function toggleRed(id, activo) {
     } catch (error) { mostrarToastGestion('Error al actualizar red', 'error'); }
 }
 
-async function eliminarRed(id) {
-    if (!confirm('¿Eliminar red social?')) return;
-    try {
-        const res = await fetch(`/api/gestion-tienda/redes/${id}`, { method: 'DELETE' });
-        const json = await res.json();
-        if (json.ok) cargarRedes();
-        mostrarToastGestion(json.mensaje, json.ok ? 'success' : 'error');
-    } catch (error) { mostrarToastGestion('Error al eliminar red', 'error'); }
+function eliminarRed(id) {
+    abrirEliminarGT({
+        titulo: '¿Eliminar red social?',
+        descripcion: 'La red social será eliminada permanentemente.',
+        onConfirmar: async () => {
+            const res = await fetch(`/api/gestion-tienda/redes/${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (json.ok) cargarRedes();
+            mostrarToastGestion(json.mensaje, json.ok ? 'success' : 'error');
+            return json.ok;
+        }
+    });
 }
 
 function cerrarModalLogo() {
@@ -538,6 +548,36 @@ function cerrarModalRed() {
     document.getElementById('modal-red').style.display = 'none';
 }
 
+let _gtEliminarAccion = null;
+
+function abrirEliminarGT({ titulo, descripcion, onConfirmar }) {
+    document.getElementById('eliminar-gt-titulo').textContent = titulo;
+    document.getElementById('eliminar-gt-desc').textContent = descripcion;
+    _gtEliminarAccion = onConfirmar;
+    document.getElementById('modal-eliminar-gt').style.display = 'flex';
+}
+
+function cerrarModalEliminarGT() {
+    document.getElementById('modal-eliminar-gt').style.display = 'none';
+    _gtEliminarAccion = null;
+}
+
+async function confirmarEliminarGT() {
+    if (!_gtEliminarAccion) return;
+    const btn = document.getElementById('btn-confirmar-eliminar-gt');
+    btn.disabled = true;
+    btn.textContent = 'Eliminando...';
+    try {
+        await _gtEliminarAccion();
+    } catch (error) {
+        mostrarToastGestion('Error al eliminar', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sí, eliminar';
+        cerrarModalEliminarGT();
+    }
+}
+
 function mostrarToastGestion(msg, tipo = 'success') {
     let wrap = document.querySelector('.toast-wrap');
     if (!wrap) { wrap = document.createElement('div'); wrap.className = 'toast-wrap'; document.body.appendChild(wrap); }
@@ -565,4 +605,6 @@ document.addEventListener('click', function (e) {
     if (id === 'btn-nueva-red') abrirNuevaRed();
     if (id === 'btn-cerrar-modal-red' || id === 'btn-cancelar-modal-red') cerrarModalRed();
     if (id === 'btn-guardar-red') guardarRed();
+    if (id === 'btn-cancelar-eliminar-gt') cerrarModalEliminarGT();
+    if (id === 'btn-confirmar-eliminar-gt') confirmarEliminarGT();
 });

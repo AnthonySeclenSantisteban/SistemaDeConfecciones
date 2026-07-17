@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/bd');
 const multer = require('multer');
 const path = require('path');
+const { buscarPorRef, eliminarPorRef } = require('../utils/clientesPendientes');
 
 function verificarSesion(req, res, next) {
     if (!req.session || !req.session.usuario) return res.status(401).json({ error: 'No autorizado' });
@@ -24,6 +25,7 @@ router.get('/admin/pagos/verificacion', verificarSesion, async (req, res) => {
                 p.id_pago,
                 p.id_pedido,
                 ped.codigo_seguimiento AS orden_codigo,
+                ped.cliente_temp_ref,
                 CONCAT(c.nombres, ' ', c.apellidos) AS cliente_nombre,
                 c.dni AS cliente_dni,
                 c.telefono AS cliente_telefono,
@@ -40,12 +42,24 @@ router.get('/admin/pagos/verificacion', verificarSesion, async (req, res) => {
                 v.numero_venta AS nota_venta_numero
             FROM pagos p
             JOIN pedidos ped ON ped.id_pedido = p.id_pedido
-            JOIN clientes c ON c.id_cliente = ped.id_cliente
+            LEFT JOIN clientes c ON c.id_cliente = ped.id_cliente
             LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
             ORDER BY
                 CASE p.estado WHEN 'pendiente' THEN 0 ELSE 1 END,
                 p.fecha_pago DESC
         `);
+
+        pagos.rows.forEach(row => {
+            if (row.cliente_temp_ref) {
+                const pend = buscarPorRef(row.cliente_temp_ref);
+                if (pend) {
+                    row.cliente_nombre   = `${pend.nombres} ${pend.apellidos || ''}`.trim();
+                    row.cliente_dni      = pend.dni;
+                    row.cliente_telefono = pend.telefono;
+                    row.cliente_email    = pend.correo;
+                }
+            }
+        });
  
        const stats = await pool.query(`
             SELECT
@@ -70,6 +84,7 @@ router.get('/admin/pagos/:id', verificarSesion, async (req, res) => {
             SELECT
                 p.*,
                 ped.codigo_seguimiento AS orden_codigo,
+                ped.cliente_temp_ref,
                 ped.total AS total_orden,
                 CONCAT(c.nombres, ' ', c.apellidos) AS cliente_nombre,
                 c.dni AS cliente_dni,
@@ -82,12 +97,21 @@ router.get('/admin/pagos/:id', verificarSesion, async (req, res) => {
                 v.numero_venta AS nota_venta_numero
                 FROM pagos p
                 JOIN pedidos ped ON ped.id_pedido = p.id_pedido
-                JOIN clientes c ON c.id_cliente = ped.id_cliente
+                LEFT JOIN clientes c ON c.id_cliente = ped.id_cliente
                 LEFT JOIN ventas v ON v.id_pedido = p.id_pedido
                 WHERE p.id_pago = $1
             `, [id]);
  
         if (!result.rows.length) return res.status(404).json({ error: 'Pago no encontrado' });
+        if (result.rows[0].cliente_temp_ref) {
+            const pend = buscarPorRef(result.rows[0].cliente_temp_ref);
+            if (pend) {
+                result.rows[0].cliente_nombre   = `${pend.nombres} ${pend.apellidos || ''}`.trim();
+                result.rows[0].cliente_dni      = pend.dni;
+                result.rows[0].cliente_telefono = pend.telefono;
+                result.rows[0].cliente_email    = pend.correo;
+            }
+        }
  
         const items = await pool.query(`
             SELECT
@@ -139,21 +163,68 @@ router.post('/admin/pagos/:id/verificar', verificarSesion, async (req, res) => {
         const { id } = req.params;
         const id_usuario = req.session.usuario.id || req.session.usuario.id_usuario;
         await client.query('BEGIN');
- 
         const pago = await client.query(
             `UPDATE pagos SET estado = 'pagado', fecha_pago = NOW()
              WHERE id_pago = $1 AND estado = 'pendiente' RETURNING *`,
             [id]
         );
         if (!pago.rows.length) throw new Error('Pago no encontrado o ya procesado');
- 
+        const id_pedido = pago.rows[0].id_pedido;
         await client.query(
             `UPDATE pedidos SET estado = 'procesando' WHERE id_pedido = $1`,
-            [pago.rows[0].id_pedido]
+            [id_pedido]
         );
- 
+        const pedidoRes = await client.query(
+            `SELECT id_cliente, cliente_temp_ref FROM pedidos WHERE id_pedido = $1`,
+            [id_pedido]
+        );
+        const { cliente_temp_ref } = pedidoRes.rows[0];
+
+        if (cliente_temp_ref) {
+            const pend = buscarPorRef(cliente_temp_ref);
+            if (pend) {
+                const nuevoCliente = await client.query(
+                    `INSERT INTO clientes (nombres, apellidos, telefono, correo, dni, estado)
+                     VALUES ($1, $2, $3, $4, $5, 1) RETURNING id_cliente`,
+                    [pend.nombres, pend.apellidos || '', pend.telefono,
+                     pend.correo || null, pend.dni || null]
+                );
+                const id_cliente_nuevo = nuevoCliente.rows[0].id_cliente;
+                let id_direccion_nueva = null;
+                if (pend.tipo_entrega === 'delivery' && pend.direccion) {
+                    const dir = await client.query(
+                        `INSERT INTO direcciones_cliente (id_cliente, direccion, distrito, referencia, direcc_principal)
+                         VALUES ($1, $2, $3, $4, true) RETURNING id_direccion`,
+                        [id_cliente_nuevo, pend.direccion, pend.distrito || '', pend.referencia || '']
+                    );
+                    id_direccion_nueva = dir.rows[0].id_direccion;
+                }
+
+                await client.query(
+                    `UPDATE pedidos SET id_cliente = $1, cliente_temp_ref = NULL,
+                     id_direccion = COALESCE($2, id_direccion) WHERE id_pedido = $3`,
+                    [id_cliente_nuevo, id_direccion_nueva, id_pedido]
+                );
+                await client.query(
+                    `UPDATE ventas SET id_cliente = $1 WHERE id_pedido = $2`,
+                    [id_cliente_nuevo, id_pedido]
+                );
+                if (id_direccion_nueva) {
+                    await client.query(
+                        `UPDATE envios SET id_direccion = $1 WHERE id_pedido = $2`,
+                        [id_direccion_nueva, id_pedido]
+                    );
+                }
+                eliminarPorRef(cliente_temp_ref);
+            }
+        }
+        await client.query(
+            `UPDATE ventas SET estado = 'pagada' WHERE id_pedido = $1`,
+            [id_pedido]
+        );
+
         await client.query('COMMIT');
-        res.json({ ok: true, id_pedido: pago.rows[0].id_pedido });
+        res.json({ ok: true, id_pedido });
     } catch (e) {
         await client.query('ROLLBACK');
         console.error('POST /admin/pagos/:id/verificar:', e);

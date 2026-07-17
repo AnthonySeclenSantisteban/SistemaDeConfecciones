@@ -127,7 +127,7 @@ async function cargarInsumos() {
                         ? '<span class="badge badge-red" style="font-size:10px;margin-left:6px;">Sin stock</span>'
                         : (bajoMinimo ? '<span class="badge badge-red" style="font-size:10px;margin-left:6px;">Stock bajo</span>' : '')}
                 </td>
-                <td style="font-family:var(--mono);">S/ ${costoProm.toFixed(2)}</td>
+                <td style="font-family:var(--mono);">S/ ${costoProm < 1 && costoProm > 0 ? costoProm.toFixed(4) : costoProm.toFixed(2)}</td>
                 <td style="font-family:var(--mono);">S/ ${valorStock.toFixed(2)}</td>
             </tr>`;
         }).join('');

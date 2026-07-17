@@ -1,0 +1,15 @@
+[
+  {
+    "ref": "PEND-1784182533558",
+    "nombres": "Julian",
+    "apellidos": "Alvarez",
+    "dni": "98656523",
+    "telefono": "933323333",
+    "correo": "LaAraña@gmail.com",
+    "tipo_entrega": "delivery",
+    "direccion": "Av. Buenos Aires",
+    "distrito": "Chiclayo",
+    "referencia": "calle argentina",
+    "creado_en": "2026-07-16T06:15:33.558Z"
+  }
+]

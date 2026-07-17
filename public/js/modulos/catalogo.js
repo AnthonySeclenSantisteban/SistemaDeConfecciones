@@ -22,7 +22,6 @@ function _emojiCategoria(categoria) {
     return '🎽';
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
     cargarProductos();
     cargarMetodosPago();
@@ -31,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initCarritoLocal();
 });
 
-/* ── CARGAR PRODUCTOS ── */
 async function cargarProductos() {
     try {
         const res = await fetch('/api/catalogo/productos');
@@ -58,7 +56,6 @@ async function cargarMetodosPago() {
     } catch (err) { console.error('Error metodos pago:', err); }
 }
 
-/* ── POBLAR FILTROS ── */
 function poblarFiltros(productos) {
     const selectColegio = document.getElementById('filtroColegio');
     const selectCategoria = document.getElementById('filtroCategoria');
@@ -71,7 +68,6 @@ function poblarFiltros(productos) {
         opt.value = c; opt.textContent = c;
         selectColegio.appendChild(opt);
     });
-
     categorias.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c; opt.textContent = c;
@@ -79,7 +75,6 @@ function poblarFiltros(productos) {
     });
 }
 
-/* ── RENDER PRODUCTOS ── */
 function renderProductos(productos) {
     const grid = document.getElementById('productosGrid');
     const empty = document.getElementById('emptyState');
@@ -95,8 +90,6 @@ function renderProductos(productos) {
 
     empty.style.display = 'none';
     grid.innerHTML = productos.map(p => tarjetaProducto(p)).join('');
-
-    // Animación escalonada
     grid.querySelectorAll('.producto-card').forEach((card, i) => {
         card.style.opacity = '0';
         card.style.transform = 'translateY(20px)';
@@ -157,13 +150,11 @@ function tarjetaProducto(p) {
     </div>`;
 }
 
-/* ── FILTROS ── */
 function aplicarFiltros() {
     const genero = document.querySelector('.chip.active')?.dataset.genero || '';
     const colegio = document.getElementById('filtroColegio').value;
     const categoria = document.getElementById('filtroCategoria').value;
     const busqueda = document.getElementById('inputBuscar')?.value?.toLowerCase().trim() || '';
-
     let filtrados = _todosProductos.filter(p => {
         const matchGenero = !genero || p.genero === genero;
         const matchColegio = !colegio || p.nombre_colegio === colegio;
@@ -177,7 +168,6 @@ function aplicarFiltros() {
 
     renderProductos(filtrados);
 }
-
 function limpiarFiltros() {
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     document.querySelector('.chip[data-genero=""]').classList.add('active');
@@ -186,25 +176,19 @@ function limpiarFiltros() {
     if (document.getElementById('inputBuscar')) document.getElementById('inputBuscar').value = '';
     aplicarFiltros();
 }
-
 function filtrarPorColegio(colegio) {
     document.getElementById('filtroColegio').value = colegio;
     document.getElementById('seccionCatalogo').scrollIntoView({ behavior: 'smooth' });
     aplicarFiltros();
 }
 
-/* ── MODAL DETALLE ── */
 async function abrirDetalle(id) {
     const producto = _todosProductos.find(p => p.id_producto === id);
     if (!producto) return;
 
     _productoActual = producto;
     _varianteActual = null;
-
-    // Mostrar modal
     abrirModal('modalDetalle');
-
-    // Galería
     const galeria = document.getElementById('galeriaPrincipal');
     if (producto.imagenes && producto.imagenes.length > 0) {
         galeria.innerHTML = `<img class="galeria-img" src="${producto.imagenes[0]}" alt="${producto.nombre_producto}" onerror="this.style.display='none'">`;
@@ -212,14 +196,10 @@ async function abrirDetalle(id) {
         document.getElementById('galeriaEmoji').textContent = _emojiCategoria(producto.categoria_nombre);
         galeria.innerHTML = `<div class="galeria-emoji">${_emojiCategoria(producto.categoria_nombre)}</div>`;
     }
-
-    // Info
     document.getElementById('detalleNombre').textContent = producto.nombre_producto;
     document.getElementById('detalleColegio').textContent = producto.nombre_colegio || '';
     document.getElementById('detallePrecio').textContent = `S/ ${parseFloat(producto.precio_venta).toFixed(2)}`;
     document.getElementById('detalleDesc').textContent = producto.descripcion || '';
-
-    // Badges
     const badges = [];
     if (producto.genero) {
         const g = producto.genero;
@@ -228,65 +208,136 @@ async function abrirDetalle(id) {
     if (producto.nombre_colegio) badges.push(`<span class="badge badge-col">${producto.nombre_colegio}</span>`);
     if (producto.categoria_nombre) badges.push(`<span class="badge" style="background:#f1f5f9;color:#64748b;">${producto.categoria_nombre}</span>`);
     document.getElementById('detalleBadges').innerHTML = badges.join('');
-
-    // Variantes
     const variantes = producto.variantes || [];
     const varWrap = document.getElementById('detalleVariantesWrap');
-    const varChips = document.getElementById('variantesChips');
+    const coloresWrap = document.getElementById('coloresSwatches');
 
     if (variantes.length > 0) {
         varWrap.style.display = 'block';
-        varChips.innerHTML = variantes.map(v => {
-            const label = [v.talla, v.color].filter(Boolean).join(' / ');
-            return `<button class="variante-chip ${v.stock <= 0 ? 'sin-stock' : ''}"
-                data-variante='${JSON.stringify(v)}'
-                onclick="seleccionarVariante(this)"
-                ${v.stock <= 0 ? 'disabled' : ''}>
-                ${label || 'Estándar'}
-                ${v.stock <= 0 ? ' (sin stock)' : ''}
-            </button>`;
-        }).join('');
+        const colores = [...new Set(variantes.map(v => v.color).filter(Boolean))];
 
-        // Seleccionar primera variante con stock
-        const primera = variantes.find(v => v.stock > 0);
-        if (primera) {
-            setTimeout(() => {
-                const firstBtn = varChips.querySelector('.variante-chip:not(.sin-stock)');
-                if (firstBtn) { firstBtn.click(); }
-            }, 50);
+        if (colores.length > 0) {
+            coloresWrap.style.display = 'block';
+            coloresWrap.querySelector('.swatches-row').innerHTML = colores.map(c => {
+                const cSafe = c.replace(/'/g, "\\'");
+                const imgColor = producto.imagenes_color?.[_normColor(c)]?.[0] || null;
+                const hex = _colorHex(c);
+                return `<button type="button" class="color-swatch" title="${c}"
+                            onmouseenter="_previsualizarColor('${cSafe}')"
+                            onmouseleave="_restaurarColor()"
+                            onclick="seleccionarColor('${cSafe}', this)">
+                            ${imgColor
+                                ? `<img src="${imgColor}" alt="${c}">`
+                                : `<span class="swatch-color" style="background:${hex}"></span>`}
+                        </button>`;
+            }).join('');
+        } else {
+            coloresWrap.style.display = 'none';
         }
+
+        setTimeout(() => {
+            const firstSwatch = coloresWrap.querySelector('.color-swatch');
+            if (firstSwatch) firstSwatch.click();
+            else _renderTallasParaColor(null);
+        }, 50);
     } else {
         varWrap.style.display = 'none';
         document.getElementById('detalleStock').innerHTML = '<span class="stock-ok">✓ Disponible</span>';
     }
-
     document.getElementById('inputCantidad').value = 1;
-
-    // Recomendaciones
     cargarRecomendaciones(producto);
 }
 
-function seleccionarVariante(btn) {
-    document.querySelectorAll('.variante-chip').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+function _normColor(c) {
+    return (c || '').trim().toLowerCase();
+}
 
-    try {
-        _varianteActual = JSON.parse(btn.dataset.variante);
-    } catch { _varianteActual = null; }
+const _mapaColores = {
+    'blanco': '#ffffff', 'negro': '#111111', 'azul marino': '#1e3a5f', 'gris': '#9ca3af',
+    'rojo': '#dc2626', 'vino': '#7c2d3e', 'verde': '#16a34a', 'celeste': '#38bdf8',
+    'amarillo': '#facc15', 'beige': '#e7dcc8'
+};
+function _colorHex(nombre) {
+    return _mapaColores[(nombre || '').trim().toLowerCase()] || '#d1d5db';
+}
 
-    if (_varianteActual) {
-        const stock = parseInt(_varianteActual.stock);
-        const stockEl = document.getElementById('detalleStock');
-        if (stock <= 0) {
-            stockEl.innerHTML = '<span class="stock-cero">✗ Sin stock</span>';
-            document.getElementById('btnAgregarDetalle').disabled = true;
-        } else if (stock <= 5) {
-            stockEl.innerHTML = `<span class="stock-bajo">⚠ Solo ${stock} disponibles</span>`;
-            document.getElementById('btnAgregarDetalle').disabled = false;
-        } else {
-            stockEl.innerHTML = `<span class="stock-ok">✓ ${stock} en stock</span>`;
-            document.getElementById('btnAgregarDetalle').disabled = false;
-        }
+let _colorHoverBackup = null;
+function _previsualizarColor(color) {
+    const galeria = document.getElementById('galeriaPrincipal');
+    _colorHoverBackup = galeria.innerHTML;
+    const url = _productoActual?.imagenes_color?.[_normColor(color)]?.[0];
+    if (url) galeria.innerHTML = `<img class="galeria-img" src="${url}" alt="${color}">`;
+}
+
+function _restaurarColor() {
+    if (_colorHoverBackup !== null) {
+        document.getElementById('galeriaPrincipal').innerHTML = _colorHoverBackup;
+        _colorHoverBackup = null;
+    }
+}
+
+function seleccionarColor(color, el) {
+    _colorHoverBackup = null;
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    const galeria = document.getElementById('galeriaPrincipal');
+    const url = _productoActual?.imagenes_color?.[_normColor(color)]?.[0] || _productoActual?.imagenes?.[0];
+    if (url) galeria.innerHTML = `<img class="galeria-img" src="${url}" alt="${_productoActual.nombre_producto}" onerror="this.style.display='none'">`;
+
+    _renderTallasParaColor(color);
+}
+
+function _renderTallasParaColor(color) {
+    const variantesColor = (_productoActual.variantes || []).filter(v => !color || v.color === color);
+    const wrap = document.getElementById('tallaSelectWrap');
+    const msg  = document.getElementById('tallaProximamenteMsg');
+
+    const hayStock = variantesColor.some(v => v.stock > 0);
+
+    if (variantesColor.length > 0 && !hayStock) {
+        wrap.style.display = 'none';
+        msg.style.display = 'block';
+    } else {
+        wrap.style.display = '';
+        msg.style.display = 'none';
+    }
+
+    const select = document.getElementById('tallaSelect');
+    select.innerHTML = '<option value="">Elige una talla</option>' + variantesColor.map(v =>
+        `<option value="${v.id_variante}" ${v.stock <= 0 ? 'disabled' : ''}>${v.talla || 'Única'}${v.stock <= 0 ? ' (sin stock)' : ''}</option>`
+    ).join('');
+
+    _varianteActual = null;
+    document.getElementById('detalleStock').innerHTML = '';
+    document.getElementById('btnAgregarDetalle').disabled = true;
+
+    const primera = variantesColor.find(v => v.stock > 0);
+    if (primera) {
+        select.value = primera.id_variante;
+        seleccionarTalla(select);
+    }
+}
+
+
+
+function seleccionarTalla(select) {
+    const idVariante = parseInt(select.value);
+    const variante = (_productoActual.variantes || []).find(v => v.id_variante === idVariante);
+    _varianteActual = variante || null;
+    const stockEl = document.getElementById('detalleStock');
+    const btn = document.getElementById('btnAgregarDetalle');
+    if (!variante) { stockEl.innerHTML = ''; btn.disabled = true; return; }
+
+    const stock = parseInt(variante.stock);
+    if (stock <= 0) {
+        stockEl.innerHTML = '<span class="stock-cero">✗ Sin stock</span>';
+        btn.disabled = true;
+    } else if (stock <= 5) {
+        stockEl.innerHTML = `<span class="stock-bajo">⚠ Solo ${stock} disponibles</span>`;
+        btn.disabled = false;
+    } else {
+        stockEl.innerHTML = `<span class="stock-ok">✓ ${stock} en stock</span>`;
+        btn.disabled = false;
     }
 }
 
@@ -316,19 +367,16 @@ function cargarRecomendaciones(producto) {
         </div>`).join('');
 }
 
-/* ── AGREGAR AL CARRITO ── */
+
 function agregarRapido(id) {
     const producto = _todosProductos.find(p => p.id_producto === id);
     if (!producto) return;
-
     const variantes = producto.variantes || [];
     if (variantes.length === 0) {
-        // Sin variantes, agregar directamente
-        agregarAlCarrito(producto, null, 1);
-    } else {
-        // Abrir detalle para seleccionar variante
-        abrirDetalle(id);
+        mostrarToast('Este producto no está disponible por el momento', 'warning');
+        return;
     }
+    abrirDetalle(id);
 }
 
 document.addEventListener('click', function(e) {
@@ -365,7 +413,7 @@ function agregarAlCarrito(producto, variante, cantidad) {
             color: variante?.color || '',
             precio: parseFloat(producto.precio_venta),
             cantidad,
-            imagen: producto.imagenes?.[0] || null,
+            imagen: producto.imagenes_color?.[_normColor(variante?.color)]?.[0] || producto.imagenes?.[0] || null,
             emoji: _emojiCategoria(producto.categoria_nombre)
         });
     }
@@ -376,21 +424,21 @@ function agregarAlCarrito(producto, variante, cantidad) {
     mostrarToast(`${producto.nombre_producto} agregado al carrito`, 'success');
 }
 
-/* ── CARRITO ── */
 function renderCarritoDrawer() {
     const itemsEl = document.getElementById('carritoItems');
     const footer = document.getElementById('carritoFooter');
-    const vacioel = document.getElementById('carritoVacio');
 
     if (!_carrito.length) {
-        vacioel.style.display = 'block';
         footer.style.display = 'none';
-        itemsEl.innerHTML = '';
-        itemsEl.appendChild(vacioel);
+        itemsEl.innerHTML = `
+            <div class="carrito-vacio" id="carritoVacio">
+                <div style="font-size:3rem;margin-bottom:1rem;">🛍️</div>
+                <p>Tu carrito está vacío</p>
+                <small>Agrega uniformes para continuar</small>
+            </div>`;
         return;
     }
 
-    vacioel.style.display = 'none';
     footer.style.display = 'block';
 
     itemsEl.innerHTML = _carrito.map((item, idx) => `
@@ -452,9 +500,7 @@ function initCarritoLocal() {
     } catch {}
 }
 
-/* ── CHECKOUT ── */
 function irPaso(n) {
-    // Validar paso actual
     if (n === 2) {
         const nombres = document.getElementById('chkNombres').value.trim();
         const telefono = document.getElementById('chkTelefono').value.trim();
@@ -470,15 +516,10 @@ function irPaso(n) {
         renderResumenMini();
         renderPanelPago(_metodoPago);
     }
-
     _pasoActual = n;
-
-    // Mostrar/ocultar pasos
     [1, 2, 3].forEach(i => {
         document.getElementById(`paso${i}`).style.display = i === n ? 'block' : 'none';
     });
-
-    // Actualizar indicadores
     document.querySelectorAll('.checkout-pasos .paso').forEach((el, i) => {
         el.classList.remove('active', 'done');
         if (i + 1 === n) el.classList.add('active');
@@ -501,7 +542,6 @@ function renderPanelPago(metodo) {
     const total = _carrito.reduce((s, i) => s + i.precio * i.cantidad, 0);
 
     const metodoData = _metodosPagoEmpresa.find(m => m.tipo === metodo);
-
     if (metodo === 'yape' || metodo === 'plin') {
         panel.innerHTML = `
             <div style="display:flex;align-items:center;gap:1rem;">
@@ -554,12 +594,9 @@ async function confirmarPedido() {
     const referencia = document.getElementById('chkReferencia').value.trim();
     const tipoDoc = document.querySelector('input[name="tipoDoc"]:checked')?.value || 'nota_venta';
     const numOp = document.getElementById('chkNumOp').value.trim();
-
     const alertEl = document.getElementById('alertCheckout');
     alertEl.style.display = 'none';
-
     if (!_carrito.length) { mostrarAlertCheckout('El carrito está vacío'); return; }
-
     const btn = document.getElementById('btnConfirmarPedido');
     btn.disabled = true;
     btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Procesando...';
@@ -585,15 +622,12 @@ async function confirmarPedido() {
 
         const json = await res.json();
         if (!json.ok) throw new Error(json.mensaje);
-
-        // Éxito
         cerrarModal('modalCheckout');
         mostrarConfirmacion(json, nombres, tipoEntrega);
         _carrito = [];
         guardarCarritoLocal();
         actualizarBadgeCarrito();
         renderCarritoDrawer();
-
     } catch (err) {
         mostrarAlertCheckout(err.message || 'Error al procesar el pedido');
     } finally {
@@ -615,7 +649,6 @@ function mostrarConfirmacion(data, nombres, tipoEntrega) {
         <div class="conf-fila"><span>Código seguimiento</span><strong>${data.codigo_seguimiento}</strong></div>
         <div class="conf-fila"><span>Total</span><strong>S/ ${parseFloat(data.total).toFixed(2)}</strong></div>
         <div class="conf-fila"><span>Entrega</span><strong>${tipoEntrega === 'delivery' ? '🚗 Delivery' : '🏪 Recojo en tienda'}</strong></div>`;
-
     const msg = encodeURIComponent(`Hola! Acabo de realizar mi pedido en Confecciones Lix.\n*N° Venta:* ${data.numero_venta}\n*Código:* ${data.codigo_seguimiento}\n*Total:* S/ ${parseFloat(data.total).toFixed(2)}`);
     document.getElementById('btnWaConfirm').href = `https://wa.me/51945952450?text=${msg}`;
 
@@ -626,7 +659,6 @@ function cerrarConfirmacion() {
     cerrarModal('modalConfirmacion');
 }
 
-/* ── SEGUIMIENTO ── */
 function abrirSeguimiento() {
     abrirModal('modalSeguimiento');
 }
@@ -636,18 +668,14 @@ async function buscarSeguimiento() {
     const resultado = document.getElementById('resultadoSeguimiento');
 
     if (!codigo) { resultado.innerHTML = '<p style="color:#dc2626;font-size:.85rem;">Ingresa un código de seguimiento</p>'; return; }
-
     resultado.innerHTML = '<p style="color:#64748b;font-size:.85rem;">Buscando...</p>';
-
     try {
         const res = await fetch(`/api/seguimiento/${codigo}`);
         const json = await res.json();
-
         if (!json.ok) {
             resultado.innerHTML = '<div style="color:#dc2626;font-size:.88rem;">Pedido no encontrado. Verifica el código.</div>';
             return;
         }
-
         const d = json.data;
         const estadoClase = `estado-${d.estado || 'pendiente'}`;
         resultado.innerHTML = `
@@ -663,7 +691,6 @@ async function buscarSeguimiento() {
     }
 }
 
-/* ── UTILS MODAL / DRAWER ── */
 function abrirModal(id) {
     document.getElementById(id).classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -691,7 +718,6 @@ function cerrarCarrito() {
     }
 }
 
-/* ── TOAST ── */
 function mostrarToast(msg, tipo = 'success') {
     let wrap = document.querySelector('.toast-wrap');
     if (!wrap) {
@@ -708,9 +734,7 @@ function mostrarToast(msg, tipo = 'success') {
     setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; t.style.transition = 'all .3s'; setTimeout(() => t.remove(), 300); }, 3000);
 }
 
-/* ── EVENT LISTENERS ── */
 function initEventListeners() {
-    // Buscador
     document.getElementById('btnAbrirBuscar').addEventListener('click', () => {
         document.getElementById('buscadorPanel').classList.toggle('open');
         if (document.getElementById('buscadorPanel').classList.contains('open')) {
@@ -721,13 +745,9 @@ function initEventListeners() {
         document.getElementById('buscadorPanel').classList.remove('open');
     });
     document.getElementById('inputBuscar').addEventListener('input', aplicarFiltros);
-
-    // Carrito
     document.getElementById('btnAbrirCarrito').addEventListener('click', abrirCarrito);
     document.getElementById('btnCerrarCarrito').addEventListener('click', cerrarCarrito);
     document.getElementById('carritoOverlay').addEventListener('click', cerrarCarrito);
-
-    // Chips de género
     document.querySelectorAll('.chip[data-genero]').forEach(chip => {
         chip.addEventListener('click', () => {
             document.querySelectorAll('.chip[data-genero]').forEach(c => c.classList.remove('active'));
@@ -736,7 +756,6 @@ function initEventListeners() {
         });
     });
 
-    // Nav links colegio
     document.querySelectorAll('.nav-link[data-filtro-colegio]').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -749,15 +768,11 @@ function initEventListeners() {
         });
     });
 
-    // Filtros select
+
     document.getElementById('filtroColegio').addEventListener('change', aplicarFiltros);
     document.getElementById('filtroCategoria').addEventListener('change', aplicarFiltros);
-
-    // Modal cerrar
     document.getElementById('btnCerrarDetalle').addEventListener('click', () => cerrarModal('modalDetalle'));
     document.getElementById('modalDetalle').addEventListener('click', e => { if (e.target === document.getElementById('modalDetalle')) cerrarModal('modalDetalle'); });
-
-    // Cantidad en detalle
     document.getElementById('btnMenos').addEventListener('click', () => {
         const inp = document.getElementById('inputCantidad');
         if (parseInt(inp.value) > 1) inp.value = parseInt(inp.value) - 1;
@@ -766,18 +781,13 @@ function initEventListeners() {
         const inp = document.getElementById('inputCantidad');
         inp.value = parseInt(inp.value) + 1;
     });
-
-    // Checkout
     document.getElementById('btnCheckout').addEventListener('click', () => {
         if (!_carrito.length) return;
         sessionStorage.setItem('lix_carrito', JSON.stringify(_carrito));
         window.location.href = '/catalogo/identificacion';
-    });
-    
+    });    
     document.getElementById('btnCerrarCheckout').addEventListener('click', () => cerrarModal('modalCheckout'));
     document.getElementById('modalCheckout').addEventListener('click', e => { if (e.target === document.getElementById('modalCheckout')) cerrarModal('modalCheckout'); });
-
-    // Métodos de pago
     document.querySelectorAll('.metodo-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.metodo-btn').forEach(b => b.classList.remove('active'));
@@ -786,24 +796,16 @@ function initEventListeners() {
             renderPanelPago(_metodoPago);
         });
     });
-
-    // Tipo entrega
     document.querySelectorAll('input[name="tipoEntrega"]').forEach(radio => {
         radio.addEventListener('change', () => {
             const esDelivery = document.getElementById('radioDelivery').checked;
             document.getElementById('deliveryCampos').style.display = esDelivery ? 'block' : 'none';
         });
     });
-
-    // Confirmar pedido
     document.getElementById('btnConfirmarPedido').addEventListener('click', confirmarPedido);
-
-    // Modal confirmación
     document.getElementById('modalConfirmacion').addEventListener('click', e => {
         if (e.target === document.getElementById('modalConfirmacion')) cerrarConfirmacion();
     });
-
-    // Tecla Escape
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
             ['modalDetalle', 'modalCheckout', 'modalConfirmacion', 'modalSeguimiento'].forEach(id => {
@@ -816,16 +818,13 @@ function initEventListeners() {
 }
 async function cargarLogoYSliders() {
     try {
-        const res = await fetch('/api/gestion-tienda/logos');
+        const res = await fetch('/api/gestion-tienda/logo-publico');
         const json = await res.json();
-        if (json.ok && json.data.length) {
-            const logoActivo = json.data.find(l => l.activo);
-            if (logoActivo) {
-                const brandIcon = document.querySelector('.brand-icon');
-                if (brandIcon) {
-                    brandIcon.innerHTML = `<img src="${logoActivo.url}" alt="Logo" style="height:40px;width:auto;object-fit:contain;">`;
-                    brandIcon.style.fontSize = 'unset';
-                }
+        if (json.ok && json.url) {
+            const brandIcon = document.querySelector('.brand-icon');
+            if (brandIcon) {
+                brandIcon.innerHTML = `<img src="${json.url}" alt="Logo" style="height:40px;width:auto;object-fit:contain;">`;
+                brandIcon.style.fontSize = 'unset';
             }
         }
     } catch (e) { console.error('Error cargando logo:', e); }
@@ -839,15 +838,15 @@ async function cargarLogoYSliders() {
 
             const imgs = json.data;
             hero.style.padding = '0';
-            hero.style.minHeight = '500px';
+            hero.style.minHeight = 'clamp(220px, 45vh, 500px)';
             hero.style.position = 'relative';
 
             hero.innerHTML = `
-                <div class="slider-wrap" style="position:relative;width:100%;min-height:500px;overflow:hidden;">
+                <div class="slider-wrap" style="position:relative;width:100%;min-height:clamp(220px, 45vh, 500px);overflow:hidden;">
                     ${imgs.map((img, i) => `
                         <div class="slide" style="position:absolute;inset:0;opacity:${i === 0 ? 1 : 0};transition:opacity .7s ease;background:#1a3c5e;">
                             <img src="${img.url_imagen}" alt="${img.titulo || 'Slider'}"
-                               style="width:100%;height:500px;object-fit:cover;"
+                               style="width:100%;height:clamp(220px, 45vh, 500px);object-fit:cover;"
                                 onerror="this.parentElement.style.background='linear-gradient(135deg,#1a3c5e,#2563a8)'">
                             ${img.titulo ? `<div style="position:absolute;bottom:2rem;left:2rem;color:#fff;font-family:var(--font-display);font-size:1.8rem;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.5);">${img.titulo}</div>` : ''}
                         </div>`).join('')}

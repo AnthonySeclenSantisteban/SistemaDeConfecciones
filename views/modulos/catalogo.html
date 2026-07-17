@@ -177,8 +177,19 @@
                 <p class="detalle-desc" id="detalleDesc"></p>
 
                 <div class="detalle-variantes" id="detalleVariantesWrap">
-                    <label class="var-label">Talla / Presentación</label>
-                    <div class="variantes-chips" id="variantesChips"></div>
+                    <div id="coloresSwatches" style="margin-bottom:1rem;">
+                        <label class="var-label">Color</label>
+                        <div class="swatches-row"></div>
+                    </div>
+                    <div id="tallaSelectWrap">
+                        <label class="var-label" for="tallaSelect">Talla</label>
+                        <select id="tallaSelect" class="talla-select" onchange="seleccionarTalla(this)">
+                            <option value="">Elige una talla</option>
+                        </select>
+                    </div>
+                    <div id="tallaProximamenteMsg" style="display:none;padding:14px 16px;background:var(--bg-alt,#f4f4f5);border-radius:8px;border:1px dashed var(--border,#ddd);text-align:center;color:var(--muted,#666);font-size:13.5px;">
+                        Este color estará próximamente disponible Crack...
+                    </div>
                 </div>
 
                 <div class="detalle-cantidad">

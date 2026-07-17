@@ -60,8 +60,8 @@ function _renderTabla(data) {
             <td><span class="badge badge-blue" style="font-size:11px;">${_esc(p.categoria_nombre || '—')}</span></td>
             <td style="color:var(--muted);font-size:13px;">${_esc(p.nombre_colegio || '—')}</td>
             <td>${_badgeGenero(p.genero)}</td>
-            <td style="font-family:var(--mono);font-size:12px;">S/ ${parseFloat(p.precio_costo).toFixed(2)}</td>
-            <td style="font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;">S/ ${parseFloat(p.precio_venta).toFixed(2)}</td>
+            <td style="font-family:var(--mono);font-size:12px;">${_fmtPrecioCosto(p)}</td>
+            <td style="font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;">${_fmtPrecioVenta(p)}</td>
             <td>${_badgeEstado(p.estado)}</td>
             <td style="font-size:12px;color:var(--muted);font-family:var(--mono);">${_fmtFecha(p.created_at)}</td>
             <td>
@@ -116,8 +116,9 @@ async function abrirNuevoProducto() {
     document.getElementById('modal-producto-titulo').textContent     = 'Nuevo producto';
     document.getElementById('btn-guardar-producto-text').textContent = 'Crear producto';
     await Promise.all([_cargarCategoriasSelect(), _cargarColegiosSelect()]);
-    document.getElementById('seccion-imagenes').style.display = 'none';
-
+   document.getElementById('seccion-imagenes').style.display = 'none';
+    document.getElementById('seccion-variantes').style.display = 'none';
+    document.getElementById('seccion-precios-talla').style.display = 'none';
     document.getElementById('modal-producto').style.display = 'flex';
 }
 
@@ -149,6 +150,11 @@ async function abrirEditarProducto(id) {
     }
     document.getElementById('seccion-imagenes').style.display = 'block';
     await _cargarImagenesProducto(id);
+    document.getElementById('seccion-variantes').style.display = 'block';
+    await _cargarTallasDisponibles();
+    await _cargarVariantesProducto(id);
+    document.getElementById('seccion-precios-talla').style.display = 'block';
+    await _cargarPreciosTalla(id);
     document.getElementById('modal-producto').style.display = 'flex';
 }
 
@@ -360,6 +366,22 @@ function _mostrarAlertaProducto(msg) {
     el.style.display = 'flex';
 }
 
+function _fmtPrecioVenta(p) {
+    if (!p.tiene_precios_por_talla) return `S/ ${parseFloat(p.precio_venta).toFixed(2)}`;
+    const min = parseFloat(p.precio_venta_min).toFixed(2);
+    const max = parseFloat(p.precio_venta_max).toFixed(2);
+    if (min === max) return `S/ ${min}`;
+    return `S/ ${min} – S/ ${max}`;
+}
+
+function _fmtPrecioCosto(p) {
+    if (!p.tiene_precios_por_talla) return `S/ ${parseFloat(p.precio_costo).toFixed(2)}`;
+    const min = parseFloat(p.precio_costo_min).toFixed(2);
+    const max = parseFloat(p.precio_costo_max).toFixed(2);
+    if (min === max) return `S/ ${min}`;
+    return `S/ ${min} – S/ ${max}`;
+}
+
 function _badgeGenero(genero) {
     if (genero === 'masculino') return '<span class="badge badge-blue" style="font-size:11px;">Masculino</span>';
     if (genero === 'femenino')  return '<span class="badge badge-accent" style="font-size:11px;">Femenino</span>';
@@ -424,6 +446,8 @@ function _renderImagenes() {
         <div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
             <img src="${_esc(img.url_imagen)}" style="width:100%;height:100%;object-fit:cover;" 
                  onerror="this.style.display='none'">
+            ${img.color ? `<span style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);
+                color:#fff;font-size:9px;text-align:center;padding:2px 0;">${_esc(img.color)}</span>` : ''}
             <button type="button" onclick="_eliminarImagenProducto(${img.id_imagen})"
                 style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;
                        background:rgba(220,38,38,.85);border:none;color:#fff;cursor:pointer;
@@ -433,29 +457,60 @@ function _renderImagenes() {
         </div>`).join('');
 }
 
+function _esUrlDeImagenValida(url) {
+    try {
+        const u = new URL(url);
+        if (!['http:', 'https:'].includes(u.protocol)) return false;
+        return /\.(jpe?g|png|gif|webp|avif|svg)(\?.*)?$/i.test(u.pathname);
+    } catch (e) { return false; }
+}
+
 async function _agregarImagenUrl() {
     const id = document.getElementById('producto-id').value;
     if (!id) { _mostrarAlertaProducto('Guarda el producto primero antes de agregar imágenes'); return; }
     const url = document.getElementById('imagen-url-input').value.trim();
+    const color = document.getElementById('imagen-color-input').value.trim();
     if (!url) { _mostrarAlertaProducto('Ingresa una URL de imagen'); return; }
+    if (!_esUrlDeImagenValida(url)) {
+        _mostrarAlertaProducto('La URL debe ser un enlace válido a una imagen (.jpg, .png, .gif, .webp, .avif o .svg)');
+        return;
+    }
+    if (!color) { _mostrarAlertaProducto('Indica el color de esta imagen antes de agregarla'); return; }
+    if (!_colorExisteEnVariantes(color)) {
+        _mostrarAlertaProducto(`Primero agrega el color "${color}" en "Colores y tallas disponibles" antes de subirle una imagen`);
+        return;
+    }
     try {
         const res = await fetch(`/api/productos/${id}/imagenes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url_imagen: url })
+            body: JSON.stringify({ url_imagen: url, color: color || null })
         });
         const json = await res.json();
         if (json.ok) {
             document.getElementById('imagen-url-input').value = '';
+            document.getElementById('imagen-color-input').value = '';
             await _cargarImagenesProducto(id);
             mostrarToast('Imagen agregada', 'success');
         } else { _mostrarAlertaProducto(json.mensaje); }
     } catch (e) { _mostrarAlertaProducto('Error al agregar imagen'); }
 }
 
+function _colorExisteEnVariantes(color) {
+    const buscado = color.trim().toLowerCase();
+    return _variantesProducto.some(v => (v.color || '').trim().toLowerCase() === buscado);
+}
+
 async function _subirImagenLocal(file) {
     const id = document.getElementById('producto-id').value;
     if (!id) { _mostrarAlertaProducto('Guarda el producto primero antes de agregar imágenes'); return; }
+    const color = document.getElementById('imagen-color-input').value.trim();
+    if (!color) { _mostrarAlertaProducto('Indica el color antes de subir la imagen'); return; }
+    if (!_colorExisteEnVariantes(color)) {
+        _mostrarAlertaProducto(`Primero agrega el color "${color}" en "Colores y tallas disponibles" antes de subirle una imagen`);
+        return;
+    }
+    if (!file.type.startsWith('image/')) { _mostrarAlertaProducto('El archivo debe ser una imagen'); return; }
     const progress = document.getElementById('imagen-upload-progress');
     progress.style.display = 'block';
     try {
@@ -467,15 +522,286 @@ async function _subirImagenLocal(file) {
         const res = await fetch(`/api/productos/${id}/imagenes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url_imagen: upJson.data.url })
+            body: JSON.stringify({ url_imagen: upJson.data.url, color: color || null })
         });
         const json = await res.json();
         if (json.ok) {
+            document.getElementById('imagen-color-input').value = '';
             await _cargarImagenesProducto(id);
             mostrarToast('Imagen subida correctamente', 'success');
         } else { _mostrarAlertaProducto(json.mensaje); }
     } catch (e) { _mostrarAlertaProducto('Error al subir imagen'); }
     finally { progress.style.display = 'none'; }
+}
+
+let _variantesProducto = [];
+let _tallasDisponibles = [];
+let _preciosTalla = [];
+let _colorEnEdicion = null;
+let _gruposVariantesActuales = [];
+
+async function _cargarPreciosTalla(id) {
+    _preciosTalla = [];
+    const select = document.getElementById('precio-talla-select');
+    select.innerHTML = '<option value="">-- Selecciona una talla --</option>';
+    document.getElementById('precio-talla-costo').value = '';
+    document.getElementById('precio-talla-venta').value = '';
+    if (!id) return;
+    try {
+        const res = await fetch(`/api/productos/${id}/precios-talla`);
+        const json = await res.json();
+        if (!json.ok) return;
+        _preciosTalla = json.data;
+        select.innerHTML += json.data.map(t => `
+            <option value="${t.id_talla}">${_esc(t.nombre_talla)}${t.tiene_precio_propio ? ' ✓' : ''}</option>
+        `).join('');
+    } catch (e) { console.error('Error cargando precios por talla:', e); }
+}
+
+function _onSeleccionarTallaPrecio() {
+    const idTalla = document.getElementById('precio-talla-select').value;
+    const costoInput = document.getElementById('precio-talla-costo');
+    const ventaInput = document.getElementById('precio-talla-venta');
+    if (!idTalla) { costoInput.value = ''; ventaInput.value = ''; return; }
+    const t = _preciosTalla.find(x => String(x.id_talla) === idTalla);
+    if (t && t.tiene_precio_propio) {
+        costoInput.value = t.precio_costo;
+        ventaInput.value = t.precio_venta;
+    } else {
+        costoInput.value = '';
+        ventaInput.value = '';
+    }
+}
+
+async function _guardarPrecioTalla() {
+    const id = document.getElementById('producto-id').value;
+    if (!id) { _mostrarAlertaProducto('Guarda el producto primero antes de poner precio por talla'); return; }
+    const idTalla = document.getElementById('precio-talla-select').value;
+    if (!idTalla) { _mostrarAlertaProducto('Elige una talla'); return; }
+    const precio_costo = document.getElementById('precio-talla-costo').value;
+    const precio_venta = document.getElementById('precio-talla-venta').value;
+    try {
+        const res = await fetch(`/api/productos/${id}/precios-talla/${idTalla}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ precio_costo, precio_venta })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            await _cargarPreciosTalla(id);
+            document.getElementById('precio-talla-select').value = idTalla;
+            mostrarToast(json.mensaje, 'success');
+        } else { _mostrarAlertaProducto(json.mensaje); }
+    } catch (e) { _mostrarAlertaProducto('Error al guardar el precio de la talla'); }
+}
+
+async function _cargarTallasDisponibles() {
+    if (_tallasDisponibles.length) { _renderTallasChipsSelector(); return; }
+    try {
+        const res = await fetch('/api/tallas');
+        const json = await res.json();
+        if (json.ok) _tallasDisponibles = json.data;
+    } catch (e) { console.error('Error cargando tallas:', e); }
+    _renderTallasChipsSelector();
+}
+
+async function _cargarVariantesProducto(id) {
+    _variantesProducto = [];
+    _colorEnEdicion = null;
+    _renderVariantesLista();
+    if (!id) return;
+    try {
+        const res = await fetch(`/api/productos/${id}/variantes`);
+        const json = await res.json();
+        if (json.ok) { _variantesProducto = json.data; _renderVariantesLista(); }
+    } catch (e) { console.error('Error cargando variantes:', e); }
+}
+
+function _agruparVariantesPorColor() {
+    const mapa = {};
+    _variantesProducto.forEach(v => {
+        (mapa[v.color] = mapa[v.color] || []).push(v);
+    });
+    return Object.entries(mapa).map(([color, variantes]) => ({ color, variantes }));
+}
+
+function _renderVariantesLista() {
+    const cont = document.getElementById('variantes-lista');
+    if (!cont) return;
+    if (!_variantesProducto.length) {
+        cont.innerHTML = '<span style="font-size:12px;color:var(--muted);">Este producto todavía no tiene colores/tallas creados.</span>';
+        _gruposVariantesActuales = [];
+        return;
+    }
+    _gruposVariantesActuales = _agruparVariantesPorColor();
+
+    cont.innerHTML = _gruposVariantesActuales.map((grupo, i) => {
+        const tallasTexto = grupo.variantes.map(v => v.nombre_talla || '—').join(', ');
+        const enEdicion = _colorEnEdicion === grupo.color;
+        return `
+        <div class="variante-color-row">
+            <div class="variante-color-info">
+                <strong style="font-size:13px;">${_esc(grupo.color)}</strong>
+                <span style="font-size:12px;color:var(--muted);">${_esc(tallasTexto)}</span>
+            </div>
+            <div class="variante-color-acciones">
+                <button type="button" class="btn-icon-sm" title="Editar tallas" onclick="_toggleEditarColor(${i})">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                </button>
+                <button type="button" class="btn-icon-sm btn-icon-sm-danger" title="Eliminar color" onclick="_confirmarEliminarColor(${i})">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                        <path d="M10 11v6M14 11v6"/>
+                        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                    </svg>
+                </button>
+            </div>
+            ${enEdicion ? _renderPanelEdicionColor(grupo, i) : ''}
+        </div>`;
+    }).join('');
+}
+
+function _renderPanelEdicionColor(grupo, i) {
+    const chips = _tallasDisponibles.map(t => {
+        const variante = grupo.variantes.find(v => v.id_talla === t.id_talla);
+        const asignada = !!variante;
+        const conStock = asignada && Number(variante.stock) > 0;
+        const clases = ['talla-chip-select'];
+        if (asignada) clases.push('active');
+        if (conStock) clases.push('locked');
+        const title = conStock
+            ? `No se puede desmarcar: tiene ${variante.stock} en stock`
+            : '';
+        return `<button type="button" class="${clases.join(' ')}"
+                    data-id-talla="${t.id_talla}" data-locked="${conStock ? '1' : '0'}"
+                    title="${_esc(title)}" onclick="_toggleTallaChipEdicion(this)">
+                    ${_esc(t.nombre_talla)}
+                </button>`;
+    }).join('');
+
+    return `
+    <div class="variante-color-editar-panel">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">
+            Editar tallas de "${_esc(grupo.color)}"
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;" id="edicion-tallas-chips-${i}">
+            ${chips}
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-secondary" style="flex:1;" onclick="_cancelarEdicionColor()">Cancelar</button>
+            <button type="button" class="btn-primary" style="flex:1;" onclick="_guardarEdicionColor(${i})">Guardar cambios</button>
+        </div>
+        <div class="variante-color-editar-nota">Las tallas en rojo tienen stock y no se pueden desmarcar; ajusta el stock desde Inventario primero.</div>
+    </div>`;
+}
+
+function _toggleTallaChipEdicion(btn) {
+    if (btn.dataset.locked === '1') {
+        mostrarToast('Esta talla tiene stock, no se puede desmarcar. Ajusta el stock desde Inventario primero.', 'error');
+        return;
+    }
+    btn.classList.toggle('active');
+}
+
+function _toggleEditarColor(i) {
+    const grupo = _gruposVariantesActuales[i];
+    if (!grupo) return;
+    _colorEnEdicion = (_colorEnEdicion === grupo.color) ? null : grupo.color;
+    _renderVariantesLista();
+}
+
+function _cancelarEdicionColor() {
+    _colorEnEdicion = null;
+    _renderVariantesLista();
+}
+
+async function _guardarEdicionColor(i) {
+    const grupo = _gruposVariantesActuales[i];
+    if (!grupo) return;
+    const id = document.getElementById('producto-id').value;
+    const cont = document.getElementById(`edicion-tallas-chips-${i}`);
+    const idTallas = [...cont.querySelectorAll('.talla-chip-select.active')].map(b => parseInt(b.dataset.idTalla));
+
+    if (!idTallas.length) {
+        mostrarToast('Debe quedar al menos una talla para este color. Si quieres quitarlo del todo, usa el botón Eliminar.', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/productos/${id}/variantes/${encodeURIComponent(grupo.color)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_tallas: idTallas })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            _colorEnEdicion = null;
+            await _cargarVariantesProducto(id);
+            mostrarToast(json.mensaje, 'success');
+        } else {
+            mostrarToast(json.mensaje, 'error');
+        }
+    } catch (e) { mostrarToast('Error al actualizar el color', 'error'); }
+}
+
+async function _confirmarEliminarColor(i) {
+    const grupo = _gruposVariantesActuales[i];
+    if (!grupo) return;
+    if (!confirm(`¿Eliminar el color "${grupo.color}" y todas sus tallas?`)) return;
+
+    const id = document.getElementById('producto-id').value;
+    try {
+        const res = await fetch(`/api/productos/${id}/variantes/${encodeURIComponent(grupo.color)}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.ok) {
+            if (_colorEnEdicion === grupo.color) _colorEnEdicion = null;
+            await _cargarVariantesProducto(id);
+            mostrarToast(json.mensaje, 'success');
+        } else {
+            mostrarToast(json.mensaje, 'error');
+        }
+    } catch (e) { mostrarToast('Error al eliminar el color', 'error'); }
+}
+
+function _renderTallasChipsSelector() {
+    const cont = document.getElementById('variante-tallas-chips');
+    if (!cont) return;
+    cont.innerHTML = _tallasDisponibles.map(t => `
+        <button type="button" class="talla-chip-select" data-id-talla="${t.id_talla}" onclick="_toggleTallaChip(this)">
+            ${_esc(t.nombre_talla)}
+        </button>
+    `).join('');
+}
+
+function _toggleTallaChip(btn) {
+    btn.classList.toggle('active');
+}
+
+async function _agregarVariante() {
+    const id = document.getElementById('producto-id').value;
+    if (!id) { _mostrarAlertaProducto('Guarda el producto primero antes de agregar variantes'); return; }
+    const color = document.getElementById('variante-color-input').value.trim();
+    if (!color) { _mostrarAlertaProducto('Escribe el nombre del color'); return; }
+    const idTallas = [...document.querySelectorAll('.talla-chip-select.active')].map(b => parseInt(b.dataset.idTalla));
+    if (!idTallas.length) { _mostrarAlertaProducto('Elige al menos una talla para este color'); return; }
+    try {
+        const res = await fetch(`/api/productos/${id}/variantes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ color, id_tallas: idTallas })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            document.getElementById('variante-color-input').value = '';
+            document.querySelectorAll('.talla-chip-select.active').forEach(b => b.classList.remove('active'));
+            await _cargarVariantesProducto(id);
+            mostrarToast(json.mensaje, 'success');
+        } else { _mostrarAlertaProducto(json.mensaje); }
+    } catch (e) { _mostrarAlertaProducto('Error al agregar la variante'); }
 }
 
 async function _eliminarImagenProducto(idImagen) {
@@ -509,6 +835,8 @@ document.addEventListener('click', function(e) {
     if (id === 'btn-confirmar-eliminar-producto')  confirmarEliminarProducto();
     if (id === 'btn-agregar-url-imagen') _agregarImagenUrl();
     if (id === 'btn-subir-imagen-local') document.getElementById('imagen-file-input').click();
+    if (id === 'btn-agregar-variante') _agregarVariante();
+    if (id === 'btn-guardar-precio-talla') _guardarPrecioTalla();
 });
 
 document.addEventListener('change', function(e) {
@@ -524,6 +852,7 @@ document.addEventListener('input', function(e) {
 
 document.addEventListener('change', function(e) {
     if (e.target.id === 'filtro-categoria-producto') _aplicarFiltros();
+    if (e.target.id === 'precio-talla-select') _onSeleccionarTallaPrecio();
 });
 
 function cargar_productos() {

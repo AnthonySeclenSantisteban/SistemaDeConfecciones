@@ -180,11 +180,30 @@
       </div>
     </div>
 
+    <div class="field" style="grid-column:1/-1;display:none;" id="seccion-variantes">
+      <label style="margin-bottom:8px;display:block;">Colores y tallas disponibles</label>
+      <div id="variantes-lista" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;">Agregar nuevo color</div>
+        <input type="text" id="variante-color-input" placeholder="Nombre del color (ej: Negro)" style="width:100%;margin-bottom:10px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Tallas para este color</div>
+        <div id="variante-tallas-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <button type="button" class="btn-secondary" id="btn-agregar-variante" style="width:100%;">
+          + Agregar color con estas tallas
+        </button>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:8px;">
+        El stock de cada talla se administra luego desde el módulo <strong>Inventario</strong>.
+      </div>
+    </div>
+
     <div class="field" style="grid-column:1/-1;" id="seccion-imagenes" style="display:none;">
       <label style="margin-bottom:8px;display:block;">Presentaciones del producto</label>
       <div id="imagenes-lista" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
       <div style="display:flex;gap:8px;margin-bottom:8px;">
         <input type="text" id="imagen-url-input" placeholder="https://... (URL de imagen)" style="flex:1;">
+        <input type="text" id="imagen-color-input" placeholder="Color (ej: Blanco)" style="width:130px;">
         <button type="button" class="btn-secondary" id="btn-agregar-url-imagen" style="white-space:nowrap;padding:8px 12px;font-size:12px;">
           + URL
         </button>
@@ -198,6 +217,26 @@
         </button>
       </div>
       <div id="imagen-upload-progress" style="display:none;font-size:12px;color:var(--muted);margin-top:6px;">Subiendo imagen...</div>
+    </div> 
+    
+
+    <div class="field" style="grid-column:1/-1;display:none;" id="seccion-precios-talla">
+      <label style="margin-bottom:8px;display:block;">Precio por talla</label>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+        <select id="precio-talla-select" style="width:100%;margin-bottom:10px;">
+          <option value="">-- Selecciona una talla --</option>
+        </select>
+        <div style="display:flex;gap:10px;margin-bottom:10px;">
+          <input type="number" id="precio-talla-costo" placeholder="Costo (S/)" min="0" step="0.01" style="flex:1;">
+          <input type="number" id="precio-talla-venta" placeholder="Venta (S/)" min="0" step="0.01" style="flex:1;">
+        </div>
+        <button type="button" class="btn-secondary" id="btn-guardar-precio-talla" style="width:100%;">
+          Guardar precio de esta talla
+        </button>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:8px;" id="precio-talla-nota">
+        Si no se configura la talla, se usa el precio general del producto.
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -268,5 +307,74 @@
   .campo-invalido select,
   .campo-invalido textarea {
     border-color: #dc2626 !important;
+  }
+  .talla-chip-select {
+    padding: 6px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 12.5px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .talla-chip-select:hover { border-color: var(--accent); }
+  .talla-chip-select.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .talla-chip-select.locked {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+    cursor: not-allowed;
+    font-weight: 600;
+  }
+  .talla-chip-select.locked:hover { border-color: #fca5a5; }
+
+  .variante-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    flex-wrap: wrap;
+  }
+  .variante-color-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 160px; }
+  .variante-color-acciones { display: flex; gap: 6px; margin-left: auto; }
+  .btn-icon-sm {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .15s;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .btn-icon-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-icon-sm.btn-icon-sm-danger:hover { border-color: #dc2626; color: #dc2626; }
+
+  .variante-color-editar-panel {
+    background: #fff;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    width: 100%;
+    margin-top: 6px;
+  }
+  .variante-color-editar-nota {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
   }
 </style>

@@ -5,6 +5,7 @@ const { generarNumeroVenta } = require('../utils/GenerarNum');
 const multer = require('multer');
 const path   = require('path');
 const { enviarConfirmacionPedido } = require('../utils/remitente');
+const { buscarPorRef } = require('../utils/clientesPendientes');
 
 
 const uploadComprobante = multer({
@@ -79,6 +80,7 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
                 v.subtotal, v.descuento, v.total,
                 v.estado, v.fecha_venta, v.observaciones,
                 c.id_cliente, c.nombres, c.apellidos, c.dni, c.telefono,
+                p.cliente_temp_ref,
                 u.nombre AS atendio,
                 (SELECT STRING_AGG(pa.metodo_pago, ' + ' ORDER BY pa.id_pago) 
                 FROM pagos pa WHERE pa.id_pedido = p.id_pedido) AS metodo_pago,
@@ -96,6 +98,18 @@ router.get('/api/ventas', requireAuth, async (req, res) => {
             LIMIT $${params.length - 1} OFFSET $${params.length}`,
             params
         );
+
+        dataRes.rows.forEach(row => {
+            if (!row.nombres && row.cliente_temp_ref) {
+                const pend = buscarPorRef(row.cliente_temp_ref);
+                if (pend) {
+                    row.nombres   = pend.nombres;
+                    row.apellidos = pend.apellidos;
+                    row.telefono  = pend.telefono;
+                    row.dni       = pend.dni;
+                }
+            }
+        });
 
         res.json({
             ok: true,
@@ -195,6 +209,7 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
                 v.subtotal, v.descuento, v.total,
                 v.estado, v.fecha_venta, v.observaciones,
                 c.id_cliente, c.nombres, c.apellidos, c.dni, c.telefono, c.correo,
+                p.cliente_temp_ref,
                 u.nombre AS atendio,
                 (SELECT STRING_AGG(pa.metodo_pago, ' + ' ORDER BY pa.id_pago) 
                  FROM pagos pa WHERE pa.id_pedido = p.id_pedido) AS metodo_pago,
@@ -229,9 +244,21 @@ router.get('/api/ventas/:id', requireAuth, async (req, res) => {
             [id]
         );
 
+        const venta = ventaRes.rows[0];
+        if (!venta.nombres && venta.cliente_temp_ref) {
+            const pend = buscarPorRef(venta.cliente_temp_ref);
+            if (pend) {
+                venta.nombres   = pend.nombres;
+                venta.apellidos = pend.apellidos;
+                venta.telefono  = pend.telefono;
+                venta.dni       = pend.dni;
+                venta.correo    = pend.correo;
+            }
+        }
+
         res.json({
             ok: true,
-            data: { venta: ventaRes.rows[0], items: itemsRes.rows }
+            data: { venta, items: itemsRes.rows }
         });
     } catch (error) {
         console.error('GET /api/ventas/:id:', error);

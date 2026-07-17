@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/bd');
+const { buscarPorRef } = require('../utils/clientesPendientes');
 
 function requireAuth(req, res, next) {
     if (!req.session || !req.session.usuario)
@@ -39,6 +40,7 @@ router.get('/api/pedidos', requireAuth, async (req, res) => {
                 p.total,
                 p.estado,
                 p.fecha_pedido,
+                p.cliente_temp_ref,
                 c.nombres, c.apellidos, c.telefono, c.dni,
                 pa.metodo_pago,
                 pa.estado AS estado_pago,
@@ -52,6 +54,18 @@ router.get('/api/pedidos', requireAuth, async (req, res) => {
             ORDER BY p.fecha_pedido DESC
             LIMIT $${params.length - 1} OFFSET $${params.length}
         `, params);
+
+        data.rows.forEach(row => {
+            if (!row.nombres && row.cliente_temp_ref) {
+                const pend = buscarPorRef(row.cliente_temp_ref);
+                if (pend) {
+                    row.nombres   = pend.nombres;
+                    row.apellidos = pend.apellidos;
+                    row.telefono  = pend.telefono;
+                    row.dni       = pend.dni;
+                }
+            }
+        });
 
         res.json({ ok: true, data: data.rows, total,
             pages: Math.ceil(total / parseInt(limit)), page: parseInt(page) });
@@ -67,7 +81,7 @@ router.get('/api/pedidos/:id', requireAuth, async (req, res) => {
         const pedidoRes = await pool.query(`
             SELECT
                 p.id_pedido, p.codigo_seguimiento, p.fecha_pedido,
-                p.total, p.estado,
+                p.total, p.estado, p.cliente_temp_ref,
                 c.id_cliente, c.nombres, c.apellidos, c.telefono, c.dni, c.correo,
                 pa.metodo_pago, pa.estado AS estado_pago, pa.monto,
                 e.tipo_entrega, e.estado_entrega, e.fecha_estimada, e.observaciones,
@@ -83,6 +97,21 @@ router.get('/api/pedidos/:id', requireAuth, async (req, res) => {
         if (!pedidoRes.rows.length)
             return res.json({ ok: false, mensaje: 'Pedido no encontrado' });
 
+        const pedido = pedidoRes.rows[0];
+        if (!pedido.nombres && pedido.cliente_temp_ref) {
+            const pend = buscarPorRef(pedido.cliente_temp_ref);
+            if (pend) {
+                pedido.nombres    = pend.nombres;
+                pedido.apellidos  = pend.apellidos;
+                pedido.telefono   = pend.telefono;
+                pedido.dni        = pend.dni;
+                pedido.correo     = pend.correo;
+                pedido.direccion  = pend.direccion;
+                pedido.distrito   = pend.distrito;
+                pedido.referencia = pend.referencia;
+            }
+        }
+
         const itemsRes = await pool.query(`
             SELECT dp.cantidad, dp.precio_unitario, dp.subtotal,
                    pr.nombre_producto, vp.color, t.nombre_talla
@@ -93,7 +122,7 @@ router.get('/api/pedidos/:id', requireAuth, async (req, res) => {
             WHERE dp.id_pedido = $1
         `, [id]);
 
-        res.json({ ok: true, data: { pedido: pedidoRes.rows[0], items: itemsRes.rows } });
+        res.json({ ok: true, data: { pedido, items: itemsRes.rows } });
     } catch (e) {
         console.error('GET /api/pedidos/:id:', e);
         res.json({ ok: false, mensaje: e.message });
